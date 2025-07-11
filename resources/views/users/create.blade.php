@@ -1,28 +1,42 @@
-<x-app-layout>
-    <x-slot name="header">
-        <div class="flex justify-between items-center">
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                {{ __('Create New User') }}
-            </h2>
-            <a href="{{ route('users.index') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition duration-150 ease-in-out flex items-center">
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                </svg>
-                Back to Users
-            </a>
-        </div>
-    </x-slot>
+@extends('layouts.app')
 
-    <div class="py-12">
-        <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6">
+@section('content')
+<div class="w-full">
+    <!-- Header Section -->
+    <div class="bg-gradient-to-r from-blue-50 to-cyan-50 border-b border-blue-100 px-6 py-6">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="font-bold text-2xl text-gray-800 leading-tight">
+                    <i class="fas fa-user-plus text-blue-600 mr-2"></i>
+                    Create New User
+                </h1>
+                <p class="text-blue-600 font-medium">Add a new system user</p>
+                <p class="text-gray-600 text-sm mt-1">User Management</p>
+            </div>
+            <div class="mt-4 md:mt-0">
+                <a href="{{ route('users.index') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition duration-150 ease-in-out flex items-center">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    Back to Users
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="py-8 bg-gray-50 min-h-screen">
+        <div class="max-w-4xl mx-auto px-6 lg:px-8">
+            <div class="bg-white overflow-hidden shadow-lg rounded-xl border border-blue-100">
+                <div class="p-8">
                     <form method="POST" action="{{ route('users.store') }}" class="space-y-6">
                         @csrf
 
                         <!-- Basic Information Section -->
                         <div class="border-b border-gray-200 pb-6">
-                            <h3 class="text-lg font-medium text-gray-900 mb-4">Basic Information</h3>
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">
+                                <i class="fas fa-user text-blue-600 mr-2"></i>
+                                Basic Information
+                            </h3>
                             
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <!-- Name -->
@@ -53,7 +67,10 @@
 
                         <!-- Security Section -->
                         <div class="border-b border-gray-200 pb-6">
-                            <h3 class="text-lg font-medium text-gray-900 mb-4">Security & Access</h3>
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">
+                                <i class="fas fa-shield-alt text-green-600 mr-2"></i>
+                                Security & Access
+                            </h3>
                             
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <!-- Password -->
@@ -99,11 +116,12 @@
                                 <!-- Status -->
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-3">Account Status</label>
-                                    <div class="flex items-center">
+                                    <div class="flex items-center p-3 bg-green-50 rounded-lg border border-green-200">
                                         <input type="checkbox" name="is_active" id="is_active" value="1" 
                                                {{ old('is_active', true) ? 'checked' : '' }}
-                                               class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                                        <label for="is_active" class="ml-2 block text-sm text-gray-700">
+                                               class="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                                        <label for="is_active" class="ml-2 block text-sm text-green-700 font-medium">
+                                            <i class="fas fa-check-circle mr-1"></i>
                                             Active (User can login and access the system)
                                         </label>
                                     </div>
@@ -112,27 +130,53 @@
                         </div>
 
                         <!-- Role Descriptions -->
-                        <div class="bg-blue-50 rounded-lg p-4">
-                            <h4 class="text-sm font-medium text-blue-900 mb-2">Role Descriptions:</h4>
-                            <ul class="text-sm text-blue-800 space-y-1">
-                                <li><strong>Staff:</strong> Basic access to view and manage customers, meters, and readings</li>
-                                <li><strong>Meter Reader:</strong> Specialized access focused on meter readings and data collection</li>
-                                <li><strong>Manager:</strong> All staff permissions plus billing management and reports</li>
-                                <li><strong>Admin:</strong> Full system access including user management and system settings</li>
-                            </ul>
+                        <div class="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg p-6 border border-blue-200">
+                            <h4 class="text-sm font-medium text-blue-900 mb-3 flex items-center">
+                                <i class="fas fa-info-circle mr-2"></i>
+                                Role Descriptions:
+                            </h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="bg-white p-3 rounded-lg border border-blue-100">
+                                    <div class="flex items-center mb-2">
+                                        <i class="fas fa-user text-gray-600 mr-2"></i>
+                                        <strong class="text-gray-800">Staff:</strong>
+                                    </div>
+                                    <p class="text-sm text-gray-600">Basic access to view and manage customers, meters, and readings</p>
+                                </div>
+                                <div class="bg-white p-3 rounded-lg border border-blue-100">
+                                    <div class="flex items-center mb-2">
+                                        <i class="fas fa-tachometer-alt text-cyan-600 mr-2"></i>
+                                        <strong class="text-gray-800">Meter Reader:</strong>
+                                    </div>
+                                    <p class="text-sm text-gray-600">Specialized access focused on meter readings and data collection</p>
+                                </div>
+                                <div class="bg-white p-3 rounded-lg border border-blue-100">
+                                    <div class="flex items-center mb-2">
+                                        <i class="fas fa-chart-line text-green-600 mr-2"></i>
+                                        <strong class="text-gray-800">Manager:</strong>
+                                    </div>
+                                    <p class="text-sm text-gray-600">All staff permissions plus billing management and reports</p>
+                                </div>
+                                <div class="bg-white p-3 rounded-lg border border-blue-100">
+                                    <div class="flex items-center mb-2">
+                                        <i class="fas fa-crown text-yellow-600 mr-2"></i>
+                                        <strong class="text-gray-800">Admin:</strong>
+                                    </div>
+                                    <p class="text-sm text-gray-600">Full system access including user management and system settings</p>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Form Actions -->
                         <div class="flex items-center justify-end space-x-4 pt-6">
                             <a href="{{ route('users.index') }}" 
-                               class="bg-gray-300 hover:bg-gray-400 text-gray-700 font-medium py-2 px-6 rounded-lg transition duration-150 ease-in-out">
+                               class="bg-gray-300 hover:bg-gray-400 text-gray-700 font-medium py-3 px-6 rounded-lg transition duration-150 ease-in-out flex items-center">
+                                <i class="fas fa-times mr-2"></i>
                                 Cancel
                             </a>
                             <button type="submit" 
-                                    class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition duration-150 ease-in-out flex items-center">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                                </svg>
+                                    class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition duration-150 ease-in-out flex items-center shadow-lg hover:shadow-xl transform hover:scale-105">
+                                <i class="fas fa-user-plus mr-2"></i>
                                 Create User
                             </button>
                         </div>
@@ -141,4 +185,5 @@
             </div>
         </div>
     </div>
-</x-app-layout> 
+</div>
+@endsection 

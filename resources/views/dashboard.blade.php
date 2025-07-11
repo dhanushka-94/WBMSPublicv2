@@ -18,11 +18,24 @@
                 </div>
             </div>
             <div class="mt-4 md:mt-0">
-                <div class="flex items-center space-x-2 text-sm text-gray-600">
-                    <svg class="h-4 w-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    <span>{{ now()->format('l, F j, Y') }}</span>
+                <div class="bg-white rounded-lg shadow-md border border-blue-200 px-4 py-3">
+                    <div class="flex flex-col items-center space-y-1">
+                        <div class="flex items-center space-x-2 text-sm text-gray-600">
+                            <svg class="h-4 w-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                            <span id="current-date">{{ now()->format('l, F j, Y') }}</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <svg class="h-4 w-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span id="current-time" class="text-lg font-semibold text-blue-700">{{ now()->format('g:i:s A') }}</span>
+                        </div>
+                        <div class="text-xs text-gray-500">
+                            <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full">Sri Lankan Time</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -411,6 +424,43 @@
 </div>
 
 <script>
+// Real-time clock
+function updateClock() {
+    const now = new Date();
+    
+    // Format date
+    const options = { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        timeZone: 'Asia/Colombo'
+    };
+    const dateString = now.toLocaleDateString('en-US', options);
+    
+    // Format time
+    const timeOptions = {
+        hour: 'numeric',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+        timeZone: 'Asia/Colombo'
+    };
+    const timeString = now.toLocaleTimeString('en-US', timeOptions);
+    
+    // Update the display
+    const dateElement = document.getElementById('current-date');
+    const timeElement = document.getElementById('current-time');
+    
+    if (dateElement) {
+        dateElement.textContent = dateString;
+    }
+    
+    if (timeElement) {
+        timeElement.textContent = timeString;
+    }
+}
+
 // Real-time billing countdown
 function updateBillingCountdown() {
     const nextBillingDate = new Date('{{ $billingCountdown['next_billing_date']->format('Y-m-d H:i:s') }}');
@@ -457,9 +507,16 @@ function updateBillingCountdown() {
     }
 }
 
-// Update countdown every second
+// Update countdown and clock every second
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize displays
+    updateClock();
     updateBillingCountdown();
+    
+    // Update clock every second
+    setInterval(updateClock, 1000);
+    
+    // Update billing countdown every second
     setInterval(updateBillingCountdown, 1000);
 });
 

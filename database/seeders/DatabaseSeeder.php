@@ -10,29 +10,24 @@ class DatabaseSeeder extends Seeder
 {
     /**
      * Seed the application's database.
+     * This will create ONLY the system administrator account.
+     * All other data has been removed for a clean system start.
      */
     public function run(): void
     {
-        // Create essential system data for the Water Billing Management System
+        // Create ONLY the system administrator - all other data removed
         $this->call([
             AdminUserSeeder::class,
-            DivisionSeeder::class,
-            CustomerTypeSeeder::class,
-            // GuarantorSeeder::class, // Removed - sample data not needed for production
-            // Note: RateSeeder should be run separately when needed
-            // CustomerSampleSeeder::class, // Removed - no longer needed for production
         ]);
         
-        echo "\n🎉 System initialization complete!\n";
-        echo "📋 Essential data has been seeded:\n";
-        echo "   ✅ System administrator user\n";
-        echo "   ✅ Divisions\n";
-        echo "   ✅ Customer types\n";
+        echo "\n🎉 Database completely flushed and clean!\n";
+        echo "📋 Only essential admin account created:\n";
+        echo "   ✅ System administrator user ONLY\n";
+        echo "   ❌ All other data removed (customers, meters, bills, etc.)\n";
         echo "\n💡 Next steps:\n";
         echo "   1. Login at: http://127.0.0.1:8000/login\n";
-        echo "   2. Change the default admin password\n";
-        echo "   3. Configure rate structure in Settings\n";
-        echo "   4. Add guarantors as needed for customers\n";
-        echo "   5. Start adding real customers\n";
+        echo "   2. Change the default admin password immediately\n";
+        echo "   3. Start fresh with your real data\n";
+        echo "   4. Add divisions, customer types, and other data as needed\n";
     }
 }
