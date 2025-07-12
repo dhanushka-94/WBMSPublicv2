@@ -180,27 +180,32 @@
                                     $previousReading = $lastReading ? $lastReading->current_reading : $meter->initial_reading;
                                 @endphp
                                 <tr class="hover:bg-gray-50 reading-row" 
-                                    data-customer-name="{{ strtolower($meter->customer->full_name) }}"
-                                    data-account-number="{{ strtolower($meter->customer->account_number) }}"
+                                    data-customer-name="{{ $meter->customer ? strtolower($meter->customer->full_name) : 'unassigned' }}"
+                                    data-account-number="{{ $meter->customer ? strtolower($meter->customer->account_number) : 'no-account' }}"
                                     data-meter-number="{{ strtolower($meter->meter_number) }}">
-                                    <td class="px-4 py-4">
+                                    <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="flex items-center">
                                             <div class="flex-shrink-0 h-10 w-10">
-                                                <img class="h-10 w-10 rounded-full object-cover" 
-                                                     src="{{ $meter->customer->profile_photo_url }}" 
-                                                     alt="{{ $meter->customer->full_name }}">
+                                                @if($meter->customer)
+                                                    <img class="h-10 w-10 rounded-full object-cover" 
+                                                         src="{{ $meter->customer->profile_photo_url }}" 
+                                                         alt="{{ $meter->customer->full_name }}">
+                                                @else
+                                                    <div class="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                                                        <i class="fas fa-user text-gray-500"></i>
+                                                    </div>
+                                                @endif
                                             </div>
                                             <div class="ml-4">
-                                                <div class="text-sm font-medium text-gray-900">{{ $meter->customer->full_name }}</div>
-                                                <div class="text-sm text-gray-500">{{ $meter->meter_number }}</div>
+                                                <div class="text-sm font-medium text-gray-900">{{ $meter->customer ? $meter->customer->full_name : 'Unassigned Customer' }}</div>
+                                                <div class="text-sm text-gray-500">{{ $meter->customer ? $meter->customer->account_number : 'No Account' }}</div>
                                             </div>
                                         </div>
-                                        <input type="hidden" name="readings[{{ $index }}][water_meter_id]" value="{{ $meter->id }}">
                                     </td>
                                     <td class="px-4 py-4">
                                         <div class="text-sm font-medium text-gray-900">{{ number_format($previousReading) }}</div>
                                         @if($lastReading)
-                                            <div class="text-xs text-gray-500">{{ $lastReading->reading_date->format('M d, Y') }}</div>
+                                            <div class="text-xs text-gray-500">{{ $lastReading->reading_date ? $lastReading->reading_date->format('M d, Y') : 'No date' }}</div>
                                         @endif
                                     </td>
                                     <td class="px-4 py-4">

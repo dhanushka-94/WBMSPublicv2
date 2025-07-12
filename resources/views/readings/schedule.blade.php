@@ -152,22 +152,28 @@
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="flex items-center">
-                                                <div class="flex-shrink-0 h-8 w-8">
-                                                    <div class="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center">
-                                                        <span class="text-xs font-medium text-white">{{ substr($meter->customer->first_name, 0, 1) }}{{ substr($meter->customer->last_name, 0, 1) }}</span>
-                                                    </div>
+                                                <div class="flex-shrink-0">
+                                                    @if($meter->customer)
+                                                        <img class="h-10 w-10 rounded-full object-cover" 
+                                                             src="{{ $meter->customer->profile_photo_url }}" 
+                                                             alt="{{ $meter->customer->full_name }}">
+                                                    @else
+                                                        <div class="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                                                            <i class="fas fa-user text-gray-500"></i>
+                                                        </div>
+                                                    @endif
                                                 </div>
                                                 <div class="ml-4">
-                                                    <div class="text-sm font-medium text-gray-900">{{ $meter->customer->full_name }}</div>
-                                                    <div class="text-sm text-gray-500">{{ $meter->customer->phone_number }}</div>
+                                                    <div class="text-sm font-medium text-gray-900">{{ $meter->customer ? $meter->customer->full_name : 'Unassigned Customer' }}</div>
+                                                    <div class="text-sm text-gray-500">{{ $meter->customer ? $meter->customer->account_number : 'No Account' }}</div>
                                                 </div>
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <span class="text-sm text-gray-900">{{ $meter->customer->account_number }}</span>
+                                            <span class="text-sm text-gray-900">{{ $meter->customer ? $meter->customer->account_number : 'N/A' }}</span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="text-sm text-gray-900">{{ $meter->customer->address }}</div>
+                                            <div class="text-sm text-gray-900">{{ $meter->customer ? $meter->customer->address : 'No address' }}</div>
                                             @if($meter->location_notes)
                                                 <div class="text-sm text-gray-500">📍 {{ $meter->location_notes }}</div>
                                             @endif
@@ -178,7 +184,7 @@
                                             @endphp
                                             @if($lastReading)
                                                 <div class="text-sm text-gray-900">{{ number_format($lastReading->current_reading) }} units</div>
-                                                <div class="text-sm text-gray-500">{{ $lastReading->reading_date->format('M d, Y') }}</div>
+                                                <div class="text-sm text-gray-500">{{ $lastReading->reading_date ? $lastReading->reading_date->format('M d, Y') : 'No date' }}</div>
                                             @else
                                                 <div class="text-sm text-gray-500">Initial: {{ number_format($meter->initial_reading) }}</div>
                                                 <div class="text-sm text-gray-400">No previous readings</div>
@@ -192,9 +198,15 @@
                                                 <a href="{{ route('meters.show', $meter) }}" class="text-gray-600 hover:text-gray-900" title="View Meter">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
-                                                <a href="{{ route('customers.show', $meter->customer) }}" class="text-green-600 hover:text-green-900" title="View Customer">
-                                                    <i class="fas fa-user"></i>
-                                                </a>
+                                                @if($meter->customer)
+                                                    <a href="{{ route('customers.show', $meter->customer) }}" class="text-green-600 hover:text-green-900" title="View Customer">
+                                                        <i class="fas fa-user"></i>
+                                                    </a>
+                                                @else
+                                                    <span class="text-gray-400" title="No customer assigned">
+                                                        <i class="fas fa-user-slash"></i>
+                                                    </span>
+                                                @endif
                                             </div>
                                         </td>
                                     </tr>
@@ -253,54 +265,94 @@
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="flex items-center">
-                                                <div class="flex-shrink-0 h-8 w-8">
-                                                    <div class="h-8 w-8 rounded-full bg-green-500 flex items-center justify-center">
-                                                        <span class="text-xs font-medium text-white">{{ substr($meter->customer->first_name, 0, 1) }}{{ substr($meter->customer->last_name, 0, 1) }}</span>
+                                            @if($meter->customer)
+                                                <div class="flex items-center">
+                                                    <div class="flex-shrink-0 h-8 w-8">
+                                                        <div class="h-8 w-8 rounded-full bg-green-500 flex items-center justify-center">
+                                                            <span class="text-xs font-medium text-white">{{ substr($meter->customer->first_name, 0, 1) }}{{ substr($meter->customer->last_name, 0, 1) }}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="ml-4">
+                                                        <div class="text-sm font-medium text-gray-900">{{ $meter->customer->full_name }}</div>
+                                                        <div class="text-sm text-gray-500">{{ $meter->customer->account_number }}</div>
                                                     </div>
                                                 </div>
-                                                <div class="ml-4">
-                                                    <div class="text-sm font-medium text-gray-900">{{ $meter->customer->full_name }}</div>
-                                                    <div class="text-sm text-gray-500">{{ $meter->customer->account_number }}</div>
+                                            @else
+                                                <div class="flex items-center">
+                                                    <div class="flex-shrink-0 h-8 w-8">
+                                                        <div class="h-8 w-8 rounded-full bg-orange-500 flex items-center justify-center">
+                                                            <span class="text-xs font-medium text-white">?</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="ml-4">
+                                                        <div class="text-sm font-medium text-orange-600">Unassigned</div>
+                                                        <div class="text-sm text-gray-500">No customer assigned</div>
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            @endif
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="text-sm font-medium text-gray-900">{{ number_format($latestReading->current_reading) }} units</div>
-                                            <div class="text-sm text-gray-500">Reader: {{ $latestReading->reader_name }}</div>
+                                            @if($latestReading)
+                                                <div class="text-sm font-medium text-gray-900">{{ number_format($latestReading->current_reading) }} units</div>
+                                                <div class="text-sm text-gray-500">Reader: {{ $latestReading->reader_name }}</div>
+                                            @else
+                                                <div class="text-sm font-medium text-gray-500">No reading available</div>
+                                            @endif
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="text-sm text-gray-900">{{ $latestReading->reading_date->format('M d, Y') }}</div>
-                                            <div class="text-sm text-gray-500">{{ $latestReading->reading_date->format('h:i A') }}</div>
+                                            @if($latestReading && $latestReading->reading_date)
+                                                <div class="text-sm text-gray-900">{{ $latestReading->reading_date->format('M d, Y') }}</div>
+                                                <div class="text-sm text-gray-500">{{ $latestReading->reading_date->format('h:i A') }}</div>
+                                            @else
+                                                <div class="text-sm text-gray-500">No date available</div>
+                                            @endif
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            @if($latestReading->status === 'pending')
-                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                                    <i class="fas fa-clock mr-1"></i>Pending
-                                                </span>
-                                            @elseif($latestReading->status === 'verified')
-                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                    <i class="fas fa-check mr-1"></i>Verified
-                                                </span>
-                                            @elseif($latestReading->status === 'billed')
-                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                    <i class="fas fa-check-double mr-1"></i>Billed
+                                            @if($latestReading)
+                                                @if($latestReading->status === 'pending')
+                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                                        <i class="fas fa-clock mr-1"></i>Pending
+                                                    </span>
+                                                @elseif($latestReading->status === 'verified')
+                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                        <i class="fas fa-check mr-1"></i>Verified
+                                                    </span>
+                                                @elseif($latestReading->status === 'billed')
+                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                        <i class="fas fa-check-double mr-1"></i>Billed
+                                                    </span>
+                                                @endif
+                                            @else
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                    <i class="fas fa-minus mr-1"></i>No Reading
                                                 </span>
                                             @endif
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                             <div class="flex space-x-2">
-                                                <a href="{{ route('readings.show', $latestReading) }}" class="text-blue-600 hover:text-blue-900" title="View Reading">
-                                                    <i class="fas fa-eye"></i>
-                                                </a>
-                                                @if($latestReading->status !== 'billed')
-                                                    <a href="{{ route('readings.edit', $latestReading) }}" class="text-indigo-600 hover:text-indigo-900" title="Edit Reading">
-                                                        <i class="fas fa-edit"></i>
+                                                @if($latestReading && $latestReading->id)
+                                                    <a href="{{ route('readings.show', $latestReading) }}" class="text-blue-600 hover:text-blue-900" title="View Reading">
+                                                        <i class="fas fa-eye"></i>
                                                     </a>
+                                                    @if($latestReading->status !== 'billed')
+                                                        <a href="{{ route('readings.edit', $latestReading) }}" class="text-indigo-600 hover:text-indigo-900" title="Edit Reading">
+                                                            <i class="fas fa-edit"></i>
+                                                        </a>
+                                                    @endif
+                                                @else
+                                                    <span class="text-gray-400" title="No reading available">
+                                                        <i class="fas fa-exclamation-triangle"></i>
+                                                    </span>
                                                 @endif
-                                                <a href="{{ route('customers.show', $meter->customer) }}" class="text-green-600 hover:text-green-900" title="View Customer">
-                                                    <i class="fas fa-user"></i>
-                                                </a>
+                                                @if($meter->customer)
+                                                    <a href="{{ route('customers.show', $meter->customer) }}" class="text-green-600 hover:text-green-900" title="View Customer">
+                                                        <i class="fas fa-user"></i>
+                                                    </a>
+                                                @else
+                                                    <span class="text-gray-400" title="No customer assigned">
+                                                        <i class="fas fa-user-slash"></i>
+                                                    </span>
+                                                @endif
                                             </div>
                                         </td>
                                     </tr>

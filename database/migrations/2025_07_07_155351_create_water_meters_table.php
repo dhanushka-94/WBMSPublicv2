@@ -13,11 +13,11 @@ return new class extends Migration
     {
         Schema::create('water_meters', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('customer_id')->constrained()->onDelete('cascade');
+            $table->foreignId('customer_id')->nullable()->constrained()->onDelete('cascade');
             $table->string('meter_number')->unique();
             $table->string('meter_brand')->nullable();
             $table->string('meter_model')->nullable();
-            $table->integer('meter_size'); // in mm or inches
+            $table->integer('meter_size')->nullable(); // in mm or inches
             $table->enum('meter_type', ['mechanical', 'digital', 'smart'])->default('mechanical');
             $table->date('installation_date');
             $table->date('last_maintenance_date')->nullable();

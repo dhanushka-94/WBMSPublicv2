@@ -76,65 +76,105 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::post('/submit', [MeterReadingApiController::class, 'submitReading']);
         Route::post('/bulk-sync', [MeterReadingApiController::class, 'bulkSyncReadings']);
         
+        // QR Code routes
+        Route::post('/qr-code/generate', [MeterReadingApiController::class, 'generateQrCode'])->name('api.meter.qr-code.generate');
+        Route::post('/qr-code/scan', [MeterReadingApiController::class, 'scanQrCode'])->name('api.meter.qr-code.scan');
+        Route::get('/qr-code/download/{meter_id}', [MeterReadingApiController::class, 'downloadQrCode'])->name('api.meter.qr-code.download');
+        Route::post('/qr-code/batch-generate', [MeterReadingApiController::class, 'batchGenerateQrCodes'])->name('api.meter.qr-code.batch-generate');
+        
         // Reading management
         Route::get('/readings/recent', function () {
-            $user = auth()->user();
-            $readings = \App\Models\MeterReading::where('reader_id', $user->id)
-                ->with(['customer', 'waterMeter'])
-                ->orderBy('created_at', 'desc')
-                ->limit(20)
-                ->get()
-                ->map(function($reading) {
-                    return [
-                        'id' => $reading->id,
-                        'customer_name' => $reading->customer->full_name,
-                        'connection_number' => $reading->customer->connection_number,
-                        'meter_number' => $reading->waterMeter->meter_number,
-                        'reading' => $reading->current_reading,
-                        'consumption' => $reading->consumption,
-                        'date' => $reading->reading_date,
-                        'status' => 'completed',
-                        'submitted_via' => $reading->submitted_via,
-                    ];
-                });
-                
-            return response()->json([
-                'success' => true,
-                'data' => $readings
-            ]);
+            try {
+                $user = auth()->user();
+                $readings = \App\Models\MeterReading::with(['waterMeter.customer'])
+                    ->where('reader_id', $user->id)
+                    ->orderBy('created_at', 'desc')
+                    ->limit(20)
+                    ->get()
+                    ->map(function($reading) {
+                        $customer = $reading->waterMeter->customer ?? null;
+                        return [
+                            'id' => $reading->id,
+                            'customer_name' => $customer ? $customer->first_name . ' ' . $customer->last_name : 'N/A',
+                            'connection_number' => $customer ? $customer->account_number : 'N/A',
+                            'meter_number' => $reading->waterMeter->meter_number ?? 'N/A',
+                            'reading' => $reading->current_reading,
+                            'consumption' => $reading->consumption,
+                            'date' => $reading->reading_date,
+                            'status' => 'completed',
+                            'submitted_via' => $reading->submitted_via ?? 'manual',
+                        ];
+                    });
+                    
+                return response()->json([
+                    'success' => true,
+                    'data' => $readings
+                ]);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to load recent readings',
+                    'error' => $e->getMessage()
+                ], 500);
+            }
         });
         
         // Statistics for mobile dashboard
         Route::get('/stats', function () {
-            $user = auth()->user();
-            $today = now()->toDateString();
-            $thisMonth = now()->format('Y-m');
-            
-            $stats = [
-                'today' => [
-                    'readings_completed' => \App\Models\MeterReading::where('reader_id', $user->id)
-                        ->whereDate('created_at', $today)->count(),
-                    'customers_visited' => \App\Models\MeterReading::where('reader_id', $user->id)
-                        ->whereDate('created_at', $today)->distinct('customer_id')->count(),
-                ],
-                'this_month' => [
-                    'total_readings' => \App\Models\MeterReading::where('reader_id', $user->id)
-                        ->where('created_at', 'like', $thisMonth . '%')->count(),
-                    'total_consumption' => \App\Models\MeterReading::where('reader_id', $user->id)
-                        ->where('created_at', 'like', $thisMonth . '%')->sum('consumption'),
-                ],
-                'performance' => [
-                    'average_readings_per_day' => \App\Models\MeterReading::where('reader_id', $user->id)
-                        ->where('created_at', '>=', now()->subDays(30))
-                        ->count() / 30,
-                    'accuracy_rate' => 98.5, // Placeholder - calculate based on readings without issues
-                ]
-            ];
-            
-            return response()->json([
-                'success' => true,
-                'data' => $stats
-            ]);
+            try {
+                $user = auth()->user();
+                $today = now()->toDateString();
+                $thisMonth = now()->format('Y-m');
+                
+                // Get readings for today
+                $todayReadings = \App\Models\MeterReading::where('reader_id', $user->id)
+                    ->whereDate('created_at', $today)->count();
+                
+                // Get unique water meter IDs for today to count customers visited
+                $todayCustomers = \App\Models\MeterReading::where('reader_id', $user->id)
+                    ->whereDate('created_at', $today)
+                    ->distinct('water_meter_id')
+                    ->count();
+                
+                // Get monthly stats
+                $monthlyReadings = \App\Models\MeterReading::where('reader_id', $user->id)
+                    ->where('created_at', 'like', $thisMonth . '%')->count();
+                
+                $monthlyConsumption = \App\Models\MeterReading::where('reader_id', $user->id)
+                    ->where('created_at', 'like', $thisMonth . '%')
+                    ->sum('consumption') ?? 0;
+                
+                // Get 30-day average
+                $thirtyDayCount = \App\Models\MeterReading::where('reader_id', $user->id)
+                    ->where('created_at', '>=', now()->subDays(30))
+                    ->count();
+                
+                $stats = [
+                    'today' => [
+                        'readings_completed' => $todayReadings,
+                        'customers_visited' => $todayCustomers,
+                    ],
+                    'this_month' => [
+                        'total_readings' => $monthlyReadings,
+                        'total_consumption' => number_format($monthlyConsumption, 2),
+                    ],
+                    'performance' => [
+                        'average_readings_per_day' => number_format($thirtyDayCount / 30, 1),
+                        'accuracy_rate' => 98.5, // Placeholder - calculate based on readings without issues
+                    ]
+                ];
+                
+                return response()->json([
+                    'success' => true,
+                    'data' => $stats
+                ]);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to load statistics',
+                    'error' => $e->getMessage()
+                ], 500);
+            }
         });
     });
     
@@ -174,34 +214,26 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
     Route::prefix('utils')->group(function () {
         // Get areas and routes for filtering
         Route::get('/areas', function () {
-            $areas = \App\Models\Customer::select('area')
-                ->distinct()
-                ->whereNotNull('area')
-                ->where('area', '!=', '')
-                ->orderBy('area')
-                ->pluck('area');
+            // Area functionality not implemented yet
+            // TODO: Add area column to customers table or implement area management
+            $areas = collect(); // Empty collection for now
                 
             return response()->json([
                 'success' => true,
-                'data' => $areas
+                'data' => $areas,
+                'message' => 'Area functionality not implemented yet'
             ]);
         });
         
         Route::get('/routes', function (Request $request) {
-            $query = \App\Models\Customer::select('route')
-                ->distinct()
-                ->whereNotNull('route')
-                ->where('route', '!=', '');
-                
-            if ($request->has('area')) {
-                $query->where('area', $request->area);
-            }
-            
-            $routes = $query->orderBy('route')->pluck('route');
+            // Route functionality not implemented yet
+            // TODO: Add route column to customers table or implement route management
+            $routes = collect(); // Empty collection for now
                 
             return response()->json([
                 'success' => true,
-                'data' => $routes
+                'data' => $routes,
+                'message' => 'Route functionality not implemented yet'
             ]);
         });
         

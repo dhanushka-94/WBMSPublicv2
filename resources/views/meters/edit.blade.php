@@ -10,11 +10,11 @@
                     <i class="fas fa-edit text-purple-600 mr-2"></i>
                     Edit Water Meter
                 </h1>
-                <p class="text-purple-600 font-medium">{{ $meter->meter_number }}</p>
+                <p class="text-purple-600 font-medium">{{ $water_meter->meter_number }}</p>
                 <p class="text-gray-600 text-sm mt-1">Update meter information and settings</p>
             </div>
             <div class="mt-4 md:mt-0 flex space-x-3">
-                <a href="{{ route('meters.show', $meter) }}" 
+                <a href="{{ route('meters.show', $water_meter) }}" 
                    class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
                     <i class="fas fa-eye mr-2"></i>
                     View Meter
@@ -30,7 +30,32 @@
 
     <div class="py-8 bg-gray-50 min-h-screen">
         <div class="w-full px-6 lg:px-8">
-            <form action="{{ route('meters.update', $meter) }}" method="POST" class="max-w-4xl mx-auto">
+            <!-- General Error Display Section -->
+            @if ($errors->any())
+                <div class="max-w-4xl mx-auto mb-6 bg-red-50 border border-red-200 rounded-xl p-4">
+                    <div class="flex items-center">
+                        <i class="fas fa-exclamation-triangle text-red-600 mr-2"></i>
+                        <h3 class="text-lg font-semibold text-red-800">Please fix the following errors:</h3>
+                    </div>
+                    <ul class="mt-3 list-disc list-inside text-sm text-red-700">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            <!-- Success Message -->
+            @if (session('success'))
+                <div class="max-w-4xl mx-auto mb-6 bg-green-50 border border-green-200 rounded-xl p-4">
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-green-600 mr-2"></i>
+                        <p class="text-green-800 font-medium">{{ session('success') }}</p>
+                    </div>
+                </div>
+            @endif
+
+            <form action="{{ route('meters.update', $water_meter) }}" method="POST" class="max-w-4xl mx-auto">
                 @csrf
                 @method('PUT')
 
@@ -50,7 +75,7 @@
                                     class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors @error('customer_id') border-red-300 @enderror">
                                 <option value="">Choose a customer (optional)...</option>
                                 @foreach($customers as $customer)
-                                    <option value="{{ $customer->id }}" {{ (old('customer_id', $meter->customer_id) == $customer->id) ? 'selected' : '' }}>
+                                    <option value="{{ $customer->id }}" {{ (old('customer_id', $water_meter->customer_id) == $customer->id) ? 'selected' : '' }}>
                                         {{ $customer->full_name }} ({{ $customer->account_number }})
                                     </option>
                                 @endforeach
@@ -76,12 +101,25 @@
                                 <label class="block text-sm font-semibold text-gray-700">
                                     <i class="fas fa-barcode mr-1"></i>Meter Number *
                                 </label>
-                                <input type="text" 
-                                       name="meter_number" 
-                                       value="{{ old('meter_number', $meter->meter_number) }}"
-                                       placeholder="e.g., WM25000001"
-                                       class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors @error('meter_number') border-red-300 @enderror" 
-                                       required>
+                                <div class="flex gap-2">
+                                    <input type="text" 
+                                           name="meter_number" 
+                                           value="{{ old('meter_number', $water_meter->meter_number) }}"
+                                           placeholder="Enter meter number (e.g., 25000001)"
+                                           pattern="[0-9]{1,20}"
+                                           title="Enter 1-20 digits only (no letters or special characters)"
+                                           maxlength="20"
+                                           data-meter-id="{{ $water_meter->id }}"
+                                           class="flex-1 px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors @error('meter_number') border-red-300 @enderror" 
+                                           required>
+                                    <button type="button" 
+                                            id="validate-meter-btn"
+                                            class="px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                        <i class="fas fa-check mr-1"></i>Validate
+                                    </button>
+                                </div>
+                                <!-- Status message for validation -->
+                                <div id="validation-status" class="mt-1 text-xs" style="display: none;"></div>
                                 @error('meter_number')
                                     <p class="text-xs text-red-600 flex items-center"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p>
                                 @enderror
@@ -94,7 +132,7 @@
                                 </label>
                                 <input type="text" 
                                        name="meter_brand" 
-                                       value="{{ old('meter_brand', $meter->meter_brand) }}"
+                                       value="{{ old('meter_brand', $water_meter->meter_brand) }}"
                                        placeholder="e.g., Sensus, Itron, Neptune"
                                        class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors @error('meter_brand') border-red-300 @enderror">
                                 @error('meter_brand')
@@ -109,7 +147,7 @@
                                 </label>
                                 <input type="text" 
                                        name="meter_model" 
-                                       value="{{ old('meter_model', $meter->meter_model) }}"
+                                       value="{{ old('meter_model', $water_meter->meter_model) }}"
                                        placeholder="e.g., 620M, E-Series"
                                        class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors @error('meter_model') border-red-300 @enderror">
                                 @error('meter_model')
@@ -125,15 +163,15 @@
                                 <select name="meter_size" 
                                         class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors @error('meter_size') border-red-300 @enderror">
                                     <option value="">Select size (optional)...</option>
-                                    <option value="15" {{ old('meter_size', $meter->meter_size) == '15' ? 'selected' : '' }}>15mm</option>
-                                    <option value="20" {{ old('meter_size', $meter->meter_size) == '20' ? 'selected' : '' }}>20mm</option>
-                                    <option value="25" {{ old('meter_size', $meter->meter_size) == '25' ? 'selected' : '' }}>25mm</option>
-                                    <option value="32" {{ old('meter_size', $meter->meter_size) == '32' ? 'selected' : '' }}>32mm</option>
-                                    <option value="40" {{ old('meter_size', $meter->meter_size) == '40' ? 'selected' : '' }}>40mm</option>
-                                    <option value="50" {{ old('meter_size', $meter->meter_size) == '50' ? 'selected' : '' }}>50mm</option>
-                                    <option value="65" {{ old('meter_size', $meter->meter_size) == '65' ? 'selected' : '' }}>65mm</option>
-                                    <option value="80" {{ old('meter_size', $meter->meter_size) == '80' ? 'selected' : '' }}>80mm</option>
-                                    <option value="100" {{ old('meter_size', $meter->meter_size) == '100' ? 'selected' : '' }}>100mm</option>
+                                    <option value="15" {{ old('meter_size', $water_meter->meter_size) == '15' ? 'selected' : '' }}>15mm</option>
+                                    <option value="20" {{ old('meter_size', $water_meter->meter_size) == '20' ? 'selected' : '' }}>20mm</option>
+                                    <option value="25" {{ old('meter_size', $water_meter->meter_size) == '25' ? 'selected' : '' }}>25mm</option>
+                                    <option value="32" {{ old('meter_size', $water_meter->meter_size) == '32' ? 'selected' : '' }}>32mm</option>
+                                    <option value="40" {{ old('meter_size', $water_meter->meter_size) == '40' ? 'selected' : '' }}>40mm</option>
+                                    <option value="50" {{ old('meter_size', $water_meter->meter_size) == '50' ? 'selected' : '' }}>50mm</option>
+                                    <option value="65" {{ old('meter_size', $water_meter->meter_size) == '65' ? 'selected' : '' }}>65mm</option>
+                                    <option value="80" {{ old('meter_size', $water_meter->meter_size) == '80' ? 'selected' : '' }}>80mm</option>
+                                    <option value="100" {{ old('meter_size', $water_meter->meter_size) == '100' ? 'selected' : '' }}>100mm</option>
                                 </select>
                                 @error('meter_size')
                                     <p class="text-xs text-red-600 flex items-center"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p>
@@ -149,9 +187,9 @@
                                         class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors @error('meter_type') border-red-300 @enderror" 
                                         required>
                                     <option value="">Select type...</option>
-                                    <option value="mechanical" {{ old('meter_type', $meter->meter_type) == 'mechanical' ? 'selected' : '' }}>Mechanical</option>
-                                    <option value="digital" {{ old('meter_type', $meter->meter_type) == 'digital' ? 'selected' : '' }}>Digital</option>
-                                    <option value="smart" {{ old('meter_type', $meter->meter_type) == 'smart' ? 'selected' : '' }}>Smart</option>
+                                    <option value="mechanical" {{ old('meter_type', $water_meter->meter_type) == 'mechanical' ? 'selected' : '' }}>Mechanical</option>
+                                    <option value="digital" {{ old('meter_type', $water_meter->meter_type) == 'digital' ? 'selected' : '' }}>Digital</option>
+                                    <option value="smart" {{ old('meter_type', $water_meter->meter_type) == 'smart' ? 'selected' : '' }}>Smart</option>
                                 </select>
                                 @error('meter_type')
                                     <p class="text-xs text-red-600 flex items-center"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p>
@@ -165,7 +203,7 @@
                                 </label>
                                 <input type="number" 
                                        name="multiplier" 
-                                       value="{{ old('multiplier', $meter->multiplier) }}"
+                                       value="{{ old('multiplier', $water_meter->multiplier) }}"
                                        step="0.0001"
                                        min="0.0001"
                                        max="10000"
@@ -195,7 +233,7 @@
                                 </label>
                                 <input type="date" 
                                        name="installation_date" 
-                                       value="{{ old('installation_date', $meter->installation_date->format('Y-m-d')) }}"
+                                       value="{{ old('installation_date', $water_meter->installation_date->format('Y-m-d')) }}"
                                        class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none transition-colors @error('installation_date') border-red-300 @enderror" 
                                        required>
                                 @error('installation_date')
@@ -212,10 +250,10 @@
                                         class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none transition-colors @error('status') border-red-300 @enderror" 
                                         required>
                                     <option value="">Select status...</option>
-                                    <option value="active" {{ old('status', $meter->status) == 'active' ? 'selected' : '' }}>Active</option>
-                                    <option value="inactive" {{ old('status', $meter->status) == 'inactive' ? 'selected' : '' }}>Inactive</option>
-                                    <option value="faulty" {{ old('status', $meter->status) == 'faulty' ? 'selected' : '' }}>Faulty</option>
-                                    <option value="replaced" {{ old('status', $meter->status) == 'replaced' ? 'selected' : '' }}>Replaced</option>
+                                    <option value="active" {{ old('status', $water_meter->status) == 'active' ? 'selected' : '' }}>Active</option>
+                                    <option value="inactive" {{ old('status', $water_meter->status) == 'inactive' ? 'selected' : '' }}>Inactive</option>
+                                    <option value="faulty" {{ old('status', $water_meter->status) == 'faulty' ? 'selected' : '' }}>Faulty</option>
+                                    <option value="replaced" {{ old('status', $water_meter->status) == 'replaced' ? 'selected' : '' }}>Replaced</option>
                                 </select>
                                 @error('status')
                                     <p class="text-xs text-red-600 flex items-center"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p>
@@ -229,7 +267,7 @@
                                 </label>
                                 <input type="date" 
                                        name="last_maintenance_date" 
-                                       value="{{ old('last_maintenance_date', $meter->last_maintenance_date ? $meter->last_maintenance_date->format('Y-m-d') : '') }}"
+                                       value="{{ old('last_maintenance_date', $water_meter->last_maintenance_date ? $water_meter->last_maintenance_date->format('Y-m-d') : '') }}"
                                        class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none transition-colors @error('last_maintenance_date') border-red-300 @enderror">
                                 @error('last_maintenance_date')
                                     <p class="text-xs text-red-600 flex items-center"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p>
@@ -243,7 +281,7 @@
                                 </label>
                                 <input type="date" 
                                        name="next_maintenance_date" 
-                                       value="{{ old('next_maintenance_date', $meter->next_maintenance_date ? $meter->next_maintenance_date->format('Y-m-d') : '') }}"
+                                       value="{{ old('next_maintenance_date', $water_meter->next_maintenance_date ? $water_meter->next_maintenance_date->format('Y-m-d') : '') }}"
                                        class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none transition-colors @error('next_maintenance_date') border-red-300 @enderror">
                                 @error('next_maintenance_date')
                                     <p class="text-xs text-red-600 flex items-center"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p>
@@ -257,15 +295,18 @@
                                 </label>
                                 <input type="number" 
                                        name="initial_reading" 
-                                       value="{{ old('initial_reading', $meter->initial_reading) }}"
+                                       value="{{ old('initial_reading', $water_meter->initial_reading) }}"
                                        step="1"
                                        min="0"
-                                       placeholder="0"
+                                       max="9999"
+                                       placeholder="0000"
+                                       title="Enter a number from 0000 to 9999"
                                        class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none transition-colors @error('initial_reading') border-red-300 @enderror" 
                                        required>
                                 @error('initial_reading')
                                     <p class="text-xs text-red-600 flex items-center"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p>
                                 @enderror
+                                <p class="text-xs text-gray-500">Range: 0000 - 9999</p>
                             </div>
 
                             <!-- Current Reading -->
@@ -275,15 +316,18 @@
                                 </label>
                                 <input type="number" 
                                        name="current_reading" 
-                                       value="{{ old('current_reading', $meter->current_reading) }}"
+                                       value="{{ old('current_reading', $water_meter->current_reading) }}"
                                        step="1"
                                        min="0"
-                                       placeholder="0"
+                                       max="9999"
+                                       placeholder="0000"
+                                       title="Enter a number from 0000 to 9999"
                                        class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none transition-colors @error('current_reading') border-red-300 @enderror" 
                                        required>
                                 @error('current_reading')
                                     <p class="text-xs text-red-600 flex items-center"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p>
                                 @enderror
+                                <p class="text-xs text-gray-500">Range: 0000 - 9999</p>
                             </div>
                         </div>
                     </div>
@@ -306,7 +350,7 @@
                                 <textarea name="location_notes" 
                                           rows="3"
                                           placeholder="Describe the meter location (e.g., Front yard, near main gate, basement)"
-                                          class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none transition-colors @error('location_notes') border-red-300 @enderror">{{ old('location_notes', $meter->location_notes) }}</textarea>
+                                          class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none transition-colors @error('location_notes') border-red-300 @enderror">{{ old('location_notes', $water_meter->location_notes) }}</textarea>
                                 @error('location_notes')
                                     <p class="text-xs text-red-600 flex items-center"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p>
                                 @enderror
@@ -320,7 +364,7 @@
                                 <textarea name="notes" 
                                           rows="3"
                                           placeholder="Any additional notes about this meter"
-                                          class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none transition-colors @error('notes') border-red-300 @enderror">{{ old('notes', $meter->notes) }}</textarea>
+                                          class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none transition-colors @error('notes') border-red-300 @enderror">{{ old('notes', $water_meter->notes) }}</textarea>
                                 @error('notes')
                                     <p class="text-xs text-red-600 flex items-center"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p>
                                 @enderror
@@ -378,7 +422,7 @@
                                         <input type="number" 
                                                name="latitude" 
                                                id="latitude"
-                                               value="{{ old('latitude', $meter->latitude) }}"
+                                               value="{{ old('latitude', $water_meter->latitude) }}"
                                                step="0.00000001"
                                                placeholder="7.8731"
                                                class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors @error('latitude') border-red-300 @enderror">
@@ -393,7 +437,7 @@
                                         <input type="number" 
                                                name="longitude" 
                                                id="longitude"
-                                               value="{{ old('longitude', $meter->longitude) }}"
+                                               value="{{ old('longitude', $water_meter->longitude) }}"
                                                step="0.00000001"
                                                placeholder="80.7718"
                                                class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors @error('longitude') border-red-300 @enderror">
@@ -411,7 +455,7 @@
                                     <input type="text" 
                                            name="address" 
                                            id="address"
-                                           value="{{ old('address', $meter->address) }}"
+                                           value="{{ old('address', $water_meter->address) }}"
                                            placeholder="Full address will be auto-filled"
                                            class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors @error('address') border-red-300 @enderror">
                                     @error('address')
@@ -420,7 +464,7 @@
                                 </div>
 
                                 <!-- Google Place ID (Hidden) -->
-                                <input type="hidden" name="google_place_id" id="google_place_id" value="{{ old('google_place_id', $meter->google_place_id) }}">
+                                <input type="hidden" name="google_place_id" id="google_place_id" value="{{ old('google_place_id', $water_meter->google_place_id) }}">
 
                                 <!-- Location Info -->
                                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -428,12 +472,12 @@
                                         <i class="fas fa-info-circle mr-1"></i>Location Information
                                     </h4>
                                     <div id="location-info" class="text-sm text-blue-700">
-                                        @if($meter->hasLocation())
-                                            <p><strong>Coordinates:</strong> {{ number_format($meter->latitude, 6) }}, {{ number_format($meter->longitude, 6) }}</p>
-                                            @if($meter->address)
-                                                <p><strong>Address:</strong> {{ $meter->address }}</p>
+                                        @if($water_meter->hasLocation())
+                                            <p><strong>Coordinates:</strong> {{ number_format($water_meter->latitude, 6) }}, {{ number_format($water_meter->longitude, 6) }}</p>
+                                            @if($water_meter->address)
+                                                <p><strong>Address:</strong> {{ $water_meter->address }}</p>
                                             @endif
-                                            <p><strong>Google Maps:</strong> <a href="{{ $meter->getGoogleMapsUrl() }}" target="_blank" class="text-blue-600 hover:underline">View on Google Maps</a></p>
+                                            <p><strong>Google Maps:</strong> <a href="{{ $water_meter->getGoogleMapsUrl() }}" target="_blank" class="text-blue-600 hover:underline">View on Google Maps</a></p>
                                         @else
                                             <p>Click on the map or use current location to set meter coordinates</p>
                                         @endif
@@ -460,7 +504,7 @@
                                 <span>Required fields: Meter Number, Type, Installation Date, Status, Initial Reading, Current Reading</span>
                             </div>
                             <div class="flex space-x-4">
-                                <a href="{{ route('meters.show', $meter) }}" 
+                                <a href="{{ route('meters.show', $water_meter) }}" 
                                    class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg transition-colors">
                                     <i class="fas fa-times mr-2"></i>Cancel
                                 </a>
@@ -616,7 +660,7 @@ function getCurrentLocation() {
             alert('Error: The Geolocation service failed.');
         });
     } else {
-        alert('Error: Your browser doesn\'t support geolocation.');
+        alert('Error: Your browser doesn't support geolocation.');
     }
 }
 
@@ -653,6 +697,202 @@ document.getElementById('longitude').addEventListener('input', function() {
     if (!isNaN(lat) && !isNaN(lng)) {
         setLocation(lat, lng);
         map.setCenter({ lat: lat, lng: lng });
+    }
+});
+
+// Meter Number Validation for Edit Form
+document.addEventListener('DOMContentLoaded', function() {
+    const meterNumberInput = document.querySelector('input[name="meter_number"]');
+    const currentMeterId = meterNumberInput.getAttribute('data-meter-id');
+    const validateButton = document.getElementById('validate-meter-btn');
+    const validationStatus = document.getElementById('validation-status');
+    const form = document.querySelector('form');
+    
+    // Input filtering - only allow numbers and limit to 20 digits
+    if (meterNumberInput) {
+        meterNumberInput.addEventListener('input', function(e) {
+            this.value = this.value.replace(/[^0-9]/g, '').substring(0, 20);
+            
+            // Reset validation status when input changes
+            validationStatus.style.display = 'none';
+            resetBorderColor(this);
+            
+            // Clear validation state when input changes
+            this.removeAttribute('data-validated');
+            this.removeAttribute('data-validation-result');
+            
+            // Enable/disable validate button based on input
+            if (validateButton) {
+                validateButton.disabled = this.value.length === 0;
+            }
+        });
+    }
+    
+    // Input filtering for reading fields - only allow numbers 0000-9999
+    const readingInputs = document.querySelectorAll('input[name="initial_reading"], input[name="current_reading"]');
+    readingInputs.forEach(function(input) {
+        input.addEventListener('input', function(e) {
+            // Remove non-numeric characters
+            let value = this.value.replace(/[^0-9]/g, '');
+            
+            // Convert to number and enforce range
+            let numValue = parseInt(value) || 0;
+            if (numValue > 9999) {
+                numValue = 9999;
+            }
+            
+            this.value = numValue.toString();
+        });
+        
+        // Also handle paste events
+        input.addEventListener('paste', function(e) {
+            setTimeout(() => {
+                let value = this.value.replace(/[^0-9]/g, '');
+                let numValue = parseInt(value) || 0;
+                if (numValue > 9999) {
+                    numValue = 9999;
+                }
+                this.value = numValue.toString();
+            }, 10);
+        });
+    });
+    
+    // Validate button click handler
+    if (validateButton) {
+        validateButton.addEventListener('click', function() {
+            const meterNumber = meterNumberInput.value.trim();
+            
+            if (!meterNumber) {
+                showStatus('Please enter a meter number first', 'error');
+                return;
+            }
+            
+            // Check format
+            if (!/^[0-9]{1,20}$/.test(meterNumber)) {
+                showStatus('Meter number must be 1-20 digits only (no letters or special characters)', 'error');
+                setBorderColor(meterNumberInput, 'red');
+                return;
+            }
+            
+            // Show checking status
+            this.disabled = true;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Checking...';
+            showStatus('Checking availability...', 'checking');
+            
+            // Make AJAX call to validate (exclude current meter)
+            const url = '{{ route("check.meter.number") }}?meter_number=' + encodeURIComponent(meterNumber) + '&exclude_id=' + currentMeterId;
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    // Set validation state attributes
+                    meterNumberInput.setAttribute('data-validated', 'true');
+                    meterNumberInput.setAttribute('data-validation-result', data.available ? 'available' : 'taken');
+                    
+                    if (data.available) {
+                        setBorderColor(meterNumberInput, 'green');
+                        showStatus(data.message, 'success');
+                    } else {
+                        setBorderColor(meterNumberInput, 'red');
+                        showStatus(data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking meter number:', error);
+                    setBorderColor(meterNumberInput, 'yellow');
+                    showStatus('Could not verify availability', 'warning');
+                    
+                    // Set validation state for error
+                    meterNumberInput.setAttribute('data-validated', 'true');
+                    meterNumberInput.setAttribute('data-validation-result', 'error');
+                })
+                .finally(() => {
+                    this.disabled = false;
+                    this.innerHTML = '<i class="fas fa-check mr-1"></i>Validate';
+                });
+        });
+    }
+    
+    // Helper functions
+    function resetBorderColor(input) {
+        input.className = input.className.replace(/border-(red|green|yellow)-300/g, 'border-gray-200');
+    }
+    
+    function setBorderColor(input, color) {
+        resetBorderColor(input);
+        const colorClass = `border-${color}-300`;
+        input.className = input.className.replace('border-gray-200', colorClass);
+    }
+    
+    function showStatus(message, type) {
+        validationStatus.style.display = 'block';
+        validationStatus.className = 'mt-1 text-xs';
+        
+        if (type === 'success') {
+            validationStatus.className += ' text-green-600';
+            validationStatus.innerHTML = `<i class="fas fa-check-circle mr-1"></i>${message}`;
+        } else if (type === 'error') {
+            validationStatus.className += ' text-red-600';
+            validationStatus.innerHTML = `<i class="fas fa-exclamation-circle mr-1"></i>${message}`;
+        } else if (type === 'warning') {
+            validationStatus.className += ' text-yellow-600';
+            validationStatus.innerHTML = `<i class="fas fa-exclamation-triangle mr-1"></i>${message}`;
+        } else if (type === 'checking') {
+            validationStatus.className += ' text-blue-600';
+            validationStatus.innerHTML = `<i class="fas fa-spinner fa-spin mr-1"></i>${message}`;
+        }
+    }
+    
+    // Form submission validation
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            let hasErrors = false;
+            
+            // Check meter number
+            const meterNumber = meterNumberInput.value;
+            if (!meterNumber || meterNumber.trim() === '') {
+                e.preventDefault();
+                alert('⚠️ Please enter a meter number.');
+                meterNumberInput.focus();
+                setBorderColor(meterNumberInput, 'red');
+                hasErrors = true;
+            }
+            
+                    // Check meter number format
+        if (meterNumber && !/^[0-9]{1,20}$/.test(meterNumber)) {
+            e.preventDefault();
+            alert('⚠️ Meter number must be 1-20 digits only (no letters or special characters).');
+            meterNumberInput.focus();
+            setBorderColor(meterNumberInput, 'red');
+            hasErrors = true;
+        }
+        
+        // Check validation state
+        const isValidated = meterNumberInput.getAttribute('data-validated');
+        const validationResult = meterNumberInput.getAttribute('data-validation-result');
+        
+        // Check if meter number has been validated and is taken
+        if (meterNumber && isValidated === 'true' && validationResult === 'taken') {
+            e.preventDefault();
+            alert('⚠️ This meter number already exists. Please enter a different number or click the Validate button to check again.');
+            meterNumberInput.focus();
+            setBorderColor(meterNumberInput, 'red');
+            hasErrors = true;
+        }
+            
+            // Prevent double submission
+            if (!hasErrors) {
+                const submitButton = form.querySelector('button[type="submit"]');
+                if (submitButton) {
+                    if (submitButton.disabled) {
+                        e.preventDefault();
+                        return false;
+                    }
+                    submitButton.disabled = true;
+                    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Updating Meter...';
+                }
+            }
+        });
     }
 });
 </script>

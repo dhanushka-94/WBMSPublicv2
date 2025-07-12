@@ -14,7 +14,7 @@
                 <p class="text-gray-600 text-sm mt-1">Customer Relationship Management</p>
                 <div class="mt-2 flex items-center space-x-2 text-xs text-gray-500">
                     <i class="fas fa-code"></i>
-                    <span>Developed by <strong class="text-blue-600">Olexto Digital Solutions (Pvt) Ltd</strong></span>
+                    <span>Developed by <strong class="text-blue-600">olexto Digital Solutions (Pvt) Ltd</strong></span>
                 </div>
             </div>
             <div class="mt-4 md:mt-0">
@@ -295,8 +295,8 @@
                                                 <i class="fas fa-user text-blue-600"></i>
                                             </div>
                                             <div class="ml-3">
-                                                <p class="font-semibold text-gray-900">{{ $customer->full_name }}</p>
-                                                <p class="text-sm text-gray-500">{{ $customer->account_number }}</p>
+                                                <p class="font-semibold text-gray-900">{{ $customer->full_name ?? 'Unknown Customer' }}</p>
+                                                <p class="text-sm text-gray-500">{{ $customer->account_number ?? 'No Account' }}</p>
                                             </div>
                                         </div>
                                         <div class="text-right">
@@ -341,7 +341,7 @@
                                     <div class="flex justify-between items-center py-3 border-b border-gray-100 last:border-b-0">
                                         <div>
                                             <p class="font-semibold text-gray-900">{{ $bill->bill_number }}</p>
-                                            <p class="text-sm text-gray-500">{{ $bill->customer->full_name }}</p>
+                                            <p class="text-sm text-gray-500">{{ $bill->customer->full_name ?? 'Unknown Customer' }}</p>
                                         </div>
                                         <div class="text-right">
                                             <p class="font-bold text-gray-900">@rupees($bill->total_amount)</p>

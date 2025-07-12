@@ -30,51 +30,45 @@ class MeterReadingApiController extends Controller
             $user = Auth::user();
             
             // Get customers for meter reader's route
-            $customers = Customer::with(['waterMeter', 'latestReading'])
+            $customers = Customer::with(['waterMeters'])
                 ->where('status', 'active')
-                ->when($request->has('area'), function ($query) use ($request) {
-                    return $query->where('area', $request->area);
-                })
-                ->when($request->has('route'), function ($query) use ($request) {
-                    return $query->where('route', $request->route);
-                })
-                ->orderBy('route')
-                ->orderBy('connection_number')
+                ->orderBy('account_number')
                 ->get()
                 ->map(function ($customer) {
+                    $waterMeter = $customer->waterMeter;
+                    $latestReading = $customer->latestReading;
+                    
                     return [
                         'id' => $customer->id,
-                        'connection_number' => $customer->connection_number,
+                        'connection_number' => $customer->account_number,
                         'name' => $customer->full_name,
                         'address' => $customer->full_address,
                         'phone' => $customer->phone,
-                        'area' => $customer->area,
-                        'route' => $customer->route,
-                        'meter' => $customer->waterMeter ? [
-                            'id' => $customer->waterMeter->id,
-                            'meter_number' => $customer->waterMeter->meter_number,
-                            'type' => $customer->waterMeter->type,
-                            'current_reading' => $customer->waterMeter->current_reading,
-                            'status' => $customer->waterMeter->status,
-                            'location_description' => $customer->waterMeter->location_description,
-                            'gps_latitude' => $customer->waterMeter->gps_latitude,
-                            'gps_longitude' => $customer->waterMeter->gps_longitude,
+                        'area' => null, // Area not implemented yet
+                        'route' => null, // Route not implemented yet
+                        'meter' => $waterMeter ? [
+                            'id' => $waterMeter->id,
+                            'meter_number' => $waterMeter->meter_number,
+                            'type' => $waterMeter->meter_type,
+                            'current_reading' => $waterMeter->current_reading,
+                            'status' => $waterMeter->status,
+                            'location_description' => $waterMeter->location_notes,
+                            'gps_latitude' => $waterMeter->latitude,
+                            'gps_longitude' => $waterMeter->longitude,
                         ] : null,
-                        'last_reading' => $customer->latestReading ? [
-                            'reading' => $customer->latestReading->current_reading,
-                            'date' => $customer->latestReading->reading_date,
-                            'reader' => $customer->latestReading->reader_name,
+                        'last_reading' => $latestReading ? [
+                            'reading' => $latestReading->current_reading,
+                            'date' => $latestReading->reading_date,
+                            'reader' => $latestReading->reader_name,
                         ] : null,
                         'status' => $customer->status,
-                        'billing_status' => $customer->billing_status,
+                        'billing_status' => 'active', // Default status since column doesn't exist
                         'last_sync' => now()->toISOString(),
                     ];
                 });
 
             $this->logMobileActivity('route_fetched', [
                 'customer_count' => $customers->count(),
-                'area' => $request->area,
-                'route' => $request->route,
             ]);
 
             return response()->json([
@@ -83,8 +77,8 @@ class MeterReadingApiController extends Controller
                     'customers' => $customers,
                     'total_count' => $customers->count(),
                     'route_info' => [
-                        'area' => $request->area,
-                        'route' => $request->route,
+                        'area' => null,
+                        'route' => null,
                         'date' => now()->toDateString(),
                         'reader' => $user->name,
                     ]
@@ -167,7 +161,6 @@ class MeterReadingApiController extends Controller
 
             // Create meter reading record
             $meterReading = MeterReading::create([
-                'customer_id' => $customer->id,
                 'water_meter_id' => $meter->id,
                 'previous_reading' => $previousReading,
                 'current_reading' => $request->current_reading,
@@ -342,7 +335,7 @@ class MeterReadingApiController extends Controller
     public function getCustomerDetails($customerId): JsonResponse
     {
         try {
-            $customer = Customer::with(['waterMeter', 'meterReadings' => function($query) {
+            $customer = Customer::with(['waterMeters', 'meterReadings' => function($query) {
                 $query->orderBy('reading_date', 'desc')->limit(5);
             }])->find($customerId);
 
@@ -353,29 +346,31 @@ class MeterReadingApiController extends Controller
                 ], 404);
             }
 
+            $waterMeter = $customer->waterMeter;
+            
             $data = [
                 'customer' => [
                     'id' => $customer->id,
-                    'connection_number' => $customer->connection_number,
+                    'connection_number' => $customer->account_number,
                     'name' => $customer->full_name,
                     'address' => $customer->full_address,
                     'phone' => $customer->phone,
                     'email' => $customer->email,
-                    'area' => $customer->area,
-                    'route' => $customer->route,
+                    'area' => null, // Area not implemented yet
+                    'route' => null, // Route not implemented yet
                     'status' => $customer->status,
-                    'billing_status' => $customer->billing_status,
+                    'billing_status' => 'active', // Default status since column doesn't exist
                 ],
-                'meter' => $customer->waterMeter ? [
-                    'id' => $customer->waterMeter->id,
-                    'meter_number' => $customer->waterMeter->meter_number,
-                    'type' => $customer->waterMeter->type,
-                    'current_reading' => $customer->waterMeter->current_reading,
-                    'status' => $customer->waterMeter->status,
-                    'installation_date' => $customer->waterMeter->installation_date,
-                    'location_description' => $customer->waterMeter->location_description,
-                    'gps_latitude' => $customer->waterMeter->gps_latitude,
-                    'gps_longitude' => $customer->waterMeter->gps_longitude,
+                'meter' => $waterMeter ? [
+                    'id' => $waterMeter->id,
+                    'meter_number' => $waterMeter->meter_number,
+                    'type' => $waterMeter->meter_type,
+                    'current_reading' => $waterMeter->current_reading,
+                    'status' => $waterMeter->status,
+                    'installation_date' => $waterMeter->installation_date,
+                    'location_description' => $waterMeter->location_notes,
+                    'gps_latitude' => $waterMeter->latitude,
+                    'gps_longitude' => $waterMeter->longitude,
                 ] : null,
                 'recent_readings' => $customer->meterReadings->map(function($reading) {
                     return [
@@ -420,11 +415,11 @@ class MeterReadingApiController extends Controller
                 ], 400);
             }
 
-            $customers = Customer::with('waterMeter')
+            $customers = Customer::with('waterMeters')
                 ->where(function($q) use ($query) {
                     $q->where('first_name', 'LIKE', "%{$query}%")
                       ->orWhere('last_name', 'LIKE', "%{$query}%")
-                      ->orWhere('connection_number', 'LIKE', "%{$query}%")
+                      ->orWhere('account_number', 'LIKE', "%{$query}%")
                       ->orWhere('phone', 'LIKE', "%{$query}%")
                       ->orWhere('address', 'LIKE', "%{$query}%");
                 })
@@ -432,15 +427,16 @@ class MeterReadingApiController extends Controller
                 ->limit($limit)
                 ->get()
                 ->map(function($customer) {
+                    $waterMeter = $customer->waterMeter;
                     return [
                         'id' => $customer->id,
-                        'connection_number' => $customer->connection_number,
+                        'connection_number' => $customer->account_number,
                         'name' => $customer->full_name,
                         'address' => $customer->full_address,
                         'phone' => $customer->phone,
-                        'area' => $customer->area,
-                        'meter_number' => $customer->waterMeter?->meter_number,
-                        'current_reading' => $customer->waterMeter?->current_reading,
+                        'area' => null, // Area not implemented yet
+                        'meter_number' => $waterMeter?->meter_number,
+                        'current_reading' => $waterMeter?->current_reading,
                     ];
                 });
 
@@ -476,7 +472,16 @@ class MeterReadingApiController extends Controller
                 ], 404);
             }
 
-            $readings = MeterReading::where('customer_id', $customerId)
+            // Get readings through the water meter relationship
+            $waterMeter = $customer->waterMeter;
+            if (!$waterMeter) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No active water meter found for this customer'
+                ], 404);
+            }
+
+            $readings = MeterReading::where('water_meter_id', $waterMeter->id)
                 ->orderBy('reading_date', 'desc')
                 ->limit(12) // Last 12 readings
                 ->get()
@@ -500,7 +505,7 @@ class MeterReadingApiController extends Controller
                 'success' => true,
                 'data' => [
                     'customer_name' => $customer->full_name,
-                    'connection_number' => $customer->connection_number,
+                    'connection_number' => $customer->account_number,
                     'readings' => $readings,
                     'total_readings' => $readings->count(),
                 ]
@@ -526,14 +531,14 @@ class MeterReadingApiController extends Controller
             'time' => $reading->created_at->format('H:i:s'),
             'customer' => [
                 'name' => $customer->full_name,
-                'connection_number' => $customer->connection_number,
+                'connection_number' => $customer->account_number,
                 'address' => $customer->full_address,
                 'phone' => $customer->phone,
             ],
             'meter' => [
                 'meter_number' => $meter->meter_number,
-                'type' => $meter->type,
-                'location' => $meter->location_description,
+                'type' => $meter->meter_type,
+                'location' => $meter->location_notes,
             ],
             'reading' => [
                 'previous' => $reading->previous_reading,
@@ -567,6 +572,229 @@ class MeterReadingApiController extends Controller
             ]);
         } catch (\Exception $e) {
             // Silent fail - don't break app functionality for logging issues
+        }
+    }
+
+    /**
+     * Generate QR code for a specific meter
+     */
+    public function generateQrCode(Request $request)
+    {
+        try {
+            $meterId = $request->input('meter_id');
+            $size = $request->input('size', 200);
+            $format = $request->input('format', 'png');
+            
+            if (!$meterId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Meter ID is required'
+                ], 400);
+            }
+
+            $meter = WaterMeter::find($meterId);
+            if (!$meter) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Meter not found'
+                ], 404);
+            }
+
+            // Generate QR code
+            $qrCodeUrl = $meter->getQrCodeUrl($size, $format);
+            $qrCodeBase64 = $meter->getQrCodeBase64($size, $format);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'QR code generated successfully',
+                'data' => [
+                    'meter_id' => $meter->id,
+                    'meter_number' => $meter->meter_number,
+                    'customer_name' => $meter->customer ? $meter->customer->full_name : 'Unassigned Customer',
+                    'qr_code_url' => $qrCodeUrl,
+                    'qr_code_base64' => $qrCodeBase64,
+                    'qr_code_data' => $meter->getQrCodeData(),
+                    'download_url' => route('api.meter.qr-code.download', ['meter_id' => $meter->id])
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error generating QR code: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Scan QR code and get meter details
+     */
+    public function scanQrCode(Request $request)
+    {
+        try {
+            $request->validate([
+                'qr_data' => 'required|string'
+            ]);
+
+            $qrData = $request->input('qr_data');
+            
+            // Find meter by QR code data
+            $meter = WaterMeter::findByQrCode($qrData);
+            
+            if (!$meter) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid QR code or meter not found'
+                ], 404);
+            }
+
+            // Load meter with related data
+            $meter->load(['customer', 'meterReadings' => function($query) {
+                $query->latest('reading_date')->limit(1);
+            }]);
+
+            $latestReading = $meter->meterReadings->first();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Meter found successfully',
+                'data' => [
+                    'meter' => [
+                        'id' => $meter->id,
+                        'meter_number' => $meter->meter_number,
+                        'meter_type' => $meter->meter_type,
+                        'meter_brand' => $meter->meter_brand,
+                        'meter_model' => $meter->meter_model,
+                        'current_reading' => $meter->current_reading,
+                        'status' => $meter->status,
+                        'location_notes' => $meter->location_notes,
+                        'latitude' => $meter->latitude,
+                        'longitude' => $meter->longitude,
+                        'installation_date' => $meter->installation_date,
+                        'last_maintenance_date' => $meter->last_maintenance_date,
+                        'next_maintenance_date' => $meter->next_maintenance_date,
+                    ],
+                    'customer' => $meter->customer ? [
+                        'id' => $meter->customer->id,
+                        'account_number' => $meter->customer->account_number,
+                        'name' => $meter->customer->full_name,
+                        'address' => $meter->customer->full_address,
+                        'phone' => $meter->customer->phone,
+                        'email' => $meter->customer->email,
+                        'status' => $meter->customer->status,
+                    ] : null,
+                    'last_reading' => $latestReading ? [
+                        'id' => $latestReading->id,
+                        'reading' => $latestReading->current_reading,
+                        'previous_reading' => $latestReading->previous_reading,
+                        'consumption' => $latestReading->consumption,
+                        'reading_date' => $latestReading->reading_date,
+                        'reader_name' => $latestReading->reader_name,
+                        'reader_id' => $latestReading->reader_id,
+                        'reading_type' => $latestReading->reading_type,
+                        'status' => $latestReading->status,
+                    ] : null,
+                    'scan_timestamp' => now()->toISOString(),
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error scanning QR code: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Download QR code for printing
+     */
+    public function downloadQrCode(Request $request)
+    {
+        try {
+            $meterId = $request->input('meter_id') ?? $request->route('meter_id');
+            $size = $request->input('size', 300);
+            $format = $request->input('format', 'png');
+            
+            if (!$meterId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Meter ID is required'
+                ], 400);
+            }
+
+            $meter = WaterMeter::with('customer')->find($meterId);
+            if (!$meter) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Meter not found'
+                ], 404);
+            }
+
+            // Generate QR code
+            $qrCode = $meter->generateQrCode($size, $format);
+            
+            // Set appropriate headers
+            $headers = [
+                'Content-Type' => $format === 'svg' ? 'image/svg+xml' : 'image/' . $format,
+                'Content-Disposition' => 'attachment; filename="meter_' . $meter->meter_number . '_qr_code.' . $format . '"'
+            ];
+
+            return response($qrCode, 200, $headers);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error downloading QR code: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get QR codes for multiple meters (batch generation)
+     */
+    public function batchGenerateQrCodes(Request $request)
+    {
+        try {
+            $request->validate([
+                'meter_ids' => 'required|array',
+                'meter_ids.*' => 'exists:water_meters,id',
+                'size' => 'nullable|integer|min:50|max:1000',
+                'format' => 'nullable|in:png,jpg,svg'
+            ]);
+
+            $meterIds = $request->input('meter_ids');
+            $size = $request->input('size', 200);
+            $format = $request->input('format', 'png');
+
+            $meters = WaterMeter::with('customer')->whereIn('id', $meterIds)->get();
+            
+            $qrCodes = [];
+            foreach ($meters as $meter) {
+                $qrCodes[] = [
+                    'meter_id' => $meter->id,
+                    'meter_number' => $meter->meter_number,
+                    'customer_name' => $meter->customer ? $meter->customer->full_name : 'Unassigned Customer',
+                    'qr_code_url' => $meter->getQrCodeUrl($size, $format),
+                    'qr_code_base64' => $meter->getQrCodeBase64($size, $format),
+                    'download_url' => route('api.meter.qr-code.download', ['meter_id' => $meter->id])
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'QR codes generated successfully',
+                'data' => [
+                    'total_meters' => count($qrCodes),
+                    'qr_codes' => $qrCodes
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error generating QR codes: ' . $e->getMessage()
+            ], 500);
         }
     }
 }

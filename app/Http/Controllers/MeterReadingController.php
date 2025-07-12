@@ -445,8 +445,8 @@ class MeterReadingController extends Controller
                 'meter_number' => $meter->meter_number,
                 'meter_type' => $meter->meter_type,
                 'location_notes' => $meter->location_notes,
-                'customer_name' => $meter->customer->full_name,
-                'account_number' => $meter->customer->account_number,
+                'customer_name' => $meter->customer ? $meter->customer->full_name : 'Unassigned Customer',
+                'account_number' => $meter->customer ? $meter->customer->account_number : 'N/A',
                 'previous_reading' => $lastReading ? $lastReading->current_reading : $meter->initial_reading,
                 'last_reading_date' => $lastReading ? $lastReading->reading_date->format('Y-m-d') : null
             ]
@@ -482,12 +482,15 @@ class MeterReadingController extends Controller
                                ->latest('reading_date')
                                ->first();
                            
+                           $customerName = $meter->customer ? $meter->customer->full_name : 'Unassigned Customer';
+                           $accountNumber = $meter->customer ? $meter->customer->account_number : 'N/A';
+                           
                            return [
                                'id' => $meter->id,
                                'meter_number' => $meter->meter_number,
-                               'customer_name' => $meter->customer->full_name,
-                               'account_number' => $meter->customer->account_number,
-                               'display_text' => "📊 {$meter->meter_number} | 👤 {$meter->customer->full_name} | 🏠 {$meter->customer->account_number}",
+                               'customer_name' => $customerName,
+                               'account_number' => $accountNumber,
+                               'display_text' => "📊 {$meter->meter_number} | 👤 {$customerName} | 🏠 {$accountNumber}",
                                'previous_reading' => $lastReading ? $lastReading->current_reading : $meter->initial_reading,
                                'last_reading_date' => $lastReading ? $lastReading->reading_date->format('Y-m-d') : null
                            ];
@@ -531,5 +534,21 @@ class MeterReadingController extends Controller
         });
 
         return view('readings.schedule', compact('readMeters', 'unreadMeters', 'currentMonth', 'currentYear'));
+    }
+
+    /**
+     * Handle edit route without parameter (fallback)
+     */
+    public function editFallback(): RedirectResponse
+    {
+        Log::warning('Attempted to access readings.edit route without parameter', [
+            'url' => request()->fullUrl(),
+            'referer' => request()->header('referer'),
+            'user_agent' => request()->header('user-agent'),
+            'ip' => request()->ip()
+        ]);
+
+        return redirect()->route('readings.index')
+            ->with('error', 'Please select a specific meter reading to edit.');
     }
 }

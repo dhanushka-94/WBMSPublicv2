@@ -25,6 +25,31 @@
 
     <div class="py-8 bg-gray-50 min-h-screen">
         <div class="w-full px-6 lg:px-8">
+            <!-- General Error Display Section -->
+            @if ($errors->any())
+                <div class="max-w-4xl mx-auto mb-6 bg-red-50 border border-red-200 rounded-xl p-4">
+                    <div class="flex items-center">
+                        <i class="fas fa-exclamation-triangle text-red-600 mr-2"></i>
+                        <h3 class="text-lg font-semibold text-red-800">Please fix the following errors:</h3>
+                    </div>
+                    <ul class="mt-3 list-disc list-inside text-sm text-red-700">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            <!-- Success Message -->
+            @if (session('success'))
+                <div class="max-w-4xl mx-auto mb-6 bg-green-50 border border-green-200 rounded-xl p-4">
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-green-600 mr-2"></i>
+                        <p class="text-green-800 font-medium">{{ session('success') }}</p>
+                    </div>
+                </div>
+            @endif
+
             <form action="{{ route('meters.store') }}" method="POST" class="max-w-4xl mx-auto">
                 @csrf
 
@@ -38,10 +63,11 @@
                     <div class="p-6">
                         <div class="space-y-2">
                             <label class="block text-sm font-semibold text-gray-700">
-                                <i class="fas fa-user-circle mr-1"></i>Select Customer
+                                <i class="fas fa-user-circle mr-1"></i>Select Customer <span class="text-gray-500">(Optional)</span>
                             </label>
                             <select name="customer_id" 
-                                    class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors @error('customer_id') border-red-300 @enderror">
+                                    id="customer_id"
+                                    class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors @error('customer_id') border-red-400 @enderror">
                                 <option value="">Choose a customer (optional)...</option>
                                 @foreach($customers as $customer)
                                     <option value="{{ $customer->id }}" {{ old('customer_id') == $customer->id ? 'selected' : '' }}>
@@ -70,12 +96,24 @@
                                 <label class="block text-sm font-semibold text-gray-700">
                                     <i class="fas fa-barcode mr-1"></i>Meter Number *
                                 </label>
+                                <div class="flex gap-2">
                                 <input type="text" 
                                        name="meter_number" 
                                        value="{{ old('meter_number') }}"
-                                       placeholder="e.g., WM25000001"
-                                       class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors @error('meter_number') border-red-300 @enderror" 
+                                           placeholder="Enter meter number (e.g., 25000001)"
+                                           pattern="[0-9]{1,20}"
+                                           title="Enter 1-20 digits only (no letters or special characters)"
+                                           maxlength="20"
+                                           class="flex-1 px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors @error('meter_number') border-red-300 @enderror" 
                                        required>
+                                    <button type="button" 
+                                            id="validate-meter-btn"
+                                            class="px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                        <i class="fas fa-check mr-1"></i>Validate
+                                    </button>
+                                </div>
+                                <!-- Status message for validation -->
+                                <div id="validation-status" class="mt-1 text-xs" style="display: none;"></div>
                                 @error('meter_number')
                                     <p class="text-xs text-red-600 flex items-center"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p>
                                 @enderror
@@ -226,12 +264,15 @@
                                        value="{{ old('initial_reading', '0') }}"
                                        step="1"
                                        min="0"
-                                       placeholder="0"
+                                       max="9999"
+                                       placeholder="0000"
+                                       title="Enter a number from 0000 to 9999"
                                        class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none transition-colors @error('initial_reading') border-red-300 @enderror" 
                                        required>
                                 @error('initial_reading')
                                     <p class="text-xs text-red-600 flex items-center"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p>
                                 @enderror
+                                <p class="text-xs text-gray-500">Range: 0000 - 9999</p>
                             </div>
 
                             <!-- Current Reading -->
@@ -244,12 +285,15 @@
                                        value="{{ old('current_reading', '0') }}"
                                        step="1"
                                        min="0"
-                                       placeholder="0"
+                                       max="9999"
+                                       placeholder="0000"
+                                       title="Enter a number from 0000 to 9999"
                                        class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none transition-colors @error('current_reading') border-red-300 @enderror" 
                                        required>
                                 @error('current_reading')
                                     <p class="text-xs text-red-600 flex items-center"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p>
                                 @enderror
+                                <p class="text-xs text-gray-500">Range: 0000 - 9999</p>
                             </div>
                         </div>
                     </div>
@@ -438,11 +482,206 @@
 <script>
 // Auto-generate meter number suggestion
 document.addEventListener('DOMContentLoaded', function() {
+    // Meter number validation with button
     const meterNumberInput = document.querySelector('input[name="meter_number"]');
-    if (meterNumberInput && !meterNumberInput.value) {
-        const year = new Date().getFullYear().toString().substr(-2);
-        const randomNumber = Math.floor(Math.random() * 900000) + 100000;
-        meterNumberInput.value = `WM${year}${randomNumber}`;
+    const validateButton = document.getElementById('validate-meter-btn');
+    const validationStatus = document.getElementById('validation-status');
+    const form = document.querySelector('form');
+    const customerSelect = document.querySelector('select[name="customer_id"]');
+    
+    // Input filtering - only allow numbers and limit to 20 digits
+    if (meterNumberInput) {
+        meterNumberInput.addEventListener('input', function(e) {
+            this.value = this.value.replace(/[^0-9]/g, '').substring(0, 20);
+            
+            // Reset validation status when input changes
+            validationStatus.style.display = 'none';
+            resetBorderColor(this);
+            
+            // Clear validation state when input changes
+            this.removeAttribute('data-validated');
+            this.removeAttribute('data-validation-result');
+            
+            // Enable/disable validate button based on input
+            if (validateButton) {
+                validateButton.disabled = this.value.length === 0;
+            }
+        });
+    }
+    
+    // Input filtering for reading fields - only allow numbers 0000-9999
+    const readingInputs = document.querySelectorAll('input[name="initial_reading"], input[name="current_reading"]');
+    readingInputs.forEach(function(input) {
+        input.addEventListener('input', function(e) {
+            // Remove non-numeric characters
+            let value = this.value.replace(/[^0-9]/g, '');
+            
+            // Convert to number and enforce range
+            let numValue = parseInt(value) || 0;
+            if (numValue > 9999) {
+                numValue = 9999;
+            }
+            
+            this.value = numValue.toString();
+        });
+        
+        // Also handle paste events
+        input.addEventListener('paste', function(e) {
+            setTimeout(() => {
+                let value = this.value.replace(/[^0-9]/g, '');
+                let numValue = parseInt(value) || 0;
+                if (numValue > 9999) {
+                    numValue = 9999;
+                }
+                this.value = numValue.toString();
+            }, 10);
+        });
+    });
+    
+    // Validate button click handler
+    if (validateButton) {
+        validateButton.addEventListener('click', function() {
+            const meterNumber = meterNumberInput.value.trim();
+            
+            if (!meterNumber) {
+                showStatus('Please enter a meter number first', 'error');
+                return;
+            }
+            
+            // Check format
+            if (!/^[0-9]{1,20}$/.test(meterNumber)) {
+                showStatus('Meter number must be 1-20 digits only (no letters or special characters)', 'error');
+                setBorderColor(meterNumberInput, 'red');
+                return;
+            }
+            
+            // Show checking status
+            this.disabled = true;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Checking...';
+            showStatus('Checking availability...', 'checking');
+            
+            // Make AJAX call to validate
+            fetch('{{ route("check.meter.number") }}?meter_number=' + encodeURIComponent(meterNumber))
+                .then(response => response.json())
+                .then(data => {
+                    // Set validation state attributes
+                    meterNumberInput.setAttribute('data-validated', 'true');
+                    meterNumberInput.setAttribute('data-validation-result', data.available ? 'available' : 'taken');
+                    
+                    if (data.available) {
+                        setBorderColor(meterNumberInput, 'green');
+                        showStatus(data.message, 'success');
+                    } else {
+                        setBorderColor(meterNumberInput, 'red');
+                        showStatus(data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking meter number:', error);
+                    setBorderColor(meterNumberInput, 'yellow');
+                    showStatus('Could not verify availability', 'warning');
+                    
+                    // Set validation state for error
+                    meterNumberInput.setAttribute('data-validated', 'true');
+                    meterNumberInput.setAttribute('data-validation-result', 'error');
+                })
+                .finally(() => {
+                    this.disabled = false;
+                    this.innerHTML = '<i class="fas fa-check mr-1"></i>Validate';
+                });
+        });
+    }
+    
+    // Helper functions
+    function resetBorderColor(input) {
+        input.className = input.className.replace(/border-(red|green|yellow)-300/g, 'border-gray-200');
+    }
+    
+    function setBorderColor(input, color) {
+        resetBorderColor(input);
+        const colorClass = `border-${color}-300`;
+        input.className = input.className.replace('border-gray-200', colorClass);
+    }
+    
+    function showStatus(message, type) {
+        validationStatus.style.display = 'block';
+        validationStatus.className = 'mt-1 text-xs';
+        
+        if (type === 'success') {
+            validationStatus.className += ' text-green-600';
+            validationStatus.innerHTML = `<i class="fas fa-check-circle mr-1"></i>${message}`;
+        } else if (type === 'error') {
+            validationStatus.className += ' text-red-600';
+            validationStatus.innerHTML = `<i class="fas fa-exclamation-circle mr-1"></i>${message}`;
+        } else if (type === 'warning') {
+            validationStatus.className += ' text-yellow-600';
+            validationStatus.innerHTML = `<i class="fas fa-exclamation-triangle mr-1"></i>${message}`;
+        } else if (type === 'checking') {
+            validationStatus.className += ' text-blue-600';
+            validationStatus.innerHTML = `<i class="fas fa-spinner fa-spin mr-1"></i>${message}`;
+        }
+    }
+
+    // Form submission validation
+    form.addEventListener('submit', function(e) {
+        let hasErrors = false;
+        
+        // Check meter number
+        const meterNumber = meterNumberInput.value;
+        
+        if (!meterNumber || meterNumber.trim() === '') {
+            e.preventDefault();
+            alert('⚠️ Please enter a meter number.');
+            meterNumberInput.focus();
+            setBorderColor(meterNumberInput, 'red');
+            hasErrors = true;
+        }
+        
+        // Check meter number format
+        if (meterNumber && !/^[0-9]{1,20}$/.test(meterNumber)) {
+            e.preventDefault();
+            alert('⚠️ Meter number must be 1-20 digits only (no letters or special characters).');
+            meterNumberInput.focus();
+            setBorderColor(meterNumberInput, 'red');
+            hasErrors = true;
+        }
+        
+        // Check validation state
+        const isValidated = meterNumberInput.getAttribute('data-validated');
+        const validationResult = meterNumberInput.getAttribute('data-validation-result');
+        
+        // Check if meter number has been validated and is taken
+        if (meterNumber && isValidated === 'true' && validationResult === 'taken') {
+            e.preventDefault();
+            alert('⚠️ This meter number already exists. Please enter a different number or click the Validate button to check again.');
+            meterNumberInput.focus();
+            setBorderColor(meterNumberInput, 'red');
+            hasErrors = true;
+        }
+        
+        // Prevent double submission
+        if (!hasErrors) {
+            const submitButton = form.querySelector('button[type="submit"]');
+            if (submitButton) {
+                if (submitButton.disabled) {
+                    e.preventDefault();
+                    return false;
+                }
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Creating Meter...';
+            }
+        }
+    });
+
+    // Reset border color when customer is selected
+    if (customerSelect) {
+        customerSelect.addEventListener('change', function() {
+            if (this.value) {
+                this.className = this.className.replace('border-red-200', 'border-green-200');
+            } else {
+                this.className = this.className.replace('border-green-200', 'border-red-200');
+            }
+        });
     }
 });
 </script>

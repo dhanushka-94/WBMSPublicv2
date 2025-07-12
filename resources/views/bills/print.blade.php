@@ -283,7 +283,7 @@
                 <div style="width: 48%;">
                     <div class="info-group">
                         <div class="info-label">Name:</div>
-                        <div class="info-value">{{ $bill->customer->full_name }}</div>
+                        <div class="info-value">{{ $bill->customer ? $bill->customer->full_name : 'Unknown Customer' }}</div>
                     </div>
                     <div class="info-group">
                         <div class="info-label">Account Number:</div>

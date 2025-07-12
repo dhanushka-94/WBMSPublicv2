@@ -61,7 +61,7 @@
                                 <span class="text-gray-500">Developed by</span>
                                 <span class="text-blue-600 font-semibold">
                                     <i class="fas fa-code mr-1"></i>
-                                    Olexto Digital Solutions (Pvt) Ltd
+                                    olexto Digital Solutions (Pvt) Ltd
                                 </span>
                             </div>
                         </div>

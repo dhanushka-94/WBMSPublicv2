@@ -218,13 +218,13 @@
                                     <div>
                                         <p class="font-semibold text-gray-900">{{ $meter->meter_number }}</p>
                                         <p class="text-sm text-gray-500">{{ $meter->meter_brand }} {{ $meter->meter_model }}</p>
-                                        <p class="text-xs text-gray-400">Installed: {{ $meter->installation_date->format('M d, Y') }}</p>
+                                        <p class="text-xs text-gray-400">Installed: {{ $meter->installation_date ? $meter->installation_date->format('M d, Y') : 'Date not set' }}</p>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4">
                                     <div>
-                                        <p class="font-semibold text-gray-900">{{ $meter->customer->full_name }}</p>
-                                        <p class="text-sm text-gray-500">{{ $meter->customer->account_number }}</p>
+                                        <p class="font-semibold text-gray-900">{{ $meter->customer ? $meter->customer->full_name : 'Unassigned Customer' }}</p>
+                                        <p class="text-sm text-gray-500">{{ $meter->customer ? $meter->customer->account_number : 'No Account' }}</p>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4">
@@ -238,7 +238,7 @@
                                     <div>
                                         <p class="font-semibold text-gray-900">{{ number_format($meter->current_reading, 0) }}</p>
                                         @if($meter->meterReadings->count() > 0)
-                                        <p class="text-xs text-gray-500">Last: {{ $meter->meterReadings->first()->reading_date->format('M d') }}</p>
+                                        <p class="text-xs text-gray-500">Last: {{ $meter->meterReadings->first()->reading_date ? $meter->meterReadings->first()->reading_date->format('M d') : 'No date' }}</p>
                                         @endif
                                     </div>
                                 </td>
@@ -264,7 +264,7 @@
                                             🔧 Due Now
                                         </span>
                                     @elseif($meter->next_maintenance_date)
-                                        <p class="text-xs text-gray-500">{{ $meter->next_maintenance_date->format('M d, Y') }}</p>
+                                        <p class="text-xs text-gray-500">{{ $meter->next_maintenance_date ? $meter->next_maintenance_date->format('M d, Y') : 'Not scheduled' }}</p>
                                     @else
                                         <span class="text-xs text-gray-400">Not scheduled</span>
                                     @endif
@@ -281,6 +281,15 @@
                                            title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </a>
+                                        <form method="POST" action="{{ route('meters.destroy', $meter) }}" class="inline-block" onsubmit="return confirm('Are you sure you want to delete meter {{ $meter->meter_number }}? This action cannot be undone.')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" 
+                                                    class="text-red-600 hover:text-red-800 transition-colors" 
+                                                    title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
                                         @if($meter->hasLocation())
                                         <a href="{{ $meter->getGoogleMapsUrl() }}" 
                                            target="_blank"

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 
 class MeterReading extends Model
 {
@@ -19,9 +20,16 @@ class MeterReading extends Model
         'consumption',
         'reading_type',
         'reader_name',
+        'reader_id',
         'notes',
         'is_billable',
-        'status'
+        'status',
+        'meter_condition',
+        'photo_path',
+        'gps_latitude',
+        'gps_longitude',
+        'submitted_via',
+        'offline_timestamp'
     ];
 
     protected $casts = [
@@ -29,7 +37,10 @@ class MeterReading extends Model
         'current_reading' => 'decimal:2',
         'previous_reading' => 'decimal:2',
         'consumption' => 'decimal:2',
-        'is_billable' => 'boolean'
+        'is_billable' => 'boolean',
+        'gps_latitude' => 'decimal:8',
+        'gps_longitude' => 'decimal:8',
+        'offline_timestamp' => 'datetime'
     ];
 
     // Relationships
@@ -38,10 +49,14 @@ class MeterReading extends Model
         return $this->belongsTo(WaterMeter::class);
     }
 
-    public function customer(): BelongsTo
+    public function customer(): HasOneThrough
     {
-        return $this->belongsTo(Customer::class, 'customer_id', 'id')
-            ->through('waterMeter');
+        return $this->hasOneThrough(Customer::class, WaterMeter::class, 'id', 'id', 'water_meter_id', 'customer_id');
+    }
+
+    public function reader(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'reader_id');
     }
 
     public function bill(): HasOne

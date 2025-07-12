@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Illuminate\Support\Facades\Storage;
 
 class WaterMeter extends Model
 {
@@ -66,6 +68,16 @@ class WaterMeter extends Model
     public function scopeActive($query)
     {
         return $query->where('status', 'active');
+    }
+
+    public function scopeWithValidCustomer($query)
+    {
+        return $query->whereNotNull('customer_id')
+            ->whereExists(function ($q) {
+                $q->select(DB::raw(1))
+                  ->from('customers')
+                  ->whereRaw('customers.id = water_meters.customer_id');
+            });
     }
 
     public function scopeByStatus($query, $status)
@@ -197,5 +209,137 @@ class WaterMeter extends Model
                 cos(radians(longitude) - radians(?)) + sin(radians(?)) * 
                 sin(radians(latitude)))) <= ?
             ", [$latitude, $longitude, $latitude, $radius]);
+    }
+
+    // QR Code Methods
+    public function generateQrCode($size = 200, $format = 'svg')
+    {
+        try {
+            // Simple QR code containing only the meter number
+            $qrCode = QrCode::format($format)
+                ->size($size)
+                ->backgroundColor(255, 255, 255)
+                ->color(0, 0, 0)
+                ->margin(1)
+                ->generate($this->meter_number);
+            
+            return $qrCode;
+        } catch (\Exception $e) {
+            // Fallback based on format
+            \Log::warning('QR code generation failed: ' . $e->getMessage());
+            
+            if ($format === 'png') {
+                // Create a simple PNG image with text
+                $image = imagecreate($size, $size);
+                $bgColor = imagecolorallocate($image, 240, 240, 240);
+                $textColor = imagecolorallocate($image, 51, 51, 51);
+                
+                // Fill background
+                imagefill($image, 0, 0, $bgColor);
+                
+                // Add text
+                $text = 'QR Code Failed';
+                $fontSize = 12;
+                $x = ($size - strlen($text) * $fontSize * 0.6) / 2;
+                $y = $size / 2;
+                imagestring($image, 3, $x, $y - 10, $text, $textColor);
+                
+                $meterText = 'Meter: ' . $this->meter_number;
+                $x2 = ($size - strlen($meterText) * 10 * 0.6) / 2;
+                imagestring($image, 2, $x2, $y + 10, $meterText, $textColor);
+                
+                // Capture PNG data
+                ob_start();
+                imagepng($image);
+                $pngData = ob_get_contents();
+                ob_end_clean();
+                
+                imagedestroy($image);
+                return $pngData;
+            } else {
+                // SVG fallback
+                return '<svg xmlns="http://www.w3.org/2000/svg" width="' . $size . '" height="' . $size . '" viewBox="0 0 ' . $size . ' ' . $size . '">
+                    <rect width="' . $size . '" height="' . $size . '" fill="#f0f0f0"/>
+                    <text x="50%" y="45%" text-anchor="middle" dy="0.35em" font-family="Arial, sans-serif" font-size="14" fill="#333">
+                        QR Code Failed
+                    </text>
+                    <text x="50%" y="55%" text-anchor="middle" dy="0.35em" font-family="Arial, sans-serif" font-size="12" fill="#666">
+                        Meter: ' . $this->meter_number . '
+                    </text>
+                </svg>';
+            }
+        }
+    }
+
+    public function getQrCodePath($size = 200, $format = 'svg')
+    {
+        $directory = 'qr-codes/meters';
+        $filename = "meter_{$this->meter_number}_{$size}.{$format}";
+        $path = "{$directory}/{$filename}";
+
+        // Check if QR code already exists
+        if (!Storage::disk('public')->exists($path)) {
+            // Generate QR code
+            $qrCode = $this->generateQrCode($size, $format);
+            
+            // Ensure directory exists
+            Storage::disk('public')->makeDirectory($directory);
+            
+            // Save QR code
+            Storage::disk('public')->put($path, $qrCode);
+        }
+
+        return $path;
+    }
+
+    public function getQrCodeUrl($size = 200, $format = 'svg')
+    {
+        $path = $this->getQrCodePath($size, $format);
+        return Storage::disk('public')->url($path);
+    }
+
+    public function getQrCodeBase64($size = 200, $format = 'svg')
+    {
+        $qrCode = $this->generateQrCode($size, $format);
+        return base64_encode($qrCode);
+    }
+
+    public function getQrCodeData()
+    {
+        return $this->meter_number;
+    }
+
+    public static function findByQrCode($qrCodeData)
+    {
+        // Since QR code now contains only the meter number, search by meter number
+        return self::where('meter_number', trim($qrCodeData))->first();
+    }
+
+    public function deleteQrCode()
+    {
+        $directory = 'qr-codes/meters';
+        
+        // Delete old QR codes with both naming schemes (ID and meter number)
+        $files = Storage::disk('public')->files($directory);
+        foreach ($files as $file) {
+            // Delete files with old naming scheme (meter ID)
+            if (str_contains($file, "meter_{$this->id}_")) {
+                Storage::disk('public')->delete($file);
+            }
+            // Delete files with new naming scheme (meter number)
+            if (str_contains($file, "meter_{$this->meter_number}_")) {
+                Storage::disk('public')->delete($file);
+            }
+        }
+    }
+
+    // Override delete to clean up QR codes
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::deleting(function ($meter) {
+            $meter->deleteQrCode();
+        });
     }
 }

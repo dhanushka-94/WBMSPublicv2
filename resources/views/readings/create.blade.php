@@ -83,9 +83,13 @@
                                 <option value="">Select a water meter...</option>
                                 @foreach($waterMeters as $meter)
                                     <option value="{{ $meter->id }}" 
-                                            data-search="{{ strtolower($meter->meter_number . ' ' . $meter->customer->full_name . ' ' . $meter->customer->account_number) }}"
+                                            data-brand="{{ $meter->meter_brand }}" 
+                                            data-model="{{ $meter->meter_model }}" 
+                                            data-type="{{ $meter->meter_type }}" 
+                                            data-last-reading="{{ $meter->current_reading }}" 
+                                            data-search="{{ $meter->customer ? strtolower($meter->meter_number . ' ' . $meter->customer->full_name . ' ' . $meter->customer->account_number) : strtolower($meter->meter_number . ' unassigned no-account') }}"
                                             {{ old('water_meter_id') == $meter->id ? 'selected' : '' }}>
-                                        📊 {{ $meter->meter_number }} | 👤 {{ $meter->customer->full_name }} | 🏠 {{ $meter->customer->account_number }}
+                                        📊 {{ $meter->meter_number }} | 👤 {{ $meter->customer ? $meter->customer->full_name : 'Unassigned Customer' }} | 🏠 {{ $meter->customer ? $meter->customer->account_number : 'No Account' }}
                                     </option>
                                 @endforeach
                             </select>

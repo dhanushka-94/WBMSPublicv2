@@ -99,6 +99,22 @@ class Customer extends Model
         return $this->waterMeters()->where('status', 'active')->first();
     }
 
+    public function getWaterMeterAttribute(): ?WaterMeter
+    {
+        return $this->getActiveWaterMeterAttribute();
+    }
+
+    public function getLatestReadingAttribute(): ?MeterReading
+    {
+        $activeMeter = $this->getActiveWaterMeterAttribute();
+        return $activeMeter ? $activeMeter->meterReadings()->latest('reading_date')->first() : null;
+    }
+
+    public function getFullAddressAttribute(): string
+    {
+        return $this->address . ($this->city ? ', ' . $this->city : '');
+    }
+
     /**
      * Get name for activity logging
      */
@@ -284,6 +300,14 @@ class Customer extends Model
     protected static function boot()
     {
         parent::boot();
+
+        // Prevent deletion of customers with active meters
+        static::deleting(function ($customer) {
+            $activeMeters = $customer->waterMeters()->count();
+            if ($activeMeters > 0) {
+                throw new \Exception("Cannot delete customer with {$activeMeters} water meters. Please reassign or delete meters first.");
+            }
+        });
 
         static::creating(function ($customer) {
             // Auto-generate account number if not provided

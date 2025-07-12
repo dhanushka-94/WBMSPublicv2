@@ -68,6 +68,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('water-meters', WaterMeterController::class)->names('meters');
     Route::get('meters/map-view', [WaterMeterController::class, 'mapView'])->name('meters.map');
     Route::post('meters/{meter}/maintenance', [WaterMeterController::class, 'recordMaintenance'])->name('meters.maintenance');
+    Route::get('meters/{meter}/qr-code', [WaterMeterController::class, 'showQRCode'])->name('meters.qr-code');
+    Route::get('meters/{meter}/qr-code/download', [WaterMeterController::class, 'downloadQRCode'])->name('meters.qr-code.download');
+    Route::get('api/check-meter-number', [WaterMeterController::class, 'checkMeterNumber'])->name('check.meter.number');
     
     // Bill Management
     Route::resource('bills', BillController::class);
@@ -80,6 +83,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     
     // Meter Reading Management
     Route::resource('meter-readings', MeterReadingController::class)->names('readings');
+    
+    // Add fallback route for readings.edit without parameter
+    Route::get('meter-readings/edit', [MeterReadingController::class, 'editFallback'])->name('readings.edit.fallback');
+    
     Route::post('readings/{reading}/verify', [MeterReadingController::class, 'verify'])->name('readings.verify');
     Route::get('readings/bulk-entry', [MeterReadingController::class, 'bulkEntry'])->name('readings.bulk');
     Route::post('readings/bulk-store', [MeterReadingController::class, 'bulkStore'])->name('readings.bulk.store');

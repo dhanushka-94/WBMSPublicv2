@@ -186,13 +186,19 @@
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="flex items-center">
                                             <div class="flex-shrink-0 h-8 w-8">
-                                                <div class="h-8 w-8 rounded-full bg-purple-500 flex items-center justify-center">
-                                                    <span class="text-xs font-medium text-white">{{ substr($reading->waterMeter->customer->first_name, 0, 1) }}{{ substr($reading->waterMeter->customer->last_name, 0, 1) }}</span>
-                                                </div>
+                                                @if($reading->waterMeter && $reading->waterMeter->customer)
+                                                    <div class="h-8 w-8 rounded-full bg-purple-500 flex items-center justify-center">
+                                                        <span class="text-xs font-medium text-white">{{ substr($reading->waterMeter->customer->first_name, 0, 1) }}{{ substr($reading->waterMeter->customer->last_name, 0, 1) }}</span>
+                                                    </div>
+                                                @else
+                                                    <div class="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center">
+                                                        <i class="fas fa-user text-gray-500 text-xs"></i>
+                                                    </div>
+                                                @endif
                                             </div>
                                             <div class="ml-4">
-                                                <div class="text-sm font-medium text-gray-900">{{ $reading->waterMeter->customer->full_name }}</div>
-                                                <div class="text-sm text-gray-500">{{ $reading->waterMeter->customer->account_number }}</div>
+                                                <div class="text-sm font-medium text-gray-900">{{ $reading->waterMeter && $reading->waterMeter->customer ? $reading->waterMeter->customer->full_name : 'Unknown Customer' }}</div>
+                                                <div class="text-sm text-gray-500">{{ $reading->waterMeter && $reading->waterMeter->customer ? $reading->waterMeter->customer->account_number : 'No Account' }}</div>
                                             </div>
                                         </div>
                                     </td>
@@ -221,7 +227,7 @@
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="text-sm text-gray-900 capitalize">{{ $reading->waterMeter->customer->customer_type ?? 'N/A' }}</span>
+                                        <span class="text-sm text-gray-900 capitalize">{{ $reading->waterMeter && $reading->waterMeter->customer ? $reading->waterMeter->customer->customer_type : 'N/A' }}</span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         @if($reading->status === 'pending')

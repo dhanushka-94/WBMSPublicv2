@@ -205,8 +205,8 @@
                                                  alt="{{ $bill->customer->full_name }}">
                                         </div>
                                         <div class="ml-4">
-                                            <div class="text-sm font-medium text-gray-900">{{ $bill->customer->full_name }}</div>
-                                            <div class="text-sm text-gray-500">{{ $bill->customer->account_number }}</div>
+                                            <div class="text-sm font-medium text-gray-900">{{ $bill->customer ? $bill->customer->full_name : 'Unknown Customer' }}</div>
+                                            <div class="text-sm text-gray-500">{{ $bill->customer ? $bill->customer->account_number : 'No Account' }}</div>
                                         </div>
                                     </div>
                                 </td>

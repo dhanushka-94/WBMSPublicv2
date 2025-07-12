@@ -10,7 +10,7 @@
                     <h1 class="text-3xl font-bold text-white">
                         <i class="fas fa-file-invoice mr-3"></i>Bill Details
                     </h1>
-                    <p class="text-blue-100 mt-2">{{ $bill->bill_number }} - {{ $bill->customer->full_name }}</p>
+                    <p class="text-blue-100 mt-2">{{ $bill->bill_number }} - {{ $bill->customer ? $bill->customer->full_name : 'Unknown Customer' }}</p>
                 </div>
                 <div class="flex space-x-3">
                     <a href="{{ route('bills.index') }}" class="bg-white text-blue-600 px-4 py-2 rounded-lg font-medium hover:bg-blue-50 transition duration-200">
@@ -92,11 +92,9 @@
                             <img class="h-16 w-16 rounded-full object-cover mr-4" 
                                  src="{{ $bill->customer->profile_photo_url }}" 
                                  alt="{{ $bill->customer->full_name }}">
-                            <div>
-                                <h4 class="text-lg font-medium text-gray-900">{{ $bill->customer->full_name }}</h4>
-                                <p class="text-gray-600">{{ $bill->customer->account_number }}</p>
-                                <p class="text-gray-600">{{ $bill->customer->email }}</p>
-                                <p class="text-gray-600">{{ $bill->customer->phone }}</p>
+                            <div class="ml-4">
+                                <h4 class="text-lg font-medium text-gray-900">{{ $bill->customer ? $bill->customer->full_name : 'Unknown Customer' }}</h4>
+                                <p class="text-sm text-gray-500">{{ $bill->customer ? $bill->customer->account_number : 'No Account' }}</p>
                             </div>
                         </div>
 

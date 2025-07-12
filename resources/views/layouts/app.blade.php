@@ -46,7 +46,7 @@
                             <span>Developed by</span>
                             <a href="#" class="text-blue-400 hover:text-blue-300 font-medium transition-colors duration-200">
                                 <i class="fas fa-code mr-1"></i>
-                                Olexto Digital Solutions (Pvt) Ltd
+                                olexto Digital Solutions (Pvt) Ltd
                             </a>
                         </div>
                     </div>

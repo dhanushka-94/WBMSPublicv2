@@ -65,7 +65,7 @@ return [
     */
 
     'developer' => [
-        'name' => 'Olexto Digital Solutions (Pvt) Ltd',
+        'name' => 'olexto Digital Solutions (Pvt) Ltd',
         'email' => 'info@olexto.com',
         'website' => 'https://www.olexto.com',
         'description' => 'Professional software development and digital transformation solutions',

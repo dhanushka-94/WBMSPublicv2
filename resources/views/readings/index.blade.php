@@ -144,7 +144,7 @@
                             <option value="">All Meters</option>
                             @foreach($waterMeters as $meter)
                                 <option value="{{ $meter->id }}" {{ request('meter_id') == $meter->id ? 'selected' : '' }}>
-                                    {{ $meter->meter_number }} - {{ $meter->customer->full_name }}
+                                    {{ $meter->meter_number }} - {{ $meter->customer ? $meter->customer->full_name : 'Unassigned Customer' }}
                                 </option>
                             @endforeach
                         </select>
@@ -207,7 +207,7 @@
                             <tr class="hover:bg-gray-50">
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div>
-                                        <div class="text-sm font-medium text-gray-900">{{ $reading->reading_date->format('M d, Y') }}</div>
+                                        <div class="text-sm font-medium text-gray-900">{{ $reading->reading_date ? $reading->reading_date->format('M d, Y') : 'No date' }}</div>
                                         <div class="text-sm text-gray-500">
                                             @php
                                                 $typeColors = [
@@ -225,12 +225,20 @@
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex items-center">
                                         <div class="flex-shrink-0 h-10 w-10">
-                                            <img class="h-10 w-10 rounded-full object-cover" 
-                                                 src="{{ $reading->waterMeter->customer->profile_photo_url }}" 
-                                                 alt="{{ $reading->waterMeter->customer->full_name }}">
+                                            @if($reading->waterMeter->customer)
+                                                <img class="h-10 w-10 rounded-full object-cover" 
+                                                     src="{{ $reading->waterMeter->customer->profile_photo_url }}" 
+                                                     alt="{{ $reading->waterMeter->customer->full_name }}">
+                                            @else
+                                                <div class="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                                                    <i class="fas fa-user text-gray-500"></i>
+                                                </div>
+                                            @endif
                                         </div>
                                         <div class="ml-4">
-                                            <div class="text-sm font-medium text-gray-900">{{ $reading->waterMeter->customer->full_name }}</div>
+                                            <div class="text-sm font-medium text-gray-900">
+                                                {{ $reading->waterMeter->customer ? $reading->waterMeter->customer->full_name : 'Unassigned Customer' }}
+                                            </div>
                                             <div class="text-sm text-gray-500">{{ $reading->waterMeter->meter_number }}</div>
                                         </div>
                                     </div>
@@ -261,15 +269,17 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                     <div class="flex space-x-2">
-                                        <a href="{{ route('readings.show', $reading) }}" class="text-blue-600 hover:text-blue-900" title="View">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                        @if($reading->status !== 'billed')
+                                        @if($reading && $reading->id)
+                                            <a href="{{ route('readings.show', $reading) }}" class="text-blue-600 hover:text-blue-900" title="View">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        @endif
+                                        @if($reading && $reading->id && $reading->status !== 'billed')
                                             <a href="{{ route('readings.edit', $reading) }}" class="text-indigo-600 hover:text-indigo-900" title="Edit">
                                                 <i class="fas fa-edit"></i>
                                             </a>
                                         @endif
-                                        @if($reading->status === 'pending')
+                                        @if($reading && $reading->id && $reading->status === 'pending')
                                             <form action="{{ route('readings.verify', $reading) }}" method="POST" class="inline">
                                                 @csrf
                                                 <button type="submit" class="text-green-600 hover:text-green-900" title="Verify">
@@ -277,7 +287,7 @@
                                                 </button>
                                             </form>
                                         @endif
-                                        @if($reading->status !== 'billed')
+                                        @if($reading && $reading->id && $reading->status !== 'billed')
                                             <form action="{{ route('readings.destroy', $reading) }}" method="POST" class="inline">
                                                 @csrf
                                                 @method('DELETE')

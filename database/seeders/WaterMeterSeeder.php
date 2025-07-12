@@ -31,8 +31,9 @@ class WaterMeterSeeder extends Seeder
         $meterSizes = [15, 20, 25, 32, 40, 50]; // in mm
 
         foreach ($customers as $index => $customer) {
-            // Create water meter for each customer
-            $meterNumber = 'WM' . str_pad($index + 1, 6, '0', STR_PAD_LEFT);
+            // Create water meter for each customer (numbers only format)
+            $year = date('y'); // Last 2 digits of year
+            $meterNumber = $year . str_pad($index + 1, 6, '0', STR_PAD_LEFT);
             $initialReading = rand(1000, 5000);
             
             $waterMeter = WaterMeter::create([

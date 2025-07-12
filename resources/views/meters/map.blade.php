@@ -57,17 +57,23 @@
                                 @foreach($meters as $meter)
                                 <div class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 cursor-pointer" 
                                      onclick="focusOnMeter({{ $meter->id }})">
-                                    <div class="flex items-center justify-between">
-                                        <div>
-                                            <p class="font-medium text-sm text-gray-900">{{ $meter->meter_number }}</p>
-                                            <p class="text-xs text-gray-500">{{ $meter->customer->full_name }}</p>
-                                        </div>
-                                        <div class="text-right">
-                                            <span class="px-2 py-1 rounded-full text-xs font-medium
-                                                {{ $meter->status === 'active' ? 'bg-green-100 text-green-700' : 
-                                                   ($meter->status === 'faulty' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700') }}">
-                                                {{ ucfirst($meter->status) }}
-                                            </span>
+                                    <div class="p-3">
+                                        <div class="flex items-center">
+                                            <div class="flex-shrink-0">
+                                                @if($meter->customer)
+                                                    <img class="h-10 w-10 rounded-full object-cover" 
+                                                         src="{{ $meter->customer->profile_photo_url }}" 
+                                                         alt="{{ $meter->customer->full_name }}">
+                                                @else
+                                                    <div class="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                                                        <i class="fas fa-user text-gray-500"></i>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                            <div class="ml-3">
+                                                <p class="text-sm font-medium text-gray-900">{{ $meter->meter_number }}</p>
+                                                <p class="text-xs text-gray-500">{{ $meter->customer ? $meter->customer->full_name : 'Unassigned Customer' }}</p>
+                                            </div>
                                         </div>
                                     </div>
                                     @if($meter->address)
@@ -157,8 +163,8 @@ function addMeterMarker(meter) {
     const infoContent = `
         <div class="p-2">
             <h3 class="font-bold text-lg text-gray-900">${meter.meter_number}</h3>
-            <p class="text-sm text-gray-600">${meter.customer.full_name}</p>
-            <p class="text-xs text-gray-500">${meter.customer.account_number}</p>
+            <p class="text-sm text-gray-600">${meter.customer ? meter.customer.full_name : 'Unassigned Customer'}</p>
+            <p class="text-xs text-gray-500">${meter.customer ? meter.customer.account_number : 'No Account'}</p>
             ${meter.address ? `<p class="text-xs text-gray-400 mt-1">${meter.address}</p>` : ''}
             <div class="flex items-center justify-between mt-2">
                 <span class="px-2 py-1 rounded-full text-xs font-medium ${getStatusClass(meter.status)}">
