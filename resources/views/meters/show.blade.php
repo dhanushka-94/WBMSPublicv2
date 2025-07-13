@@ -135,8 +135,8 @@
                                             <img class="mx-auto h-24 w-24 rounded-full object-cover" 
                                                  src="{{ $water_meter->customer->profile_photo_url }}" 
                                                  alt="{{ $water_meter->customer->full_name }}">
-                                            <p class="mt-1 text-lg font-semibold text-gray-900">{{ $water_meter->customer->full_name }}</p>
-                                            <p class="text-sm text-gray-500">{{ $water_meter->customer->account_number }}</p>
+                                        <p class="mt-1 text-lg font-semibold text-gray-900">{{ $water_meter->customer->full_name }}</p>
+                                        <p class="text-sm text-gray-500">{{ $water_meter->customer->account_number }}</p>
                                         </div>
                                     @else
                                         <div class="text-center">
@@ -144,7 +144,7 @@
                                                 <i class="fas fa-user text-gray-500 text-3xl"></i>
                                             </div>
                                             <p class="mt-1 text-lg font-semibold text-gray-900">Unassigned Customer</p>
-                                            <p class="text-sm text-gray-500">No customer assigned</p>
+                                        <p class="text-sm text-gray-500">No customer assigned</p>
                                         </div>
                                     @endif
                                 </div>

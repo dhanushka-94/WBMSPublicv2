@@ -103,7 +103,7 @@ class MeterReadingApiController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'customer_id' => 'required|exists:customers,id',
-                'meter_id' => 'required|exists:water_meters,id',
+                'meter_id' => 'nullable|exists:water_meters,id',
                 'current_reading' => 'required|numeric|min:0',
                 'reading_date' => 'required|date',
                 'gps_latitude' => 'nullable|numeric|between:-90,90',
@@ -111,7 +111,7 @@ class MeterReadingApiController extends Controller
                 'meter_photo' => 'nullable|image|mimes:jpeg,png,jpg|max:5120', // 5MB max
                 'notes' => 'nullable|string|max:500',
                 'meter_condition' => 'nullable|in:good,damaged,broken,needs_repair',
-                'reading_accuracy' => 'nullable|in:exact,estimated,calculated',
+                'reading_accuracy' => 'nullable|in:exact,estimated,calculated,actual',
                 'offline_timestamp' => 'nullable|date', // For offline readings
             ]);
 
@@ -125,14 +125,33 @@ class MeterReadingApiController extends Controller
 
             $user = Auth::user();
             $customer = Customer::find($request->customer_id);
+            
+            // Find meter - either from request or customer's active meter
+            if ($request->meter_id) {
             $meter = WaterMeter::find($request->meter_id);
 
             // Verify the meter belongs to the customer
             if ($meter->customer_id !== $customer->id) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Meter does not belong to this customer'
+                        'message' => 'Meter does not belong to this customer',
+                        'debug' => [
+                            'customer_id' => $customer->id,
+                            'meter_customer_id' => $meter->customer_id,
+                            'meter_id' => $meter->id
+                        ]
+                    ], 400);
+                }
+            } else {
+                // Find customer's active meter automatically
+                $meter = $customer->waterMeter; // This uses the accessor method
+                
+                if (!$meter) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No active water meter found for this customer'
                 ], 400);
+                }
             }
 
             // Check if reading is logical (not less than previous reading for cumulative meters)
@@ -169,7 +188,7 @@ class MeterReadingApiController extends Controller
                 'reader_id' => $user->id,
                 'reader_name' => $user->name,
                 'notes' => $request->notes,
-                'reading_type' => $request->reading_accuracy ?? 'exact',
+                'reading_type' => $this->mapReadingAccuracyToType($request->reading_accuracy ?? 'actual'),
                 'meter_condition' => $request->meter_condition ?? 'good',
                 'photo_path' => $photoPath,
                 'gps_latitude' => $request->gps_latitude,
@@ -204,7 +223,7 @@ class MeterReadingApiController extends Controller
                 'reading_id' => $meterReading->id,
                 'customer' => [
                     'name' => $customer->full_name,
-                    'connection_number' => $customer->connection_number,
+                    'connection_number' => $customer->account_number,
                     'address' => $customer->full_address,
                 ],
                 'meter' => [
@@ -335,9 +354,14 @@ class MeterReadingApiController extends Controller
     public function getCustomerDetails($customerId): JsonResponse
     {
         try {
-            $customer = Customer::with(['waterMeters', 'meterReadings' => function($query) {
+            $customer = Customer::with([
+                'waterMeters' => function($query) {
+                    $query->where('status', 'active')->first();
+                }, 
+                'meterReadings' => function($query) {
                 $query->orderBy('reading_date', 'desc')->limit(5);
-            }])->find($customerId);
+                }
+            ])->find($customerId);
 
             if (!$customer) {
                 return response()->json([
@@ -346,6 +370,7 @@ class MeterReadingApiController extends Controller
                 ], 404);
             }
 
+            // Get the active water meter (use the accessor method)
             $waterMeter = $customer->waterMeter;
             
             $data = [
@@ -405,13 +430,14 @@ class MeterReadingApiController extends Controller
     public function searchCustomers(Request $request): JsonResponse
     {
         try {
-            $query = $request->get('q', '');
+            // Accept both 'q' and 'search' parameters for flexibility
+            $query = $request->get('search', $request->get('q', ''));
             $limit = min($request->get('limit', 20), 50); // Max 50 results
 
-            if (strlen($query) < 2) {
+            if (strlen($query) < 1) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Search query must be at least 2 characters'
+                    'message' => 'Search query is required'
                 ], 400);
             }
 
@@ -796,5 +822,20 @@ class MeterReadingApiController extends Controller
                 'message' => 'Error generating QR codes: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Map reading accuracy to valid reading type
+     */
+    private function mapReadingAccuracyToType($accuracy)
+    {
+        $mapping = [
+            'exact' => 'actual',
+            'estimated' => 'estimated',
+            'calculated' => 'estimated',
+            'actual' => 'actual'
+        ];
+        
+        return $mapping[$accuracy] ?? 'actual';
     }
 }

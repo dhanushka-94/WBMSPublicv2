@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthApiController;
 use App\Http\Controllers\Api\MeterReadingApiController;
+use App\Http\Controllers\Api\PaymentApiController;
 
 /*
 |--------------------------------------------------------------------------
@@ -176,6 +177,21 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
                 ], 500);
             }
         });
+    });
+    
+    // Payment routes
+    Route::prefix('payments')->group(function () {
+        // Get customer bills for payment
+        Route::get('/customer/{customer_id}/bills', [PaymentApiController::class, 'getCustomerBills']);
+        
+        // Record payment
+        Route::post('/record', [PaymentApiController::class, 'recordPayment']);
+        
+        // Get payment history
+        Route::get('/customer/{customer_id}/history', [PaymentApiController::class, 'getPaymentHistory']);
+        
+        // Search customers for payment collection
+        Route::get('/customers/search', [PaymentApiController::class, 'searchCustomersForPayment']);
     });
     
     // Sync management

@@ -226,9 +226,9 @@
                                     <div class="flex items-center">
                                         <div class="flex-shrink-0 h-10 w-10">
                                             @if($reading->waterMeter->customer)
-                                                <img class="h-10 w-10 rounded-full object-cover" 
-                                                     src="{{ $reading->waterMeter->customer->profile_photo_url }}" 
-                                                     alt="{{ $reading->waterMeter->customer->full_name }}">
+                                            <img class="h-10 w-10 rounded-full object-cover" 
+                                                 src="{{ $reading->waterMeter->customer->profile_photo_url }}" 
+                                                 alt="{{ $reading->waterMeter->customer->full_name }}">
                                             @else
                                                 <div class="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
                                                     <i class="fas fa-user text-gray-500"></i>
@@ -270,9 +270,9 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                     <div class="flex space-x-2">
                                         @if($reading && $reading->id)
-                                            <a href="{{ route('readings.show', $reading) }}" class="text-blue-600 hover:text-blue-900" title="View">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
+                                        <a href="{{ route('readings.show', $reading) }}" class="text-blue-600 hover:text-blue-900" title="View">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
                                         @endif
                                         @if($reading && $reading->id && $reading->status !== 'billed')
                                             <a href="{{ route('readings.edit', $reading) }}" class="text-indigo-600 hover:text-indigo-900" title="Edit">

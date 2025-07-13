@@ -153,7 +153,7 @@
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="flex items-center">
                                                 <div class="flex-shrink-0">
-                                                    @if($meter->customer)
+                                            @if($meter->customer)
                                                         <img class="h-10 w-10 rounded-full object-cover" 
                                                              src="{{ $meter->customer->profile_photo_url }}" 
                                                              alt="{{ $meter->customer->full_name }}">
@@ -162,8 +162,8 @@
                                                             <i class="fas fa-user text-gray-500"></i>
                                                         </div>
                                                     @endif
-                                                </div>
-                                                <div class="ml-4">
+                                                    </div>
+                                                    <div class="ml-4">
                                                     <div class="text-sm font-medium text-gray-900">{{ $meter->customer ? $meter->customer->full_name : 'Unassigned Customer' }}</div>
                                                     <div class="text-sm text-gray-500">{{ $meter->customer ? $meter->customer->account_number : 'No Account' }}</div>
                                                 </div>
@@ -293,33 +293,33 @@
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             @if($latestReading)
-                                                <div class="text-sm font-medium text-gray-900">{{ number_format($latestReading->current_reading) }} units</div>
-                                                <div class="text-sm text-gray-500">Reader: {{ $latestReading->reader_name }}</div>
+                                            <div class="text-sm font-medium text-gray-900">{{ number_format($latestReading->current_reading) }} units</div>
+                                            <div class="text-sm text-gray-500">Reader: {{ $latestReading->reader_name }}</div>
                                             @else
                                                 <div class="text-sm font-medium text-gray-500">No reading available</div>
                                             @endif
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             @if($latestReading && $latestReading->reading_date)
-                                                <div class="text-sm text-gray-900">{{ $latestReading->reading_date->format('M d, Y') }}</div>
-                                                <div class="text-sm text-gray-500">{{ $latestReading->reading_date->format('h:i A') }}</div>
+                                            <div class="text-sm text-gray-900">{{ $latestReading->reading_date->format('M d, Y') }}</div>
+                                            <div class="text-sm text-gray-500">{{ $latestReading->reading_date->format('h:i A') }}</div>
                                             @else
                                                 <div class="text-sm text-gray-500">No date available</div>
                                             @endif
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             @if($latestReading)
-                                                @if($latestReading->status === 'pending')
-                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                                        <i class="fas fa-clock mr-1"></i>Pending
-                                                    </span>
-                                                @elseif($latestReading->status === 'verified')
-                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                        <i class="fas fa-check mr-1"></i>Verified
-                                                    </span>
-                                                @elseif($latestReading->status === 'billed')
-                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                        <i class="fas fa-check-double mr-1"></i>Billed
+                                            @if($latestReading->status === 'pending')
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                                    <i class="fas fa-clock mr-1"></i>Pending
+                                                </span>
+                                            @elseif($latestReading->status === 'verified')
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                    <i class="fas fa-check mr-1"></i>Verified
+                                                </span>
+                                            @elseif($latestReading->status === 'billed')
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                    <i class="fas fa-check-double mr-1"></i>Billed
                                                     </span>
                                                 @endif
                                             @else
@@ -331,13 +331,13 @@
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                             <div class="flex space-x-2">
                                                 @if($latestReading && $latestReading->id)
-                                                    <a href="{{ route('readings.show', $latestReading) }}" class="text-blue-600 hover:text-blue-900" title="View Reading">
-                                                        <i class="fas fa-eye"></i>
+                                                <a href="{{ route('readings.show', $latestReading) }}" class="text-blue-600 hover:text-blue-900" title="View Reading">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                @if($latestReading->status !== 'billed')
+                                                    <a href="{{ route('readings.edit', $latestReading) }}" class="text-indigo-600 hover:text-indigo-900" title="Edit Reading">
+                                                        <i class="fas fa-edit"></i>
                                                     </a>
-                                                    @if($latestReading->status !== 'billed')
-                                                        <a href="{{ route('readings.edit', $latestReading) }}" class="text-indigo-600 hover:text-indigo-900" title="Edit Reading">
-                                                            <i class="fas fa-edit"></i>
-                                                        </a>
                                                     @endif
                                                 @else
                                                     <span class="text-gray-400" title="No reading available">

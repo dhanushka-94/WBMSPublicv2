@@ -73,7 +73,7 @@
                                             <div class="ml-3">
                                                 <p class="text-sm font-medium text-gray-900">{{ $meter->meter_number }}</p>
                                                 <p class="text-xs text-gray-500">{{ $meter->customer ? $meter->customer->full_name : 'Unassigned Customer' }}</p>
-                                            </div>
+                                        </div>
                                         </div>
                                     </div>
                                     @if($meter->address)
