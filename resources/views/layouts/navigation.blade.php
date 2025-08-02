@@ -7,7 +7,7 @@
                 <div class="shrink-0 flex items-center">
                     <a href="{{ route('dashboard') }}" class="flex items-center space-x-3">
                         <div class="flex items-center justify-center h-10 w-10 rounded-lg bg-white bg-opacity-20 p-1.5">
-                            <img src="{{ asset('images/aquabill-logo.png') }}" alt="AquaBill Logo" class="h-full w-full object-contain">
+                            <img src="{{ asset('images/aquabill-logo-color.png') }}" alt="AquaBill Logo" class="h-full w-full object-contain">
                         </div>
                         <div class="text-white">
                             <div class="font-bold text-lg leading-tight">AquaBill by olexto</div>

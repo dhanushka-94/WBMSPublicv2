@@ -27,7 +27,7 @@
                 <div class="text-center mb-8">
                     <div class="flex justify-center items-center space-x-4 mb-4">
                         <div class="flex items-center justify-center h-16 w-16 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-600 shadow-xl p-2">
-                            <img src="{{ asset('images/aquabill-logo.png') }}" alt="AquaBill Logo" class="h-full w-full object-contain">
+                            <img src="{{ asset('images/aquabill-logo-color.png') }}" alt="AquaBill Logo" class="h-full w-full object-contain">
                         </div>
                         <div class="text-left">
                             <h1 class="text-3xl font-bold text-gray-800">AquaBill by olexto</h1>
@@ -35,10 +35,7 @@
                             <p class="text-blue-600 font-medium text-lg">Client: Dunsinane Estate</p>
                         </div>
                     </div>
-                    <div class="max-w-md mx-auto">
-                        <h2 class="text-xl font-semibold text-gray-700 mb-2">AquaBill by olexto</h2>
-                        <p class="text-gray-600">Smart Water Supply, Billing, and Customer Management</p>
-                    </div>
+
                 </div>
 
                 <!-- Login Card -->
@@ -56,14 +53,14 @@
                     <div class="bg-white/80 backdrop-blur-sm rounded-lg px-6 py-4 shadow-lg border border-blue-100">
                         <div class="flex flex-col space-y-2">
                             <p class="text-sm text-gray-600">
-                                © {{ date('Y') }} olexto Digital Solutions (Pvt) Ltd - All rights reserved
+                                © {{ date('Y') }} AquaBill by olexto - All rights reserved
                             </p>
                             <div class="flex items-center justify-center space-x-2 text-sm">
                                 <span class="text-gray-500">Developed by</span>
-                                <span class="text-blue-600 font-semibold">
+                                <a href="https://olexto.com" target="_blank" class="text-blue-600 font-semibold hover:text-blue-800 transition-colors">
                                     <i class="fas fa-code mr-1"></i>
                                     olexto Digital Solutions (Pvt) Ltd
-                                </span>
+                                </a>
                             </div>
                         </div>
                     </div>
