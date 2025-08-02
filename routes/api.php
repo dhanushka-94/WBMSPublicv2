@@ -28,14 +28,14 @@ Route::prefix('v1')->group(function () {
             'status' => 'ok',
             'version' => '1.0.0',
             'timestamp' => now()->toISOString(),
-            'server' => 'Water Billing Management System API'
+            'server' => 'AquaBill by olexto API'
         ]);
     });
     
     // App info
     Route::get('/app-info', function () {
         return response()->json([
-            'app_name' => 'WBMS Mobile',
+            'app_name' => 'AquaBill Mobile',
             'version' => '1.0.0',
             'api_version' => 'v1',
             'features' => [

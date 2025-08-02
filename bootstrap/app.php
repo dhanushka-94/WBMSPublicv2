@@ -15,6 +15,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web([
             \App\Http\Middleware\ActivityLogger::class,
         ]);
+        
+        // Register custom middleware aliases
+        $middleware->alias([
+            'system.check' => \App\Http\Middleware\CheckSystemStatus::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

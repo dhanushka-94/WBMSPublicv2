@@ -8,10 +8,10 @@
             <div>
                 <h1 class="font-bold text-2xl text-gray-800 leading-tight">
                     <i class="fas fa-tachometer-alt text-blue-600 mr-2"></i>
-                    DN WASSIP Dashboard
+                    AquaBill by olexto - Dashboard
                 </h1>
-                <p class="text-blue-600 font-medium">Dunsinane Estate Water Supply and Management System</p>
-                <p class="text-gray-600 text-sm mt-1">Customer Relationship Management</p>
+                <p class="text-blue-600 font-medium">Smart Water Supply, Billing, and Customer Management</p>
+                <p class="text-gray-600 text-sm mt-1">Client: Dunsinane Estate | SaaS Platform</p>
                 <div class="mt-2 flex items-center space-x-2 text-xs text-gray-500">
                     <i class="fas fa-code"></i>
                     <span>Developed by <strong class="text-blue-600">olexto Digital Solutions (Pvt) Ltd</strong></span>

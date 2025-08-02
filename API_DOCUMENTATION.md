@@ -1,7 +1,8 @@
-# Water Billing Management System (WBMS) - Mobile API Documentation
+# AquaBill by olexto - Mobile API Documentation
+## Smart Water Supply, Billing, and Customer Management (SaaS)
 
 ## Overview
-This comprehensive documentation covers all REST APIs for the Water Billing Management System mobile application. The APIs support mobile meter reading, payment collection, customer management, and comprehensive system integration.
+This comprehensive documentation covers all REST APIs for AquaBill by olexto mobile application. The APIs support mobile meter reading, payment collection, customer management, and comprehensive system integration for smart water utility management.
 
 ## Base Configuration
 - **Base URL**: `http://your-domain.com/api/v1`
@@ -28,7 +29,7 @@ Login to the mobile application and receive an authentication token.
 **Request Body**:
 ```json
 {
-  "email": "reader@wassip.com",
+  "email": "reader@aquabill.olexto.com",
   "password": "password",
   "device_name": "Samsung Galaxy S21",
   "device_info": {
@@ -49,7 +50,7 @@ Login to the mobile application and receive an authentication token.
     "user": {
       "id": 1,
       "name": "John Doe",
-      "email": "reader@wassip.com",
+      "email": "reader@aquabill.olexto.com",
       "role": "meter_reader",
       "permissions": {
         "can_read_meters": true,
@@ -126,7 +127,7 @@ Verify if the current token is valid.
     "user": {
       "id": 1,
       "name": "John Doe",
-      "email": "reader@wassip.com",
+      "email": "reader@aquabill.olexto.com",
       "role": "meter_reader"
     },
     "expires_at": "2024-02-15T10:30:00Z"
@@ -148,7 +149,7 @@ Get current user profile information.
     "user": {
       "id": 1,
       "name": "John Doe",
-      "email": "reader@wassip.com",
+      "email": "reader@aquabill.olexto.com",
       "role": "meter_reader",
       "permissions": {
         "can_read_meters": true,
@@ -203,7 +204,7 @@ Update user profile information (limited fields for mobile).
     "user": {
       "id": 1,
       "name": "John Updated Doe",
-      "email": "reader@wassip.com",
+      "email": "reader@aquabill.olexto.com",
       "role": "meter_reader",
       "phone": "0771234567"
     }
@@ -355,7 +356,7 @@ reading_accuracy: exact
         "signature_line": "________________________"
       },
       "footer": {
-        "company": "Water Billing Management System",
+        "company": "AquaBill by olexto",
         "note": "Thank you for your cooperation",
         "website": "www.waterbilling.com"
       }
@@ -1084,7 +1085,7 @@ Check API health and availability.
   "status": "ok",
   "version": "1.0.0",
   "timestamp": "2024-01-20T10:30:00Z",
-  "server": "Water Billing Management System API"
+  "server": "AquaBill by olexto API"
 }
 ```
 
@@ -1096,7 +1097,7 @@ Get application information and supported features.
 **Response** (Success - 200):
 ```json
 {
-  "app_name": "WBMS Mobile",
+  "app_name": "AquaBill Mobile",
   "version": "1.0.0",
   "api_version": "v1",
   "features": {

@@ -14,6 +14,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class CustomerController extends Controller
 {
@@ -74,7 +76,6 @@ class CustomerController extends Controller
     {
         $validated = $request->validate([
             // 'account_number' => 'required|string|unique:customers,account_number|max:50', // Removed - auto-generated
-            'meter_number' => 'nullable|string|unique:customers,meter_number|max:50',
             'title' => 'required|in:Mr,Mrs,Miss,Ms,Dr', // Required
             'first_name' => 'required|string|max:255', // Required
             'last_name' => 'nullable|string|max:255', // Optional
@@ -95,8 +96,24 @@ class CustomerController extends Controller
             'notes' => 'nullable|string',
             // Billing settings
             'billing_day' => 'nullable|integer|min:1|max:31',
-            'auto_billing_enabled' => 'boolean'
+            'auto_billing_enabled' => 'boolean',
+            // Meter assignment
+            'water_meter_id' => [
+                'nullable',
+                'exists:water_meters,id',
+                function ($attribute, $value, $fail) {
+                    if ($value) {
+                        $meter = \App\Models\WaterMeter::find($value);
+                        if ($meter && $meter->customer_id) {
+                            $fail('This meter is already assigned to another customer.');
+                        }
+                    }
+                }
+            ]
         ]);
+
+        try {
+            DB::beginTransaction();
 
         // Handle profile photo upload
         if ($request->hasFile('profile_photo')) {
@@ -112,13 +129,40 @@ class CustomerController extends Controller
             $validated['auto_billing_enabled'] = true; // Default to enabled
         }
 
+            // Remove water_meter_id from validated data as it's not a customer field
+            $waterMeterId = $validated['water_meter_id'] ?? null;
+            unset($validated['water_meter_id']);
+
         $customer = Customer::create($validated);
+
+            // Assign water meter if selected
+            if ($waterMeterId) {
+                $waterMeter = \App\Models\WaterMeter::find($waterMeterId);
+                if ($waterMeter && !$waterMeter->customer_id) {
+                    $waterMeter->update(['customer_id' => $customer->id]);
+                    
+                    // Log meter assignment activity
+                    $this->logActivity('assign_meter', "Assigned water meter {$waterMeter->meter_number} to customer {$customer->full_name}", $customer, [
+                        'meter_id' => $waterMeter->id,
+                        'meter_number' => $waterMeter->meter_number
+                    ]);
+                }
+            }
 
         // Log the customer creation activity
         $this->logModelCreated($customer);
 
+            DB::commit();
+
         return redirect()->route('customers.show', $customer)
-            ->with('success', 'Customer created successfully.');
+                ->with('success', 'Customer created successfully.' . ($waterMeterId ? ' Water meter has been assigned.' : ''));
+                
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error creating customer: ' . $e->getMessage());
+            return back()->with('error', 'Failed to create customer. Please try again.')
+                ->withInput();
+        }
     }
 
     /**

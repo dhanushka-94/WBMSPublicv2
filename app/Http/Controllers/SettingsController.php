@@ -32,7 +32,7 @@ class SettingsController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:divisions,name',
-            'custom_id' => 'required|string|max:4|unique:divisions,custom_id',
+            'custom_id' => 'required|string|max:10|unique:divisions,custom_id',
             'description' => 'nullable|string|max:500',
             'is_active' => 'nullable|boolean'
         ]);
@@ -61,7 +61,7 @@ class SettingsController extends Controller
             'custom_id' => [
                 'required',
                 'string',
-                'max:4',
+                'max:10',
                 Rule::unique('divisions')->ignore($division->id)
             ],
             'description' => 'nullable|string|max:500',
@@ -103,7 +103,7 @@ class SettingsController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:customer_types,name',
-            'custom_id' => 'required|string|max:3|unique:customer_types,custom_id',
+            'custom_id' => 'required|string|max:10|unique:customer_types,custom_id',
             'description' => 'nullable|string|max:500',
             'is_active' => 'nullable|boolean'
         ]);
@@ -132,7 +132,7 @@ class SettingsController extends Controller
             'custom_id' => [
                 'required',
                 'string',
-                'max:3',
+                'max:10',
                 Rule::unique('customer_types')->ignore($customerType->id)
             ],
             'description' => 'nullable|string|max:500',

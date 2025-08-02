@@ -65,28 +65,28 @@ class CreateRoleUsers extends Command
         $users = [
             [
                 'name' => 'System Administrator',
-                'email' => 'admin@wassip.com',
+                'email' => 'admin@aquabill.olexto.com',
                 'password' => Hash::make('password'),
                 'role' => 'admin',
                 'is_active' => true,
             ],
             [
                 'name' => 'System Manager',
-                'email' => 'manager@wassip.com',
+                'email' => 'manager@aquabill.olexto.com',
                 'password' => Hash::make('password'),
                 'role' => 'manager',
                 'is_active' => true,
             ],
             [
                 'name' => 'Staff Member',
-                'email' => 'staff@wassip.com',
+                'email' => 'staff@aquabill.olexto.com',
                 'password' => Hash::make('password'),
                 'role' => 'staff',
                 'is_active' => true,
             ],
             [
                 'name' => 'Meter Reader',
-                'email' => 'reader@wassip.com',
+                'email' => 'reader@aquabill.olexto.com',
                 'password' => Hash::make('password'),
                 'role' => 'meter_reader',
                 'is_active' => true,
@@ -102,9 +102,9 @@ class CreateRoleUsers extends Command
         $this->info('✅ Successfully cleared all data and created role users!');
         $this->info('');
         $this->info('Login credentials:');
-        $this->info('Admin: admin@wassip.com / password');
-        $this->info('Manager: manager@wassip.com / password');
-        $this->info('Staff: staff@wassip.com / password');
-        $this->info('Meter Reader: reader@wassip.com / password');
+        $this->info('Admin: admin@aquabill.olexto.com / password');
+        $this->info('Manager: manager@aquabill.olexto.com / password');
+        $this->info('Staff: staff@aquabill.olexto.com / password');
+        $this->info('Meter Reader: reader@aquabill.olexto.com / password');
     }
 } 

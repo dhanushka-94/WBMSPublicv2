@@ -33,7 +33,7 @@ class RefreshDatabase extends Command
      */
     public function handle()
     {
-        $this->info('🔄 Water Billing Management System - Database Refresh');
+        $this->info('🔄 AquaBill by olexto - Database Refresh');
         $this->info('This command will refresh the database while preserving system users');
         $this->newLine();
 
@@ -211,7 +211,7 @@ class RefreshDatabase extends Command
             $this->warn('   ⚠️  No admin user found, creating default admin...');
             User::create([
                 'name' => 'System Administrator',
-                'email' => 'admin@wassip.com',
+                'email' => 'admin@aquabill.olexto.com',
                 'password' => Hash::make('password'),
                 'role' => 'admin',
                 'email_verified_at' => now(),

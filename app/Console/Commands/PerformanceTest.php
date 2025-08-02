@@ -43,7 +43,7 @@ class PerformanceTest extends Command
         $recordCount = $this->option('records');
         $cleanup = $this->option('cleanup');
 
-        $this->info("🚀 WBMS Performance Test - Testing with {$recordCount} records");
+        $this->info("🚀 AquaBill Performance Test - Testing with {$recordCount} records");
         $this->newLine();
 
         // Test 1: Database Performance Test
@@ -456,7 +456,7 @@ class PerformanceTest extends Command
         $this->newLine();
 
         $this->info("🎉 CONCLUSION:");
-        $this->line("   The WBMS system is designed to efficiently handle");
+        $this->line("   The AquaBill system is designed to efficiently handle");
         $this->line("   10,000+ customer records with excellent performance.");
         $this->line("   All critical operations are optimized for scale.");
     }

@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>{{ config('app.name', 'Dunsinane Estate Water Supply and Management System') }}</title>
+        <title>@yield('title', 'AquaBill by olexto')</title>
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
@@ -39,13 +39,21 @@
             <footer class="bg-gray-800 text-white py-4 px-4 sm:px-6 lg:px-8">
                 <div class="max-w-7xl mx-auto">
                     <div class="flex flex-col md:flex-row justify-between items-center space-y-2 md:space-y-0">
-                        <div class="text-sm text-gray-300">
-                            © {{ date('Y') }} DN WASSIP - Dunsinane Estate Water Supply and Management System
+                        <div class="flex flex-col md:flex-row items-center space-y-1 md:space-y-0 md:space-x-4 text-sm text-gray-300">
+                            <span>© {{ date('Y') }} olexto Digital Solutions (Pvt) Ltd</span>
+                            <div class="flex space-x-3">
+                                <span class="bg-gray-700 px-2 py-1 rounded text-xs">
+                                    <i class="fas fa-desktop mr-1"></i>v2.0.0
+                                </span>
+                                <span class="bg-gray-700 px-2 py-1 rounded text-xs">
+                                    <i class="fas fa-mobile-alt mr-1"></i>v2.0.0
+                                </span>
+                            </div>
                         </div>
-                        <div class="flex items-center space-x-2 text-sm text-gray-300">
-                            <span>Developed by</span>
-                            <a href="#" class="text-blue-400 hover:text-blue-300 font-medium transition-colors duration-200">
-                                <i class="fas fa-code mr-1"></i>
+                        <div class="flex flex-col md:flex-row items-center space-y-1 md:space-y-0 md:space-x-2 text-sm text-gray-300">
+                            <span>Powered by Software as a System by</span>
+                            <a href="{{ route('about') }}" class="text-blue-400 hover:text-blue-300 font-medium transition-colors duration-200">
+                                <i class="fas fa-cloud mr-1"></i>
                                 olexto Digital Solutions (Pvt) Ltd
                             </a>
                         </div>

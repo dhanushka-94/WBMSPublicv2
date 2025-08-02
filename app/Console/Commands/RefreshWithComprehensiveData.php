@@ -28,7 +28,7 @@ class RefreshWithComprehensiveData extends Command
      */
     public function handle()
     {
-        $this->info('🚀 Water Billing Management System - Comprehensive Data Refresh');
+        $this->info('🚀 AquaBill by olexto - Comprehensive Data Refresh');
         $this->line('');
         
         if (!$this->option('force')) {
@@ -94,13 +94,13 @@ class RefreshWithComprehensiveData extends Command
         
         $this->line('');
         $this->info('🔑 Login Information:');
-        $this->line('   Email: admin@wassip.com');
+        $this->line('   Email: admin@aquabill.olexto.com');
         $this->line('   Password: password');
         $this->line('');
         $this->info('💡 Test Accounts:');
-        $this->line('   Meter Readers: reader1@wassip.com to reader50@wassip.com');
-        $this->line('   Staff Members: staff1@wassip.com to staff30@wassip.com');
-        $this->line('   Managers: manager1@wassip.com to manager20@wassip.com');
+        $this->line('   Meter Readers: reader1@aquabill.olexto.com to reader50@aquabill.olexto.com');
+        $this->line('   Staff Members: staff1@aquabill.olexto.com to staff30@aquabill.olexto.com');
+        $this->line('   Managers: manager1@aquabill.olexto.com to manager20@aquabill.olexto.com');
         $this->line('   (All passwords: password)');
         $this->line('');
         $this->info('🌐 Access: http://127.0.0.1:8000');

@@ -1,32 +1,29 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
-    <div class="w-full px-4 sm:px-6 lg:px-8">
+<div class="min-h-screen bg-gray-50 py-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         <!-- Header Section -->
-        <div class="mb-8">
+        <div class="mb-6">
             <div class="flex flex-col md:flex-row md:items-center justify-between">
                 <div>
-                    <h1 class="text-3xl font-bold text-gray-900 flex items-center">
-                        <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center mr-4">
-                            <i class="fas fa-users text-white"></i>
-                        </div>
-                        Customer Management
-                    </h1>
-                    <p class="mt-2 text-gray-600">DN WASSIP - Manage Water Service Customers</p>
+                    <h1 class="text-2xl font-semibold text-gray-900">Customer Management</h1>
+                    <p class="mt-1 text-sm text-gray-600">Manage water service customers</p>
                 </div>
+                <div class="mt-4 md:mt-0">
                 <a href="{{ route('customers.create') }}" 
-                   class="mt-4 md:mt-0 inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 border border-transparent rounded-lg font-semibold text-white hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl">
+                       class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                     <i class="fas fa-plus mr-2"></i>
                     Add New Customer
                 </a>
+                </div>
             </div>
         </div>
         
         <!-- Stats Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white overflow-hidden shadow-xl rounded-2xl border border-gray-200">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+            <div class="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200">
                 <div class="p-6">
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
@@ -42,11 +39,11 @@
                 </div>
             </div>
             
-            <div class="bg-white overflow-hidden shadow-xl rounded-2xl border border-gray-200">
+            <div class="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200">
                 <div class="p-6">
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
-                            <div class="flex items-center justify-center h-12 w-12 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg">
+                            <div class="flex items-center justify-center h-12 w-12 rounded-lg bg-emerald-100 text-emerald-600">
                                 <i class="fas fa-check-circle text-lg"></i>
                             </div>
                         </div>

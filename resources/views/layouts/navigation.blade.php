@@ -7,11 +7,11 @@
                 <div class="shrink-0 flex items-center">
                     <a href="{{ route('dashboard') }}" class="flex items-center space-x-3">
                         <div class="flex items-center justify-center h-10 w-10 rounded-lg bg-white bg-opacity-20 p-1.5">
-                            <img src="{{ asset('images/wassip-logo-only.png') }}" alt="WASSIP Logo" class="h-full w-full object-contain">
+                            <img src="{{ asset('images/aquabill-logo.png') }}" alt="AquaBill Logo" class="h-full w-full object-contain">
                         </div>
                         <div class="text-white">
-                            <div class="font-bold text-lg leading-tight">DN WASSIP</div>
-                            <div class="text-xs text-blue-200">Water Supply & Management</div>
+                            <div class="font-bold text-lg leading-tight">AquaBill by olexto</div>
+                            <div class="text-xs text-blue-200">Smart Water Management SaaS</div>
                         </div>
                     </a>
                 </div>
@@ -125,6 +125,38 @@
                                 <a href="{{ route('reports.overdue') }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-800 transition duration-150">
                                     <i class="fas fa-exclamation-triangle mr-3 text-red-600"></i>Overdue Report
                                 </a>
+                                <a href="{{ route('reports.monthly-active') }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-800 transition duration-150">
+                                    <i class="fas fa-users-cog mr-3 text-green-600"></i>Monthly Active Connections
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SMS & Communications Dropdown -->
+                    <div class="relative flex items-center h-16" x-data="{ open: false }" @click.outside="open = false">
+                        <button @click="open = !open" 
+                                class="inline-flex items-center px-3 py-2 h-10 text-sm font-medium text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 rounded-md transition duration-150 ease-in-out {{ request()->routeIs('sms.*') ? 'bg-white bg-opacity-20' : '' }}">
+                            <i class="fas fa-sms mr-2"></i>
+                            <span>SMS & Communications</span>
+                            <svg class="ml-1 h-4 w-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                        <div x-show="open" 
+                             x-transition:enter="transition ease-out duration-200"
+                             x-transition:enter-start="opacity-0 scale-95"
+                             x-transition:enter-end="opacity-100 scale-100"
+                             x-transition:leave="transition ease-in duration-75"
+                             x-transition:leave-start="opacity-100 scale-100"
+                             x-transition:leave-end="opacity-0 scale-95"
+                             class="absolute z-50 mt-2 w-56 rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5 top-full">
+                            <div class="py-1">
+                                <a href="{{ route('sms.index') }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-800 transition duration-150">
+                                    <i class="fas fa-list mr-3 text-blue-600"></i>SMS Log
+                                </a>
+                                <a href="{{ route('sms.statistics') }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-800 transition duration-150">
+                                    <i class="fas fa-chart-bar mr-3 text-green-600"></i>SMS Statistics
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -160,6 +192,48 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- About Us Link -->
+                    <x-nav-link :href="route('about')" :active="request()->routeIs('about')" 
+                                class="text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 {{ request()->routeIs('about') ? 'bg-white bg-opacity-20 text-white' : '' }} flex items-center h-16">
+                        <i class="fas fa-info-circle mr-2"></i>{{ __('About Us') }}
+                    </x-nav-link>
+
+                    @php
+                        $isSystemEnabled = \App\Helpers\SystemConfig::isSystemEnabled();
+                        $canControlSystem = auth()->check() && (auth()->id() === 1 || auth()->user()->role === 'admin');
+                    @endphp
+
+                    <!-- System Control (Admin Only) -->
+                    @if($canControlSystem)
+                        <div class="relative flex items-center h-16 ml-4">
+                            <div class="flex items-center space-x-2">
+                                <!-- System Status Indicator -->
+                                <div class="flex items-center">
+                                    <div class="w-2 h-2 rounded-full {{ $isSystemEnabled ? 'bg-green-400' : 'bg-red-400' }} mr-2"></div>
+                                    <span class="text-xs text-blue-200">
+                                        {{ $isSystemEnabled ? 'ACTIVE' : 'DISABLED' }}
+                                    </span>
+                                </div>
+                                
+                                <!-- Toggle Button -->
+                                <button onclick="toggleSystemStatus()" 
+                                        class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-full transition duration-150 
+                                               {{ $isSystemEnabled 
+                                                  ? 'bg-red-600 hover:bg-red-700 text-white' 
+                                                  : 'bg-green-600 hover:bg-green-700 text-white' }}">
+                                    <i class="fas fa-power-off mr-1"></i>
+                                    {{ $isSystemEnabled ? 'Disable' : 'Enable' }}
+                                </button>
+                                
+                                <!-- System Control Link -->
+                                <a href="{{ route('system.status') }}" 
+                                   class="inline-flex items-center px-2 py-1.5 text-xs text-blue-200 hover:text-white hover:bg-white hover:bg-opacity-10 rounded transition duration-150">
+                                    <i class="fas fa-cogs"></i>
+                                </a>
+                            </div>
+                        </div>
+                    @endif
                 </div>
             </div>
 
@@ -200,6 +274,11 @@
                         <x-dropdown-link :href="route('dashboard')" class="flex items-center">
                             <i class="fas fa-tachometer-alt mr-3 text-blue-500"></i>
                             {{ __('Dashboard') }}
+                        </x-dropdown-link>
+
+                        <x-dropdown-link :href="route('about')" class="flex items-center">
+                            <i class="fas fa-info-circle mr-3 text-green-500"></i>
+                            {{ __('About System') }}
                         </x-dropdown-link>
 
                         <div class="border-t border-gray-100"></div>
@@ -286,6 +365,13 @@
                                    class="text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 ml-4">
                 <i class="fas fa-history mr-2"></i>{{ __('Activity Logs') }}
             </x-responsive-nav-link>
+            
+            <!-- About Us -->
+            <div class="px-3 py-2 text-xs font-semibold text-blue-200 uppercase tracking-wide mt-4">About</div>
+            <x-responsive-nav-link :href="route('about')" :active="request()->routeIs('about')"
+                                   class="text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 ml-4">
+                <i class="fas fa-info-circle mr-2"></i>{{ __('About Us') }}
+            </x-responsive-nav-link>
         </div>
 
         <!-- Responsive Settings Options -->
@@ -316,3 +402,57 @@
         </div>
     </div>
 </nav>
+
+<script>
+function toggleSystemStatus() {
+    @if($canControlSystem ?? false)
+        const isEnabled = {{ $isSystemEnabled ? 'true' : 'false' }};
+        const action = isEnabled ? 'disable' : 'enable';
+        
+        if (action === 'disable') {
+            const reason = prompt('Please provide a reason for disabling the system:', 'Payment overdue - System temporarily disabled');
+            if (!reason) return;
+            
+            if (confirm('Are you sure you want to disable the system? This will restrict access to most features.')) {
+                performToggle(action, reason);
+            }
+        } else {
+            if (confirm('Are you sure you want to enable the system? All features will be restored.')) {
+                performToggle(action);
+            }
+        }
+    @endif
+}
+
+function performToggle(action, reason = null) {
+    const url = action === 'enable' ? '{{ route("system.enable") }}' : '{{ route("system.disable") }}';
+    const data = { _token: '{{ csrf_token() }}' };
+    
+    if (reason) {
+        data.reason = reason;
+    }
+    
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success message and reload
+            alert(data.message);
+            window.location.reload();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while toggling system status.');
+    });
+}
+</script>

@@ -577,7 +577,7 @@ class MeterReadingApiController extends Controller
                 'signature_line' => '________________________',
             ],
             'footer' => [
-                'company' => 'Water Billing Management System',
+                'company' => 'AquaBill by olexto',
                 'note' => 'Thank you for your cooperation',
                 'website' => 'www.waterbilling.com',
             ]

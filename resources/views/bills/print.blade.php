@@ -235,8 +235,10 @@
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <div class="company-name">DN WASSIP</div>
-            <div class="company-subtitle">Water Billing Management System</div>
+            <div class="company-name">AquaBill by olexto</div>
+            <div class="company-subtitle">Smart Water Supply, Billing, and Customer Management</div>
+                <div class="client-info">Client: Dunsinane Estate</div>
+                <div class="powered-by">Powered by olexto Digital Solutions (Pvt) Ltd</div>
             <div class="bill-title">WATER BILL</div>
         </div>
 
@@ -447,7 +449,7 @@
         <div class="footer">
             <p>This is a computer-generated bill. No signature required.</p>
             <p>Generated on {{ now()->format('F d, Y \a\t g:i A') }}</p>
-            <p>Thank you for using DN WASSIP Water Billing Management System</p>
+            <p>Thank you for using AquaBill by olexto - Smart Water Supply, Billing, and Customer Management</p>
         </div>
     </div>
 

@@ -5,7 +5,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Carbon\Carbon;
+use App\Services\SmsNotificationService;
+use App\Models\SmsNotification;
 
 class Bill extends Model
 {
@@ -77,6 +80,11 @@ class Bill extends Model
         return $this->belongsTo(MeterReading::class);
     }
 
+    public function smsNotifications(): HasMany
+    {
+        return $this->hasMany(SmsNotification::class);
+    }
+
     // Scopes
     public function scopeDraft($query)
     {
@@ -135,6 +143,35 @@ class Bill extends Model
             $bill->calculateTotalAmount();
             $bill->updateBalance();
             $bill->updateStatusBasedOnPayment();
+        });
+
+        static::updated(function ($bill) {
+            // Send SMS notifications based on status changes
+            if ($bill->wasChanged('status')) {
+                switch ($bill->status) {
+                    case 'generated':
+                        $bill->sendNewBillNotification();
+                        break;
+                    case 'sent':
+                        // Bill marked as sent manually - could send confirmation SMS
+                        break;
+                    case 'overdue':
+                        $bill->sendOverdueAlert();
+                        break;
+                }
+            }
+
+            // Send payment confirmation when payment is recorded
+            if ($bill->wasChanged('paid_amount') && $bill->paid_amount > $bill->getOriginal('paid_amount')) {
+                $paidAmount = $bill->paid_amount - $bill->getOriginal('paid_amount');
+                $bill->sendPaymentConfirmation($paidAmount);
+            }
+
+            // Send late fee notice when late fees are added
+            if ($bill->wasChanged('late_fees') && $bill->late_fees > $bill->getOriginal('late_fees')) {
+                $lateFeeAmount = $bill->late_fees - $bill->getOriginal('late_fees');
+                $bill->sendLateFeeNotice($lateFeeAmount);
+            }
         });
     }
 
@@ -269,5 +306,66 @@ class Bill extends Model
     public function getBillingPeriodDays(): int
     {
         return $this->billing_period_from->diffInDays($this->billing_period_to) + 1;
+    }
+
+    // SMS Notification Methods
+    public function sendNewBillNotification(): bool
+    {
+        try {
+            $smsService = app(SmsNotificationService::class);
+            $notification = $smsService->sendNewBillNotification($this);
+            return $notification !== null;
+        } catch (\Exception $e) {
+            \Log::error("Failed to send new bill SMS notification: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function sendDueReminder(): bool
+    {
+        try {
+            $smsService = app(SmsNotificationService::class);
+            $notification = $smsService->sendDueReminder($this);
+            return $notification !== null;
+        } catch (\Exception $e) {
+            \Log::error("Failed to send due reminder SMS: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function sendOverdueAlert(): bool
+    {
+        try {
+            $smsService = app(SmsNotificationService::class);
+            $notification = $smsService->sendOverdueAlert($this);
+            return $notification !== null;
+        } catch (\Exception $e) {
+            \Log::error("Failed to send overdue SMS alert: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function sendPaymentConfirmation(float $paidAmount): bool
+    {
+        try {
+            $smsService = app(SmsNotificationService::class);
+            $notification = $smsService->sendPaymentConfirmation($this, $paidAmount);
+            return $notification !== null;
+        } catch (\Exception $e) {
+            \Log::error("Failed to send payment confirmation SMS: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function sendLateFeeNotice(float $lateFeeAmount): bool
+    {
+        try {
+            $smsService = app(SmsNotificationService::class);
+            $notification = $smsService->sendLateFeeNotice($this, $lateFeeAmount);
+            return $notification !== null;
+        } catch (\Exception $e) {
+            \Log::error("Failed to send late fee SMS notice: " . $e->getMessage());
+            return false;
+        }
     }
 }

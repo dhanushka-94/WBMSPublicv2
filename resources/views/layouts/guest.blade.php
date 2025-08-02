@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>{{ config('app.name', 'Dunsinane Estate Water Supply and Management System') }}</title>
+        <title>{{ config('app.name', 'AquaBill by olexto') }}</title>
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
@@ -27,16 +27,17 @@
                 <div class="text-center mb-8">
                     <div class="flex justify-center items-center space-x-4 mb-4">
                         <div class="flex items-center justify-center h-16 w-16 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-600 shadow-xl p-2">
-                            <img src="{{ asset('images/wassip-logo-only.png') }}" alt="WASSIP Logo" class="h-full w-full object-contain">
+                            <img src="{{ asset('images/aquabill-logo.png') }}" alt="AquaBill Logo" class="h-full w-full object-contain">
                         </div>
                         <div class="text-left">
-                            <h1 class="text-3xl font-bold text-gray-800">DN WASSIP</h1>
-                            <p class="text-blue-600 font-medium text-lg">Water Supply & Management</p>
+                            <h1 class="text-3xl font-bold text-gray-800">AquaBill by olexto</h1>
+                    <p class="text-sm text-gray-600 mt-1">Smart Water Supply, Billing, and Customer Management</p>
+                            <p class="text-blue-600 font-medium text-lg">Client: Dunsinane Estate</p>
                         </div>
                     </div>
                     <div class="max-w-md mx-auto">
-                        <h2 class="text-xl font-semibold text-gray-700 mb-2">Dunsinane Estate Water Supply and Management System</h2>
-                        <p class="text-gray-600">Customer Relationship Management Portal</p>
+                        <h2 class="text-xl font-semibold text-gray-700 mb-2">AquaBill by olexto</h2>
+                        <p class="text-gray-600">Smart Water Supply, Billing, and Customer Management</p>
                     </div>
                 </div>
 
@@ -55,7 +56,7 @@
                     <div class="bg-white/80 backdrop-blur-sm rounded-lg px-6 py-4 shadow-lg border border-blue-100">
                         <div class="flex flex-col space-y-2">
                             <p class="text-sm text-gray-600">
-                                © {{ date('Y') }} DN WASSIP - All rights reserved
+                                © {{ date('Y') }} olexto Digital Solutions (Pvt) Ltd - All rights reserved
                             </p>
                             <div class="flex items-center justify-center space-x-2 text-sm">
                                 <span class="text-gray-500">Developed by</span>

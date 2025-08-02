@@ -42,18 +42,7 @@ class AppServiceProvider extends ServiceProvider
             return "<?php echo 'Rs. ' . number_format($expression, 2); ?>";
         });
 
-        // Register global currency helper
-        if (!function_exists('lkr')) {
-            function lkr($amount, $decimals = 2) {
-                return 'Rs. ' . number_format($amount, $decimals);
-            }
-        }
-
-        // Register Sri Lankan Rupees helper function
-        if (!function_exists('rupees')) {
-            function rupees($amount, $decimals = 2) {
-                return 'Rs. ' . number_format($amount, $decimals);
-            }
-        }
+        // Helper functions are now available through Blade directives above
+        // Global functions removed to prevent redeclaration issues
     }
 }

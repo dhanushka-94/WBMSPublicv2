@@ -1,43 +1,46 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
-    <div class="w-full px-4 sm:px-6 lg:px-8">
-        <!-- Header Section -->
-        <div class="mb-8">
+<div class="min-h-screen bg-gray-50 py-6">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Professional Header -->
+        <div class="mb-6">
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="text-3xl font-bold text-gray-900 flex items-center">
-                        <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center mr-4">
-                            <i class="fas fa-user-plus text-white"></i>
-                        </div>
-                        Create New Customer
-                    </h1>
-                    <p class="mt-2 text-gray-600">Add a new customer to your water billing system</p>
+                    <h1 class="text-2xl font-semibold text-gray-900">Create New Customer</h1>
+                    <p class="mt-1 text-sm text-gray-600">Add a new customer to AquaBill - Smart Water Supply, Billing, and Customer Management</p>
                 </div>
+                <div class="flex items-center space-x-3">
                 <a href="{{ route('customers.index') }}" 
-                   class="inline-flex items-center px-6 py-3 bg-white border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200">
+                       class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
                     <i class="fas fa-arrow-left mr-2"></i>
                     Back to Customers
                 </a>
+                </div>
             </div>
         </div>
 
         <!-- Main Form Card -->
-        <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
+        <div class="bg-white shadow-sm rounded-lg border border-gray-200">
             <form action="{{ route('customers.store') }}" method="POST" enctype="multipart/form-data" class="space-y-0">
                 @csrf
 
                 <!-- Account Information Section -->
-                <div class="bg-gradient-to-r from-blue-500 to-indigo-600 p-6">
-                    <h2 class="text-xl font-semibold text-white flex items-center">
-                        <i class="fas fa-id-card mr-3"></i>
-                        Account Information
-                    </h2>
-                    <p class="text-blue-100 mt-1">System-generated account details</p>
+                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-id-card text-blue-600 text-sm"></i>
+                            </div>
+                        </div>
+                        <div class="ml-3">
+                            <h2 class="text-lg font-medium text-gray-900">Account Information</h2>
+                            <p class="text-sm text-gray-500">System-generated account details</p>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="p-6 bg-blue-50 border-b border-blue-100">
+                <div class="px-6 py-6 border-b border-gray-200">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <!-- Account Number -->
                         <div class="space-y-2">
@@ -45,7 +48,7 @@
                             <div class="relative">
                                 <input 
                                     type="text" 
-                                    value="Auto-generated (e.g., AC{{ substr(date('Y'), -2) }}{{ str_pad(rand(0, 99999999), 8, '0', STR_PAD_LEFT) }})"
+                                    value="Auto-generated (e.g., CP/NE/DN/DIV/TYPE/0001)"
                                     readonly
                                     class="w-full px-4 py-3 bg-white border-2 border-blue-200 rounded-lg text-gray-500 cursor-not-allowed focus:outline-none">
                                 <div class="absolute inset-y-0 right-0 flex items-center pr-3">
@@ -54,7 +57,7 @@
                             </div>
                             <p class="text-xs text-blue-600 flex items-center">
                                 <i class="fas fa-info-circle mr-1"></i>
-                                Numbers-only format, auto-generated on save
+                                Format: CP/NE/DN/Division/Type/Number, auto-generated on save
                             </p>
                         </div>
 
@@ -67,7 +70,7 @@
                                     name="reference_number" 
                                     value="{{ old('reference_number') }}"
                                     placeholder="Leave empty to auto-generate"
-                                    class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors @error('reference_number') border-red-300 @enderror">
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 @error('reference_number') border-red-300 @enderror">
                                 <div class="absolute inset-y-0 right-0 flex items-center pr-3">
                                     <i class="fas fa-hashtag text-gray-400"></i>
                                 </div>
@@ -80,15 +83,21 @@
                 </div>
 
                 <!-- Customer Classification Section -->
-                <div class="bg-gradient-to-r from-indigo-500 to-purple-600 p-6">
-                    <h2 class="text-xl font-semibold text-white flex items-center">
-                        <i class="fas fa-tags mr-3"></i>
-                        Customer Classification
-                    </h2>
-                    <p class="text-indigo-100 mt-1">Required classification details</p>
+                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-tags text-indigo-600 text-sm"></i>
+                            </div>
+                        </div>
+                        <div class="ml-3">
+                            <h2 class="text-lg font-medium text-gray-900">Customer Classification</h2>
+                            <p class="text-sm text-gray-500">Required classification details</p>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="p-6 bg-indigo-50 border-b border-indigo-100">
+                <div class="px-6 py-6 border-b border-gray-200">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <!-- Customer Type -->
                         <div class="space-y-2">
@@ -139,37 +148,26 @@
                             @enderror
                         </div>
 
-                        <!-- Meter Number -->
-                        <div class="space-y-2">
-                            <label class="block text-sm font-semibold text-gray-700">Meter Number</label>
-                            <div class="relative">
-                                <input 
-                                    type="text" 
-                                    name="meter_number" 
-                                    value="{{ old('meter_number') }}"
-                                    placeholder="Water meter number"
-                                    class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:outline-none transition-colors @error('meter_number') border-red-300 @enderror">
-                                <div class="absolute inset-y-0 right-0 flex items-center pr-3">
-                                    <i class="fas fa-tachometer-alt text-gray-400"></i>
-                                </div>
-                            </div>
-                            @error('meter_number')
-                                <p class="text-xs text-red-600 flex items-center"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p>
-                            @enderror
-                        </div>
+
                     </div>
                 </div>
 
                 <!-- Personal Information Section -->
-                <div class="bg-gradient-to-r from-emerald-500 to-teal-600 p-6">
-                    <h2 class="text-xl font-semibold text-white flex items-center">
-                        <i class="fas fa-user mr-3"></i>
-                        Personal Information
-                    </h2>
-                    <p class="text-emerald-100 mt-1">Customer's personal details</p>
+                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-user text-emerald-600 text-sm"></i>
+                            </div>
+                        </div>
+                        <div class="ml-3">
+                            <h2 class="text-lg font-medium text-gray-900">Personal Information</h2>
+                            <p class="text-sm text-gray-500">Customer's personal details</p>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="p-6 bg-emerald-50 border-b border-emerald-100">
+                <div class="px-6 py-6 border-b border-gray-200">
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <!-- Title -->
                         <div class="space-y-2">
@@ -269,15 +267,21 @@
                 </div>
 
                 <!-- Contact Information Section -->
-                <div class="bg-gradient-to-r from-amber-500 to-orange-600 p-6">
-                    <h2 class="text-xl font-semibold text-white flex items-center">
-                        <i class="fas fa-phone mr-3"></i>
-                        Contact Information
-                    </h2>
-                    <p class="text-amber-100 mt-1">Phone numbers and email address</p>
+                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-phone text-amber-600 text-sm"></i>
+                            </div>
+                        </div>
+                        <div class="ml-3">
+                            <h2 class="text-lg font-medium text-gray-900">Contact Information</h2>
+                            <p class="text-sm text-gray-500">Phone numbers and email address</p>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="p-6 bg-amber-50 border-b border-amber-100">
+                <div class="px-6 py-6 border-b border-gray-200">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <!-- Phone Number One -->
                         <div class="space-y-2">
@@ -342,15 +346,21 @@
                 </div>
 
                 <!-- Identity & Address Section -->
-                <div class="bg-gradient-to-r from-rose-500 to-pink-600 p-6">
-                    <h2 class="text-xl font-semibold text-white flex items-center">
-                        <i class="fas fa-map-marker-alt mr-3"></i>
-                        Identity & Address
-                    </h2>
-                    <p class="text-rose-100 mt-1">Location and identification details</p>
+                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-rose-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-map-marker-alt text-rose-600 text-sm"></i>
+                            </div>
+                        </div>
+                        <div class="ml-3">
+                            <h2 class="text-lg font-medium text-gray-900">Identity & Address</h2>
+                            <p class="text-sm text-gray-500">Location and identification details</p>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="p-6 bg-rose-50 border-b border-rose-100">
+                <div class="px-6 py-6 border-b border-gray-200">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <!-- NIC -->
                         <div class="space-y-2">
@@ -450,15 +460,21 @@
                 </div>
 
                 <!-- Connection & Financial Section -->
-                <div class="bg-gradient-to-r from-violet-500 to-purple-600 p-6">
-                    <h2 class="text-xl font-semibold text-white flex items-center">
-                        <i class="fas fa-plug mr-3"></i>
-                        Connection & Financial
-                    </h2>
-                    <p class="text-violet-100 mt-1">Service connection and payment details</p>
+                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-violet-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-plug text-violet-600 text-sm"></i>
+                            </div>
+                        </div>
+                        <div class="ml-3">
+                            <h2 class="text-lg font-medium text-gray-900">Connection & Financial</h2>
+                            <p class="text-sm text-gray-500">Service connection and payment details</p>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="p-6 bg-violet-50 border-b border-violet-100">
+                <div class="px-6 py-6 border-b border-gray-200">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <!-- Connection Date -->
                         <div class="space-y-2">
@@ -555,16 +571,203 @@
                     </div>
                 </div>
 
-                <!-- Billing Settings Section -->
-                <div class="bg-gradient-to-r from-orange-500 to-red-600 p-6">
-                    <h2 class="text-xl font-semibold text-white flex items-center">
-                        <i class="fas fa-calendar-alt mr-3"></i>
-                        Billing Settings
-                    </h2>
-                    <p class="text-orange-100 mt-1">Automated billing configuration</p>
+                <!-- Meter Assignment Section -->
+                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-tachometer-alt text-green-600 text-sm"></i>
+                            </div>
+                        </div>
+                        <div class="ml-3">
+                            <h2 class="text-lg font-medium text-gray-900">Meter Assignment</h2>
+                            <p class="text-sm text-gray-500">Assign an existing water meter to this customer</p>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="p-6 bg-orange-50 border-b border-orange-100">
+                <div class="px-6 py-6 border-b border-gray-200">
+                    <div class="grid grid-cols-1 gap-6">
+                        <!-- Water Meter Selection -->
+                        <div class="space-y-2">
+                            <label class="block text-sm font-semibold text-gray-700">
+                                <i class="fas fa-tachometer-alt mr-1"></i>
+                                Water Meter <span class="text-gray-500">(Optional)</span>
+                            </label>
+                            
+                            <!-- Hidden select for form submission -->
+                            <input type="hidden" name="water_meter_id" id="water_meter_id" value="{{ old('water_meter_id') }}">
+                            
+                            <!-- Custom searchable dropdown -->
+                            <div class="relative">
+                                <div class="relative">
+                                    <input 
+                                        type="text" 
+                                        id="meter_search_input"
+                                        placeholder="🔍 Search meter number, type, or brand..."
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 @error('water_meter_id') border-red-300 @enderror"
+                                        autocomplete="off">
+                                    <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+                                        <i class="fas fa-search text-gray-400"></i>
+                                    </div>
+                                </div>
+                                
+                                <!-- Dropdown results -->
+                                <div id="meter_dropdown" class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-80 overflow-y-auto hidden">
+                                    @php
+                                        $unassignedMeters = \App\Models\WaterMeter::whereNull('customer_id')->orderBy('meter_number')->get();
+                                        $assignedMeters = \App\Models\WaterMeter::whereNotNull('customer_id')->with('customer')->orderBy('meter_number')->get();
+                                    @endphp
+                                    
+                                    @if($unassignedMeters->count() > 0)
+                                        <div class="p-2 bg-green-50 border-b border-green-200">
+                                            <p class="text-sm font-semibold text-green-700 flex items-center">
+                                                <i class="fas fa-check-circle mr-1"></i>
+                                                📍 Available Meters (Unassigned)
+                                            </p>
+                                        </div>
+                                        @foreach($unassignedMeters as $meter)
+                                            <div class="meter-option cursor-pointer p-3 hover:bg-green-50 border-b border-gray-100 available-meter" 
+                                                 data-meter-id="{{ $meter->id }}"
+                                                 data-meter-number="{{ $meter->meter_number }}"
+                                                 data-meter-type="{{ $meter->meter_type }}"
+                                                 data-meter-brand="{{ $meter->meter_brand }}"
+                                                 data-installation-date="{{ $meter->installation_date ? $meter->installation_date->format('Y-m-d') : '' }}"
+                                                 data-current-reading="{{ $meter->current_reading }}"
+                                                 data-search-text="{{ strtolower($meter->meter_number . ' ' . $meter->meter_type . ' ' . ($meter->meter_brand ?? '')) }}">
+                                                <div class="flex items-center justify-between">
+                                                    <div>
+                                                        <p class="font-medium text-gray-900">🆓 {{ $meter->meter_number }}</p>
+                                                        <p class="text-sm text-gray-500">{{ ucfirst($meter->meter_type) }} | {{ $meter->meter_brand ?? 'Unknown Brand' }}</p>
+                                                    </div>
+                                                    <div class="text-right">
+                                                        <p class="text-sm font-medium text-green-600">Available</p>
+                                                        <p class="text-xs text-gray-500">{{ number_format($meter->current_reading, 2) }} units</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    @endif
+                                    
+                                    @if($assignedMeters->count() > 0)
+                                        <div class="p-2 bg-orange-50 border-b border-orange-200">
+                                            <p class="text-sm font-semibold text-orange-700 flex items-center">
+                                                <i class="fas fa-users mr-1"></i>
+                                                👤 Assigned Meters (For Reference)
+                                            </p>
+                                        </div>
+                                        @foreach($assignedMeters as $meter)
+                                            <div class="meter-option cursor-not-allowed p-3 bg-gray-50 border-b border-gray-100 assigned-meter opacity-60" 
+                                                 data-meter-id="{{ $meter->id }}"
+                                                 data-meter-number="{{ $meter->meter_number }}"
+                                                 data-meter-type="{{ $meter->meter_type }}"
+                                                 data-meter-brand="{{ $meter->meter_brand }}"
+                                                 data-installation-date="{{ $meter->installation_date ? $meter->installation_date->format('Y-m-d') : '' }}"
+                                                 data-current-reading="{{ $meter->current_reading }}"
+                                                 data-customer-name="{{ $meter->customer->full_name }}"
+                                                 data-search-text="{{ strtolower($meter->meter_number . ' ' . $meter->meter_type . ' ' . ($meter->meter_brand ?? '')) }}">
+                                                <div class="flex items-center justify-between">
+                                                    <div>
+                                                        <p class="font-medium text-gray-600">🔒 {{ $meter->meter_number }}</p>
+                                                        <p class="text-sm text-gray-500">{{ ucfirst($meter->meter_type) }} | {{ $meter->meter_brand ?? 'Unknown Brand' }}</p>
+                                                    </div>
+                                                    <div class="text-right">
+                                                        <p class="text-sm font-medium text-orange-600">Assigned</p>
+                                                        <p class="text-xs text-gray-500">{{ $meter->customer->full_name }}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    @endif
+                                    
+                                    <!-- No results message -->
+                                    <div id="no_results" class="p-4 text-center text-gray-500 hidden">
+                                        <i class="fas fa-search-minus text-2xl mb-2"></i>
+                                        <p>No meters found matching your search</p>
+                                    </div>
+                                </div>
+                            </div>
+                            @error('water_meter_id')
+                                <p class="text-xs text-red-600 flex items-center"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p>
+                            @enderror
+                            
+                            <!-- Meter Information Display -->
+                            <div id="meter-info" class="mt-3 p-4 bg-white rounded-lg border-2 border-green-200 hidden">
+                                <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                                    <i class="fas fa-info-circle mr-2 text-green-500"></i>
+                                    Selected Meter Information
+                                </h4>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                        <p class="text-gray-600">Meter Number:</p>
+                                        <p id="meter-number" class="font-medium text-gray-900">-</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-gray-600">Type:</p>
+                                        <p id="meter-type" class="font-medium text-gray-900">-</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-gray-600">Brand:</p>
+                                        <p id="meter-brand" class="font-medium text-gray-900">-</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-gray-600">Installation Date:</p>
+                                        <p id="meter-installation-date" class="font-medium text-gray-900">-</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-gray-600">Current Reading:</p>
+                                        <p id="meter-current-reading" class="font-medium text-blue-600">-</p>
+                                    </div>
+                                    <div id="meter-customer-info" class="hidden">
+                                        <p class="text-gray-600">Currently Assigned To:</p>
+                                        <p id="meter-customer-name" class="font-medium text-orange-600">-</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Meter Statistics -->
+                            <div class="mt-3 p-3 bg-white rounded-lg border border-green-200">
+                                <div class="flex items-center justify-between text-sm">
+                                    <div class="flex items-center text-green-600">
+                                        <i class="fas fa-check-circle mr-1"></i>
+                                        <span><strong>{{ $unassignedMeters->count() }}</strong> unassigned meters available</span>
+                                    </div>
+                                    <div class="flex items-center text-gray-500">
+                                        <i class="fas fa-users mr-1"></i>
+                                        <span><strong>{{ $assignedMeters->count() }}</strong> meters already assigned</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Create New Meter Link -->
+                            <div class="mt-3">
+                                <a href="{{ route('meters.create') }}" 
+                                   target="_blank"
+                                   class="inline-flex items-center text-sm text-green-600 hover:text-green-800 font-medium">
+                                    <i class="fas fa-plus-circle mr-1"></i>
+                                    Create New Water Meter
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Billing Settings Section -->
+                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-calendar-alt text-orange-600 text-sm"></i>
+                            </div>
+                        </div>
+                        <div class="ml-3">
+                            <h2 class="text-lg font-medium text-gray-900">Billing Settings</h2>
+                            <p class="text-sm text-gray-500">Automated billing configuration</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="px-6 py-6 border-b border-gray-200">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <!-- Billing Day -->
                         <div class="space-y-2">
@@ -634,20 +837,20 @@
                 </div>
 
                 <!-- Action Buttons -->
-                <div class="bg-gray-50 px-6 py-8">
+                <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
                     <div class="flex items-center justify-between">
                         <div class="text-sm text-gray-500 flex items-center">
                             <i class="fas fa-info-circle mr-2"></i>
                             <span class="text-red-500">*</span> Required fields
                         </div>
-                        <div class="flex items-center space-x-4">
+                        <div class="flex items-center space-x-3">
                             <a href="{{ route('customers.index') }}" 
-                               class="px-6 py-3 bg-white border-2 border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 flex items-center">
+                               class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
                                 <i class="fas fa-times mr-2"></i>
                                 Cancel
                             </a>
                             <button type="submit" 
-                                    class="px-8 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold rounded-lg hover:from-blue-600 hover:to-indigo-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center">
+                                    class="inline-flex items-center px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
                                 <i class="fas fa-save mr-2"></i>
                                 Create Customer
                             </button>
@@ -670,5 +873,135 @@ function previewImage(input) {
         reader.readAsDataURL(input.files[0]);
     }
 }
+
+// Handle searchable meter selection
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('meter_search_input');
+    const dropdown = document.getElementById('meter_dropdown');
+    const hiddenInput = document.getElementById('water_meter_id');
+    const meterInfo = document.getElementById('meter-info');
+    const noResults = document.getElementById('no_results');
+    
+    let selectedMeter = null;
+    
+    // Show dropdown when input is focused
+    searchInput.addEventListener('focus', function() {
+        dropdown.classList.remove('hidden');
+        filterMeters();
+    });
+    
+    // Hide dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.relative')) {
+            dropdown.classList.add('hidden');
+        }
+    });
+    
+    // Filter meters based on search input
+    searchInput.addEventListener('input', function() {
+        filterMeters();
+    });
+    
+    function filterMeters() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const meterOptions = dropdown.querySelectorAll('.meter-option');
+        let visibleCount = 0;
+        
+        meterOptions.forEach(option => {
+            const searchText = option.dataset.searchText || '';
+            if (searchText.includes(searchTerm)) {
+                option.style.display = 'block';
+                visibleCount++;
+            } else {
+                option.style.display = 'none';
+            }
+        });
+        
+        // Show/hide no results message
+        if (visibleCount === 0 && searchTerm.length > 0) {
+            noResults.classList.remove('hidden');
+        } else {
+            noResults.classList.add('hidden');
+        }
+    }
+    
+    // Handle meter selection
+    dropdown.addEventListener('click', function(e) {
+        const meterOption = e.target.closest('.meter-option');
+        if (meterOption && meterOption.classList.contains('available-meter')) {
+            selectMeter(meterOption);
+        }
+    });
+    
+    function selectMeter(meterOption) {
+        selectedMeter = meterOption;
+        
+        // Update hidden input
+        hiddenInput.value = meterOption.dataset.meterId;
+        
+        // Update search input display
+        searchInput.value = meterOption.dataset.meterNumber + ' | ' + 
+                           meterOption.dataset.meterType.charAt(0).toUpperCase() + 
+                           meterOption.dataset.meterType.slice(1) + ' | ' + 
+                           (meterOption.dataset.meterBrand || 'Unknown Brand');
+        
+        // Hide dropdown
+        dropdown.classList.add('hidden');
+        
+        // Show meter information
+        updateMeterInfo(meterOption);
+    }
+    
+    function updateMeterInfo(meterOption) {
+        if (meterOption) {
+            meterInfo.classList.remove('hidden');
+            
+            // Update meter details
+            document.getElementById('meter-number').textContent = meterOption.dataset.meterNumber || '-';
+            document.getElementById('meter-type').textContent = meterOption.dataset.meterType ? 
+                meterOption.dataset.meterType.charAt(0).toUpperCase() + meterOption.dataset.meterType.slice(1) : '-';
+            document.getElementById('meter-brand').textContent = meterOption.dataset.meterBrand || 'Unknown Brand';
+            document.getElementById('meter-installation-date').textContent = meterOption.dataset.installationDate || '-';
+            document.getElementById('meter-current-reading').textContent = meterOption.dataset.currentReading ? 
+                parseFloat(meterOption.dataset.currentReading).toFixed(2) + ' units' : '-';
+            
+            // Show customer info if meter is assigned
+            const customerInfo = document.getElementById('meter-customer-info');
+            if (meterOption.dataset.customerName) {
+                customerInfo.classList.remove('hidden');
+                document.getElementById('meter-customer-name').textContent = meterOption.dataset.customerName;
+            } else {
+                customerInfo.classList.add('hidden');
+            }
+        } else {
+            meterInfo.classList.add('hidden');
+        }
+    }
+    
+    // Clear selection when input is cleared
+    searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Backspace' || e.key === 'Delete') {
+            if (this.value.length <= 1) {
+                clearSelection();
+            }
+        }
+    });
+    
+    function clearSelection() {
+        selectedMeter = null;
+        hiddenInput.value = '';
+        meterInfo.classList.add('hidden');
+        dropdown.classList.remove('hidden');
+        filterMeters();
+    }
+    
+    // Handle old value on page load
+    if (hiddenInput.value) {
+        const selectedOption = dropdown.querySelector(`[data-meter-id="${hiddenInput.value}"]`);
+        if (selectedOption) {
+            selectMeter(selectedOption);
+        }
+    }
+});
 </script>
 @endsection 

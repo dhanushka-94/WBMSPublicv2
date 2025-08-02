@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Customer extends Model
@@ -67,7 +68,7 @@ class Customer extends Model
         return $this->hasMany(WaterMeter::class);
     }
 
-    public function meterReadings(): HasMany
+    public function meterReadings(): HasManyThrough
     {
         return $this->hasManyThrough(MeterReading::class, WaterMeter::class);
     }
@@ -77,11 +78,49 @@ class Customer extends Model
         return $this->hasMany(Bill::class);
     }
 
+    public function smsNotifications(): HasMany
+    {
+        return $this->hasMany(SmsNotification::class);
+    }
+
     // Accessors
     public function getFullNameAttribute(): string
     {
         $title = $this->title ? $this->title . ' ' : '';
         return $title . $this->first_name . ' ' . $this->last_name;
+    }
+
+    // Scopes
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'active');
+    }
+
+    public function scopeWithPhone($query)
+    {
+        return $query->whereNotNull('phone');
+    }
+
+    // SMS Methods
+    public function canReceiveSms(): bool
+    {
+        return !empty($this->phone) && $this->status === 'active';
+    }
+
+    public function getFormattedPhoneAttribute(): string
+    {
+        if (!$this->phone) {
+            return '';
+        }
+        
+        // Format phone number for display (e.g., 94712345678 -> +94 71 234 5678)
+        $phone = $this->phone;
+        if (strlen($phone) === 12 && substr($phone, 0, 2) === '94') {
+            return '+94 ' . substr($phone, 2, 2) . ' ' . substr($phone, 4, 3) . ' ' . substr($phone, 7);
+        } elseif (strlen($phone) === 10 && substr($phone, 0, 1) === '0') {
+            return substr($phone, 0, 3) . ' ' . substr($phone, 3, 3) . ' ' . substr($phone, 6);
+        }
+        return $phone;
     }
 
     public function getProfilePhotoUrlAttribute(): string
@@ -123,12 +162,7 @@ class Customer extends Model
         return "{$this->full_name} ({$this->account_number})";
     }
 
-    // Scopes
-    public function scopeActive($query)
-    {
-        return $query->where('status', 'active');
-    }
-
+    // Additional Scopes
     public function scopeByType($query, $type)
     {
         return $query->where('customer_type', $type);
@@ -154,28 +188,41 @@ class Customer extends Model
     }
 
     /**
-     * Generate unique account number with numbers-only format
-     * Format: AC{year_short}{random_numbers} (e.g., AC25123456789)
+     * Generate unique account number with CP/NE/DN format
+     * Format: CP/NE/DN/DIVISION_ID/CUSTOMER_TYPE_ID/0001
      */
-    public static function generateAccountNumber(): string
+    public static function generateAccountNumber($divisionId, $customerTypeId): string
     {
-        $yearShort = substr(date('Y'), -2); // Last 2 digits of year (e.g., 25 for 2025)
+        $division = Division::find($divisionId);
+        $customerType = CustomerType::find($customerTypeId);
         
-        do {
-            // Generate 8 random numbers for uniqueness
-            $randomNumbers = '';
-            for ($i = 0; $i < 8; $i++) {
-                $randomNumbers .= rand(0, 9);
-            }
+        // Use custom IDs if available, otherwise fallback to name prefixes
+        $divisionPrefix = $division && $division->custom_id 
+            ? $division->custom_id 
+            : ($division ? substr($division->name, 0, 3) : 'UNK');
             
-            $accountNumber = "AC{$yearShort}{$randomNumbers}";
+        $typePrefix = $customerType && $customerType->custom_id 
+            ? $customerType->custom_id 
+            : 'GEN';
+
+        // Build the base prefix with CP/NE/DN/ format
+        $basePrefix = 'CP/NE/DN/' . strtoupper($divisionPrefix) . '/' . strtoupper($typePrefix) . '/';
             
-            // Check if this account number already exists
-            $exists = self::where('account_number', $accountNumber)->exists();
-            
-        } while ($exists); // Keep generating until we get a unique one
-        
-        return $accountNumber;
+        // Get last customer with similar prefix pattern
+        $lastCustomer = self::where('account_number', 'like', $basePrefix . '%')
+            ->orderBy('account_number', 'desc')
+            ->first();
+
+        if ($lastCustomer) {
+            // Extract the number part after the last slash
+            $parts = explode('/', $lastCustomer->account_number);
+            $lastNumber = (int)end($parts);
+            $nextNumber = $lastNumber + 1;
+        } else {
+            $nextNumber = 1;
+        }
+
+        return $basePrefix . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
     }
 
     /**
@@ -310,9 +357,12 @@ class Customer extends Model
         });
 
         static::creating(function ($customer) {
-            // Auto-generate account number if not provided
-            if (empty($customer->account_number)) {
-                $customer->account_number = self::generateAccountNumber();
+            // Auto-generate account number if not provided and required fields are present
+            if (empty($customer->account_number) && $customer->division_id && $customer->customer_type_id) {
+                $customer->account_number = self::generateAccountNumber(
+                    $customer->division_id, 
+                    $customer->customer_type_id
+                );
             }
             
             // Auto-generate reference number if not provided and required fields are present
