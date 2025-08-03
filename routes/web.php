@@ -52,9 +52,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     
     // View-only customer routes (always accessible)
     Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
-    Route::get('/customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
+    Route::get('/customers/create', [CustomerController::class, 'create'])->name('customers.create');
     Route::get('customers/{customer}/meters', [CustomerController::class, 'meters'])->name('customers.meters');
     Route::get('customers/{customer}/bills', [CustomerController::class, 'bills'])->name('customers.bills');
+    Route::get('/customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
     
     // View-only bill routes (always accessible) 
     Route::get('/bills', [BillController::class, 'index'])->name('bills.index');
@@ -103,8 +104,7 @@ Route::middleware(['auth', 'verified', 'system.check'])->group(function () {
         Route::get('rates/{rate}/duplicate', [RateController::class, 'duplicate'])->name('rates.duplicate');
     });
     
-    // Customer Management (create/edit/delete - RESTRICTED)
-    Route::get('/customers/create', [CustomerController::class, 'create'])->name('customers.create');
+    // Customer Management (edit/delete - RESTRICTED)
     Route::post('/customers', [CustomerController::class, 'store'])->name('customers.store');
     Route::get('/customers/{customer}/edit', [CustomerController::class, 'edit'])->name('customers.edit');
     Route::put('/customers/{customer}', [CustomerController::class, 'update'])->name('customers.update');
