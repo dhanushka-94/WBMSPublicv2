@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
         
         $this->call([
             SystemUsersSeeder::class,
+            SampleDataSeeder::class,
         ]);
         
         echo "\n🎉 AquaBill by olexto seeding completed!\n";
@@ -29,6 +30,7 @@ class DatabaseSeeder extends Seeder
         echo "   👥 Staff: staff@aquabill.olexto.com, billing.staff@aquabill.olexto.com, support.staff@aquabill.olexto.com\n";
         echo "   📊 Meter Readers: reader1@aquabill.olexto.com to reader5@aquabill.olexto.com\n";
         echo "   🔐 All accounts use password: password\n";
+        echo "\n📦 Sample data includes divisions, rates, customers, meters, readings, and bills.\n";
         echo "\n🌐 Access the system at: http://127.0.0.1:8000/login\n";
         echo "⚠️  Please change default passwords after first login!\n";
     }

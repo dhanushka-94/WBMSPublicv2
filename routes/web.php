@@ -12,6 +12,7 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\MobileApiDocsController;
 use App\Http\Controllers\SmsNotificationController;
 use App\Http\Controllers\MonthlyActiveReportController;
 use App\Http\Controllers\SystemControlController;
@@ -163,8 +164,14 @@ Route::middleware(['auth', 'verified', 'system.check'])->group(function () {
     
     // Activity Logs (RESTRICTED)
     Route::get('activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
-    Route::get('activity-logs/{activity}', [ActivityLogController::class, 'show'])->name('activity-logs.show');
+    Route::get('activity-logs/export', [ActivityLogController::class, 'export'])->name('activity-logs.export');
     Route::get('activity-logs/user/{user}', [ActivityLogController::class, 'userActivity'])->name('activity-logs.user');
+    Route::get('activity-logs/{activity}', [ActivityLogController::class, 'show'])->name('activity-logs.show');
+
+    // Mobile API docs — admin only
+    Route::get('mobile-api', [MobileApiDocsController::class, 'index'])
+        ->middleware('admin')
+        ->name('mobile-api.index');
 });
 
 require __DIR__.'/auth.php';

@@ -164,7 +164,7 @@
                     <!-- System Management Dropdown -->
                     <div class="relative flex items-center h-16" x-data="{ open: false }" @click.outside="open = false">
                         <button @click="open = !open" 
-                                class="inline-flex items-center px-3 py-2 h-10 text-sm font-medium text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 rounded-md transition duration-150 ease-in-out {{ request()->routeIs('users.*', 'settings.*', 'activity-logs.*') ? 'bg-white bg-opacity-20' : '' }}">
+                                class="inline-flex items-center px-3 py-2 h-10 text-sm font-medium text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 rounded-md transition duration-150 ease-in-out {{ request()->routeIs('users.*', 'settings.*', 'activity-logs.*', 'mobile-api.*') ? 'bg-white bg-opacity-20' : '' }}">
                             <i class="fas fa-cogs mr-2"></i>
                             <span>System</span>
                             <svg class="ml-1 h-4 w-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -189,6 +189,11 @@
                                 <a href="{{ route('activity-logs.index') }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-800 transition duration-150">
                                     <i class="fas fa-history mr-3 text-orange-600"></i>Activity Logs
                                 </a>
+                                @if(auth()->user()->role === 'admin' || auth()->id() === 1)
+                                <a href="{{ route('mobile-api.index') }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-800 transition duration-150">
+                                    <i class="fas fa-mobile-alt mr-3 text-cyan-600"></i>Mobile API Docs
+                                </a>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -365,6 +370,12 @@
                                    class="text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 ml-4">
                 <i class="fas fa-history mr-2"></i>{{ __('Activity Logs') }}
             </x-responsive-nav-link>
+            @if(auth()->user()->role === 'admin' || auth()->id() === 1)
+            <x-responsive-nav-link :href="route('mobile-api.index')" :active="request()->routeIs('mobile-api.*')"
+                                   class="text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 ml-4">
+                <i class="fas fa-mobile-alt mr-2"></i>{{ __('Mobile API Docs') }}
+            </x-responsive-nav-link>
+            @endif
             
             <!-- About Us -->
             <div class="px-3 py-2 text-xs font-semibold text-blue-200 uppercase tracking-wide mt-4">About</div>

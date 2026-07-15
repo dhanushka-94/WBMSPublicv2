@@ -31,6 +31,7 @@ class Customer extends Model
         'status',
         'customer_type_id',
         'division_id',
+        'staff_type',
         'guarantor_id',
         'connection_date',
         'deposit_amount',
