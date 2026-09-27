@@ -11,13 +11,13 @@
                         </div>
                         <div class="text-white">
                             <div class="font-bold text-lg leading-tight">AquaBill by olexto</div>
-                            <div class="text-xs text-blue-200">Smart Water Management SaaS</div>
+                            <div class="hidden sm:block text-xs text-blue-200">Smart Water Management SaaS</div>
                         </div>
                     </a>
                 </div>
 
                 <!-- Navigation Links -->
-                <div class="hidden space-x-1 sm:-my-px sm:ms-10 sm:flex sm:items-center sm:h-16">
+                <div class="hidden space-x-1 lg:-my-px lg:ms-6 lg:flex lg:items-center lg:h-16">
                     <!-- Dashboard -->
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" 
                                 class="text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 {{ request()->routeIs('dashboard') ? 'bg-white bg-opacity-20 text-white' : '' }} flex items-center h-16">
@@ -243,7 +243,7 @@
             </div>
 
             <!-- Settings Dropdown -->
-            <div class="hidden sm:flex sm:items-center sm:ms-6">
+            <div class="hidden lg:flex lg:items-center lg:ms-6">
                 <x-dropdown align="right" width="56">
                     <x-slot name="trigger">
                         <button class="inline-flex items-center px-4 py-2 border border-transparent text-sm leading-4 font-medium rounded-lg text-white bg-white bg-opacity-10 hover:bg-opacity-20 focus:outline-none transition ease-in-out duration-150 shadow-sm">
@@ -304,7 +304,7 @@
             </div>
 
             <!-- Hamburger -->
-            <div class="-me-2 flex items-center sm:hidden">
+            <div class="-me-2 flex items-center lg:hidden">
                 <button @click="open = ! open" class="inline-flex items-center justify-center p-2 rounded-md text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 focus:outline-none focus:bg-white focus:bg-opacity-10 focus:text-white transition duration-150 ease-in-out">
                     <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
                         <path :class="{'hidden': open, 'inline-flex': ! open }" class="inline-flex" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
@@ -316,7 +316,7 @@
     </div>
 
     <!-- Responsive Navigation Menu -->
-    <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden bg-blue-700">
+    <div :class="{'block': open, 'hidden': ! open}" class="hidden lg:hidden bg-blue-700">
         <div class="pt-2 pb-3 space-y-1">
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')"
                                    class="text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10">

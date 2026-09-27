@@ -37,7 +37,7 @@
 
             <!-- Footer with Developer Credits -->
             <footer class="bg-gray-800 text-white py-4 px-4 sm:px-6 lg:px-8">
-                <div class="max-w-7xl mx-auto">
+                <div class="w-full">
                     <div class="flex flex-col md:flex-row justify-between items-center space-y-2 md:space-y-0">
                         <div class="flex flex-col md:flex-row items-center space-y-1 md:space-y-0 md:space-x-4 text-sm text-gray-300">
 <span>© {{ date('Y') }} AquaBill by olexto - All rights reserved</span>

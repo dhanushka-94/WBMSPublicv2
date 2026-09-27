@@ -1,3 +1,34 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Page shells use the full viewport. Dialogs, chips, and the login card stay sized. */
+main .max-w-7xl,
+main .max-w-6xl,
+main .max-w-5xl,
+main .max-w-4xl,
+main .max-w-3xl,
+main .max-w-2xl,
+main .max-w-xl,
+main .container,
+footer .max-w-7xl {
+    max-width: none;
+    width: 100%;
+}
+
+main {
+    width: 100%;
+    min-width: 0;
+}
+
+@media (max-width: 1023px) {
+    main .flex.justify-between {
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+}
+
+main .overflow-x-auto,
+main .overflow-auto {
+    max-width: 100%;
+}
