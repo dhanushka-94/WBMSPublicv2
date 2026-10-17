@@ -86,7 +86,7 @@ class LargeSampleDataSeeder extends Seeder
         $customers = $this->seedCustomers($divisions, $types, $guarantors);
         $this->command?->info('Customers: ' . count($customers));
 
-        $meters = $this->seedMeters($customers);
+        $meters = $this->seedMeters($customers, 1);
         $this->command?->info('Meters: ' . count($meters));
 
         $this->seedReadingsAndBills($meters, $readers);
@@ -112,14 +112,88 @@ class LargeSampleDataSeeder extends Seeder
         );
     }
 
-    private function seedGuarantors(): array
+    public function append(int $extraCustomers = 1000): void
+    {
+        Config::set('sms.bill_notifications.new_bill', false);
+        Config::set('sms.bill_notifications.due_reminder', false);
+        Config::set('sms.bill_notifications.overdue_alert', false);
+        Config::set('sms.bill_notifications.payment_confirmation', false);
+        Config::set('sms.bill_notifications.late_fee_notice', false);
+        Config::set('sms.notifications.enabled', false);
+
+        $divisions = Division::all()->values();
+        $types = CustomerType::all()->values();
+        $readers = User::where('role', 'meter_reader')->get();
+
+        if ($readers->isEmpty() || $divisions->isEmpty() || $types->isEmpty()) {
+            $this->command?->error('Divisions, customer types, or meter readers are missing.');
+            return;
+        }
+
+        $lastGuarantorCode = Guarantor::query()->orderByDesc('id')->value('guarantor_id');
+        $guarantorStart = $lastGuarantorCode ? ((int) substr($lastGuarantorCode, 1)) + 1 : 1;
+        $extraGuarantors = max(50, (int) round($extraCustomers / 5));
+
+        $lastMeterNumber = WaterMeter::query()->orderByDesc('id')->value('meter_number');
+        $customerStart = $lastMeterNumber ? ((int) substr($lastMeterNumber, 3)) + 1 : 1;
+
+        $this->command?->info("Adding {$extraCustomers} customers from #{$customerStart}...");
+
+        $guarantors = $this->seedGuarantors($guarantorStart, $extraGuarantors);
+        $this->command?->info('New guarantors: ' . count($guarantors));
+
+        $previousCount = $this->customerCount;
+        $this->customerCount = $extraCustomers;
+        $customers = $this->seedCustomers($divisions, $types, $guarantors, $customerStart);
+        $this->customerCount = $previousCount;
+        $this->command?->info('New customers: ' . count($customers));
+
+        $meters = $this->seedMeters($customers, $customerStart);
+        $this->command?->info('New meters: ' . count($meters));
+
+        $this->loadBillSequence();
+        $billIdBefore = (int) (DB::table('bills')->max('id') ?? 0);
+
+        $this->seedReadingsAndBills($meters, $readers);
+        $this->seedSmsNotifications($billIdBefore + 1);
+        $this->seedActivityLogs(1000, (int) DB::table('activity_logs')->max('id'));
+
+        $this->command?->info('Extra sample data added.');
+        $this->command?->table(
+            ['Table', 'Count'],
+            [
+                ['Guarantors', Guarantor::count()],
+                ['Customers', Customer::count()],
+                ['Water meters', WaterMeter::count()],
+                ['Meter readings', MeterReading::count()],
+                ['Bills', Bill::count()],
+                ['SMS notifications', DB::table('sms_notifications')->count()],
+                ['Activity logs', DB::table('activity_logs')->count()],
+            ]
+        );
+    }
+
+    private function loadBillSequence(): void
+    {
+        $rows = DB::table('bills')
+            ->selectRaw('SUBSTRING(bill_number, 3, 6) as ym, MAX(CAST(RIGHT(bill_number, 4) AS UNSIGNED)) as seq')
+            ->groupBy('ym')
+            ->get();
+
+        foreach ($rows as $row) {
+            $this->billSequence[(string) $row->ym] = (int) $row->seq;
+        }
+    }
+
+    private function seedGuarantors(int $from = 1, ?int $count = null): array
     {
         $firstNames = ['Sunil', 'Kamala', 'Nimal', 'Ruwan', 'Chamari', 'Ajith', 'Dilani', 'Pradeep', 'Saman', 'Nadeesha', 'Kasun', 'Ishara', 'Gayan', 'Malsha', 'Tharindu'];
         $lastNames = ['Perera', 'Fernando', 'Silva', 'Jayasinghe', 'Bandara', 'Herath', 'Gunasekara', 'Wickramasinghe', 'Rathnayake', 'Senanayake'];
         $relationships = ['Father', 'Mother', 'Brother', 'Sister', 'Uncle', 'Friend', 'Colleague', 'Neighbor'];
 
+        $count ??= $this->guarantorCount;
         $guarantors = [];
-        for ($i = 1; $i <= $this->guarantorCount; $i++) {
+        for ($i = $from; $i < $from + $count; $i++) {
             $first = $firstNames[($i - 1) % count($firstNames)];
             $last = $lastNames[($i - 1) % count($lastNames)];
             $guarantors[] = Guarantor::create([
@@ -138,7 +212,7 @@ class LargeSampleDataSeeder extends Seeder
         return $guarantors;
     }
 
-    private function seedCustomers($divisions, $types, array $guarantors): array
+    private function seedCustomers($divisions, $types, array $guarantors, int $start = 1): array
     {
         $titles = ['Mr', 'Mrs', 'Ms', 'Miss', 'M/s'];
         $firstNames = ['Anura', 'Seetha', 'Mahinda', 'Nadeeka', 'Kasun', 'Thilini', 'Samantha', 'Priyanka', 'Roshan', 'Malithi', 'Gayan', 'Ishara', 'Nuwan', 'Sanduni', 'Chathura', 'Lanka', 'Pathum', 'Dinuka', 'Hasitha', 'Amali'];
@@ -150,7 +224,7 @@ class LargeSampleDataSeeder extends Seeder
         $bar = $this->command?->getOutput()?->createProgressBar($this->customerCount);
         $bar?->start();
 
-        for ($i = 1; $i <= $this->customerCount; $i++) {
+        for ($i = $start; $i < $start + $this->customerCount; $i++) {
             $division = $divisions[($i - 1) % $divisions->count()];
             $bucket = $i % 10;
             if ($bucket < 7) {
@@ -209,13 +283,13 @@ class LargeSampleDataSeeder extends Seeder
         return $customers;
     }
 
-    private function seedMeters(array $customers): array
+    private function seedMeters(array $customers, int $startNumber): array
     {
         $meters = [];
         $brands = ['Kent', 'Sensus', 'Itron', 'Arad', 'Elster'];
 
         foreach ($customers as $i => $customer) {
-            $n = $i + 1;
+            $n = $startNumber + $i;
             $initial = 80 + ($n * 17);
             $meter = WaterMeter::create([
                 'customer_id' => $customer->id,
@@ -394,7 +468,7 @@ class LargeSampleDataSeeder extends Seeder
         });
     }
 
-    private function seedSmsNotifications(): void
+    private function seedSmsNotifications(int $minBillId = 1): void
     {
         $this->command?->info('Creating SMS notifications...');
         $now = now();
@@ -403,6 +477,7 @@ class LargeSampleDataSeeder extends Seeder
         DB::table('bills')
             ->join('customers', 'customers.id', '=', 'bills.customer_id')
             ->select('bills.id as bill_id', 'bills.customer_id', 'bills.bill_number', 'bills.status', 'bills.balance_amount', 'customers.phone')
+            ->where('bills.id', '>=', $minBillId)
             ->orderBy('bills.id')
             ->chunk(400, function ($bills) use (&$inserted, $now) {
                 $rows = [];
@@ -445,7 +520,7 @@ class LargeSampleDataSeeder extends Seeder
         $this->command?->line("  SMS rows: {$inserted}");
     }
 
-    private function seedActivityLogs(): void
+    private function seedActivityLogs(int $count = 800, int $offset = 0): void
     {
         $users = User::query()->get(['id', 'name', 'email', 'role']);
         if ($users->isEmpty()) {
@@ -463,7 +538,7 @@ class LargeSampleDataSeeder extends Seeder
 
         $rows = [];
         $now = now();
-        for ($i = 1; $i <= 800; $i++) {
+        for ($i = $offset + 1; $i <= $offset + $count; $i++) {
             $user = $users[$i % $users->count()];
             $action = $actions[$i % count($actions)];
             $rows[] = [
