@@ -30,7 +30,7 @@
                             <svg class="h-4 w-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                             </svg>
-                            <span id="current-time" class="text-lg font-semibold text-blue-700">{{ now()->format('g:i:s A') }}</span>
+                            <span id="current-time" class="text-lg font-semibold text-blue-700">{{ now()->format('H:i:s') }}</span>
                         </div>
                         <div class="text-xs text-gray-500">
                             <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full">Sri Lankan Time</span>
@@ -440,10 +440,11 @@ function updateClock() {
     
     // Format time
     const timeOptions = {
-        hour: 'numeric',
+        hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
-        hour12: true,
+        hour12: false,
+        hourCycle: 'h23',
         timeZone: 'Asia/Colombo'
     };
     const timeString = now.toLocaleTimeString('en-US', timeOptions);

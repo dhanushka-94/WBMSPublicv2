@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class Customer extends Model
 {
@@ -16,6 +17,7 @@ class Customer extends Model
         'account_number',
         'reference_number',
         'meter_number',
+        'qr_code_path',
         'title',
         'first_name',
         'last_name',
@@ -122,6 +124,15 @@ class Customer extends Model
             return substr($phone, 0, 3) . ' ' . substr($phone, 3, 3) . ' ' . substr($phone, 6);
         }
         return $phone;
+    }
+
+    public function getQrCodeUrlAttribute(): ?string
+    {
+        if (!$this->qr_code_path) {
+            return null;
+        }
+
+        return Storage::disk('public')->url($this->qr_code_path);
     }
 
     public function getProfilePhotoUrlAttribute(): string

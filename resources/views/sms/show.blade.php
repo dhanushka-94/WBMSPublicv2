@@ -63,18 +63,18 @@
                             </div>
                             <div class="flex justify-between">
                                 <span class="text-sm font-medium text-gray-600">Created:</span>
-                                <span class="text-sm text-gray-900">{{ $sms_notification->created_at->format('M d, Y h:i A') }}</span>
+                                <span class="text-sm text-gray-900">{{ $sms_notification->created_at->format('M d, Y H:i') }}</span>
                             </div>
                             @if($sms_notification->sent_at)
                             <div class="flex justify-between">
                                 <span class="text-sm font-medium text-gray-600">Sent At:</span>
-                                <span class="text-sm text-gray-900">{{ $sms_notification->sent_at->format('M d, Y h:i A') }}</span>
+                                <span class="text-sm text-gray-900">{{ $sms_notification->sent_at->format('M d, Y H:i') }}</span>
                             </div>
                             @endif
                             @if($sms_notification->scheduled_at)
                             <div class="flex justify-between">
                                 <span class="text-sm font-medium text-gray-600">Scheduled For:</span>
-                                <span class="text-sm text-gray-900">{{ $sms_notification->scheduled_at->format('M d, Y h:i A') }}</span>
+                                <span class="text-sm text-gray-900">{{ $sms_notification->scheduled_at->format('M d, Y H:i') }}</span>
                             </div>
                             @endif
                             <div class="flex justify-between">

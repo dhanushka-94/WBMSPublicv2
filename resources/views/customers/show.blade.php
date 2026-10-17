@@ -213,13 +213,18 @@
                         <div class="space-y-4">
                             @foreach($activeMeters as $meter)
                             <div class="border border-gray-200 rounded-lg p-4 hover:border-purple-300 transition-colors">
-                                <div class="flex items-center justify-between">
-                                    <div>
+                                <div class="flex items-center justify-between gap-4">
+                                    <div class="flex items-center gap-4">
+                                        @if($customer->qr_code_url && $customer->meter_number === $meter->meter_number)
+                                        <img src="{{ $customer->qr_code_url }}" alt="QR code for {{ $customer->full_name }}" class="h-20 w-20 rounded border border-gray-200 bg-white">
+                                        @endif
+                                        <div>
                                         <h4 class="font-medium text-gray-900">{{ $meter->meter_number }}</h4>
                                         <p class="text-sm text-gray-500">
                                             {{ $meter->meter_brand }} {{ $meter->meter_model }} 
                                             ({{ $meter->meter_size }}mm {{ ucfirst($meter->meter_type) }})
                                         </p>
+                                        </div>
                                     </div>
                                     <div class="text-right">
                                         <p class="text-lg font-bold text-purple-600">{{ number_format($meter->current_reading, 2) }}</p>
@@ -243,6 +248,30 @@
 
             <!-- Right Column - Quick Stats & Recent Activity -->
             <div class="space-y-8">
+
+                @if($customer->qr_code_url)
+                <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
+                    <div class="bg-gradient-to-r from-indigo-500 to-blue-600 p-4">
+                        <h3 class="text-lg font-semibold text-white flex items-center">
+                            <i class="fas fa-qrcode mr-2"></i>
+                            Customer QR Code
+                        </h3>
+                    </div>
+                    <div class="p-6 text-center">
+                        <img src="{{ $customer->qr_code_url }}" alt="QR code for {{ $customer->account_number }}" class="mx-auto h-48 w-48 rounded-lg border border-gray-200 bg-white">
+                        <p class="mt-4 text-sm text-gray-600">Linked to {{ $customer->full_name }}</p>
+                        <p class="mt-1 font-mono text-sm text-blue-800">{{ $customer->meter_number }}</p>
+                        <p class="text-xs text-gray-500">{{ $customer->account_number }}</p>
+                        @if($activeMeters->first())
+                        <a href="{{ route('meters.qr-code.download', $activeMeters->first()) }}"
+                           class="mt-4 inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                            <i class="fas fa-download mr-2"></i>
+                            Download QR
+                        </a>
+                        @endif
+                    </div>
+                </div>
+                @endif
                 
                 <!-- Quick Stats -->
                 <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">

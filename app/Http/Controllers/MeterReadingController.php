@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\MeterReading;
 use App\Models\WaterMeter;
 use App\Models\Customer;
+use App\Models\Rate;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -171,9 +172,14 @@ class MeterReadingController extends Controller
      */
     public function show(MeterReading $reading): View
     {
-        $reading->load(['waterMeter.customer', 'bill']);
-        
-        return view('readings.show', compact('reading'));
+        $reading->load(['waterMeter.customer', 'bill', 'reader']);
+
+        $customerType = $reading->waterMeter?->customer?->customer_type;
+        $charges = $customerType
+            ? Rate::calculateCharges($customerType, (float) $reading->consumption, $reading->reading_date)
+            : null;
+
+        return view('readings.show', compact('reading', 'charges'));
     }
 
     /**

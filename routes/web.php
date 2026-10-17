@@ -118,8 +118,8 @@ Route::middleware(['auth', 'verified', 'system.check'])->group(function () {
     Route::resource('water-meters', WaterMeterController::class)->names('meters');
     Route::get('meters/map-view', [WaterMeterController::class, 'mapView'])->name('meters.map');
     Route::post('meters/{meter}/maintenance', [WaterMeterController::class, 'recordMaintenance'])->name('meters.maintenance');
-    Route::get('meters/{meter}/qr-code', [WaterMeterController::class, 'showQRCode'])->name('meters.qr-code');
-    Route::get('meters/{meter}/qr-code/download', [WaterMeterController::class, 'downloadQRCode'])->name('meters.qr-code.download');
+    Route::get('meters/{water_meter}/qr-code', [WaterMeterController::class, 'showQRCode'])->name('meters.qr-code');
+    Route::get('meters/{water_meter}/qr-code/download', [WaterMeterController::class, 'downloadQRCode'])->name('meters.qr-code.download');
     Route::get('api/check-meter-number', [WaterMeterController::class, 'checkMeterNumber'])->name('check.meter.number');
     
     // Bill Management (create/edit/delete - RESTRICTED)
@@ -133,7 +133,9 @@ Route::middleware(['auth', 'verified', 'system.check'])->group(function () {
     Route::post('bills/calculate-late-fees', [BillController::class, 'calculateLateFees'])->name('bills.late-fees');
     
     // Meter Reading Management (RESTRICTED)
-    Route::resource('meter-readings', MeterReadingController::class)->names('readings');
+    Route::resource('meter-readings', MeterReadingController::class)
+        ->names('readings')
+        ->parameters(['meter-readings' => 'reading']);
     Route::get('meter-readings/edit', [MeterReadingController::class, 'editFallback'])->name('readings.edit.fallback');
     Route::post('readings/{reading}/verify', [MeterReadingController::class, 'verify'])->name('readings.verify');
     Route::get('readings/bulk-entry', [MeterReadingController::class, 'bulkEntry'])->name('readings.bulk');

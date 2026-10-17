@@ -145,14 +145,24 @@
                                 </div>
 
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Reader Name</label>
-                                    <p class="text-lg font-semibold text-gray-900">{{ $reading->reader_name }}</p>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Read by</label>
+                                    <p class="text-lg font-semibold text-gray-900">{{ $reading->reader->name ?? $reading->reader_name ?? 'Unknown reader' }}</p>
+                                    <p class="text-sm text-gray-500">
+                                        @if($reading->reader)
+                                            {{ ucfirst(str_replace('_', ' ', $reading->reader->role)) }}
+                                            @if($reading->reader->email)
+                                                · {{ $reading->reader->email }}
+                                            @endif
+                                        @else
+                                            Name recorded on the reading
+                                        @endif
+                                    </p>
                                 </div>
 
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Recorded On</label>
-                                    <p class="text-lg font-semibold text-gray-900">{{ $reading->created_at->format('M d, Y H:i') }}</p>
-                                    <p class="text-sm text-gray-500">{{ $reading->created_at->diffForHumans() }}</p>
+                                    <p class="text-lg font-semibold text-gray-900">{{ $reading->created_at ? $reading->created_at->format('M d, Y H:i') : 'Not recorded' }}</p>
+                                    <p class="text-sm text-gray-500">{{ $reading->created_at ? $reading->created_at->diffForHumans() : 'No timestamp' }}</p>
                                 </div>
 
                                 @if($reading->notes)
@@ -167,38 +177,57 @@
                         </div>
                     </div>
 
-                    <!-- Billing Information -->
-                    @if($reading->status === 'billed')
-                        @php
-                            $bill = \App\Models\Bill::where('meter_reading_id', $reading->id)->first();
-                        @endphp
-                        @if($bill)
-                            <div class="bg-white rounded-xl shadow-sm border border-gray-200">
-                                <div class="p-6 border-b border-gray-200">
-                                    <h3 class="text-lg font-semibold text-gray-900">
-                                        <i class="fas fa-file-invoice-dollar mr-2"></i>Associated Bill
-                                    </h3>
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                        <div class="p-6 border-b border-gray-200">
+                            <h3 class="text-lg font-semibold text-gray-900">
+                                <i class="fas fa-file-invoice-dollar mr-2"></i>Calculated bill
+                            </h3>
+                        </div>
+                        <div class="p-6">
+                            @if($charges)
+                                <div class="flex items-end justify-between gap-4 mb-4">
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-700">Amount for {{ number_format($reading->consumption) }} units</p>
+                                        <p class="text-sm text-gray-500">{{ ucfirst($reading->waterMeter->customer->customer_type ?? 'customer') }} rate on {{ $reading->reading_date ? $reading->reading_date->format('M d, Y') : 'the reading date' }}</p>
+                                    </div>
+                                    <p class="text-3xl font-bold text-green-600">@lkr($charges['total_charges'])</p>
                                 </div>
-                                
-                                <div class="p-6">
-                                    <div class="flex items-center justify-between">
-                                        <div>
-                                            <p class="text-sm font-medium text-gray-700">Bill Number</p>
-                                            <p class="text-lg font-semibold text-gray-900">{{ $bill->bill_number }}</p>
-                                            <p class="text-sm text-gray-500">Generated on {{ $bill->bill_date ? $bill->bill_date->format('M d, Y') : 'No date' }}</p>
+                                <div class="divide-y divide-gray-100 border border-gray-100 rounded-lg">
+                                    @foreach($charges['breakdown'] as $line)
+                                        <div class="flex items-center justify-between px-4 py-2 text-sm">
+                                            <span class="text-gray-700">{{ $line['tier_name'] }} · {{ number_format($line['consumption']) }} units</span>
+                                            <span class="font-medium text-gray-900">@lkr($line['charge'] + $line['fixed_charge'])</span>
                                         </div>
-                                        <div class="text-right">
-                                            <p class="text-sm font-medium text-gray-700">Total Amount</p>
-                                            <p class="text-2xl font-bold text-green-600">@lkr($bill->total_amount)</p>
-                                            <a href="{{ route('bills.show', $bill) }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                                                View Bill Details →
-                                            </a>
-                                        </div>
+                                    @endforeach
+                                    <div class="flex items-center justify-between px-4 py-2 text-sm">
+                                        <span class="text-gray-700">Water charges</span>
+                                        <span class="font-medium text-gray-900">@lkr($charges['water_charges'])</span>
+                                    </div>
+                                    <div class="flex items-center justify-between px-4 py-2 text-sm">
+                                        <span class="text-gray-700">Fixed charges</span>
+                                        <span class="font-medium text-gray-900">@lkr($charges['fixed_charges'])</span>
                                     </div>
                                 </div>
-                            </div>
-                        @endif
-                    @endif
+                            @else
+                                <p class="text-sm text-gray-500">No customer rate is available for this reading, so a bill amount cannot be calculated.</p>
+                            @endif
+
+                            @if($reading->bill)
+                                <div class="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-700">Saved bill {{ $reading->bill->bill_number }}</p>
+                                        <p class="text-sm text-gray-500">Includes late fees and other adjustments. Generated {{ $reading->bill->bill_date ? $reading->bill->bill_date->format('M d, Y') : 'on an unknown date' }}.</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="text-xl font-bold text-gray-900">@lkr($reading->bill->total_amount)</p>
+                                        <a href="{{ route('bills.show', $reading->bill) }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                            View Bill Details →
+                                        </a>
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Sidebar -->

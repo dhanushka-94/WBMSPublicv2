@@ -289,6 +289,13 @@ class WaterMeter extends Model
             Storage::disk('public')->put($path, $qrCode);
         }
 
+        if ($size === 200 && $format === 'svg' && $this->customer_id) {
+            Customer::whereKey($this->customer_id)->update([
+                'meter_number' => $this->meter_number,
+                'qr_code_path' => $path,
+            ]);
+        }
+
         return $path;
     }
 

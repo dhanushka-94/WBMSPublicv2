@@ -203,6 +203,9 @@
                                                     </div>
                                                 @endif
                                             </div>
+                                            @if($customer->qr_code_url)
+                                            <img src="{{ $customer->qr_code_url }}" alt="QR for {{ $customer->account_number }}" class="ml-3 h-12 w-12 rounded border border-gray-200 bg-white">
+                                            @endif
                                             <div class="ml-4">
                                                 <div class="text-base font-bold text-gray-900">{{ $customer->full_name }}</div>
                                                 @if($customer->title)

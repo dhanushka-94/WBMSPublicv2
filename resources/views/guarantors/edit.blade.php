@@ -321,7 +321,7 @@
                         <label class="block text-sm font-semibold text-gray-700">Registration Date</label>
                         <div class="relative">
                             <input type="text" 
-                                   value="{{ $guarantor->created_at->format('M d, Y \a\t g:i A') }}" 
+                                   value="{{ $guarantor->created_at->format('M d, Y H:i') }}" 
                                    disabled
                                    class="w-full px-4 py-3 border-2 border-gray-200 bg-gray-50 rounded-lg text-gray-600">
                             <div class="absolute top-3 right-3">
@@ -335,7 +335,7 @@
                         <label class="block text-sm font-semibold text-gray-700">Last Updated</label>
                         <div class="relative">
                             <input type="text" 
-                                   value="{{ $guarantor->updated_at->format('M d, Y \a\t g:i A') }}" 
+                                   value="{{ $guarantor->updated_at->format('M d, Y H:i') }}" 
                                    disabled
                                    class="w-full px-4 py-3 border-2 border-gray-200 bg-gray-50 rounded-lg text-gray-600">
                             <div class="absolute top-3 right-3">

@@ -151,7 +151,7 @@
                                         </td>
                                         <td class="px-4 py-4 text-sm text-gray-600">
                                             <div>{{ $notification->created_at->format('M d, Y') }}</div>
-                                            <div class="text-xs text-gray-400">{{ $notification->created_at->format('h:i A') }}</div>
+                                            <div class="text-xs text-gray-400">{{ $notification->created_at->format('H:i') }}</div>
                                         </td>
                                         <td class="px-4 py-4">
                                             @if($notification->customer)

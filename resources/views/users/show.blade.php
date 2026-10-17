@@ -164,13 +164,13 @@
 
                                 <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                                     <label class="block text-sm font-medium text-gray-500 mb-1">Account Created</label>
-                                    <p class="text-lg font-semibold text-gray-900">{{ $user->created_at->format('M d, Y \a\t g:i A') }}</p>
+                                    <p class="text-lg font-semibold text-gray-900">{{ $user->created_at->format('M d, Y H:i') }}</p>
                                     <p class="text-sm text-gray-500">{{ $user->created_at->diffForHumans() }}</p>
                                 </div>
 
                                 <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                                     <label class="block text-sm font-medium text-gray-500 mb-1">Last Updated</label>
-                                    <p class="text-lg font-semibold text-gray-900">{{ $user->updated_at->format('M d, Y \a\t g:i A') }}</p>
+                                    <p class="text-lg font-semibold text-gray-900">{{ $user->updated_at->format('M d, Y H:i') }}</p>
                                     <p class="text-sm text-gray-500">{{ $user->updated_at->diffForHumans() }}</p>
                                 </div>
                             </div>
