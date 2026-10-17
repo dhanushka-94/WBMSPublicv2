@@ -40,9 +40,11 @@
             <h2 class="text-xl font-bold text-gray-900 mb-3">App flow</h2>
             <ol class="list-decimal list-inside text-gray-700 space-y-2">
                 <li><code class="bg-gray-100 px-1 rounded">POST /login</code> and store <code class="bg-gray-100 px-1 rounded">data.token</code>.</li>
+                <li><code class="bg-gray-100 px-1 rounded">GET /meter-reading/rates</code> and store the tariff slabs for offline receipts.</li>
                 <li><code class="bg-gray-100 px-1 rounded">GET /meter-reading/route/today</code> for the day’s customer list.</li>
                 <li>Open a customer with <code class="bg-gray-100 px-1 rounded">GET /meter-reading/customers/{id}</code>, or find one with search or QR scan.</li>
-                <li><code class="bg-gray-100 px-1 rounded">POST /meter-reading/submit</code> for one reading while online.</li>
+                <li>Price the new reading with the stored slabs, or call <code class="bg-gray-100 px-1 rounded">POST /meter-reading/quote</code> while online. The receipt shows previous reading, new reading, consumption, water charges, other charges, and the LKR total.</li>
+                <li><code class="bg-gray-100 px-1 rounded">POST /meter-reading/submit</code> for one reading while online. <code class="bg-gray-100 px-1 rounded">receipt_data.charges</code> repeats those amounts.</li>
                 <li>If the phone was offline, keep the readings on the device and upload them with <code class="bg-gray-100 px-1 rounded">POST /meter-reading/bulk-sync</code>.</li>
                 <li>Optional: show unpaid bills and record a cash payment.</li>
                 <li><code class="bg-gray-100 px-1 rounded">POST /logout</code> when the reader finishes.</li>
@@ -61,6 +63,7 @@
                 <li>A bulk-sync response of HTTP 200 can still contain failed rows. Keep those rows on the phone.</li>
                 <li>Areas, routes, and the sync pending/force calls are placeholders. Build the route list from <code class="bg-gray-100 px-1 rounded">route/today</code>.</li>
                 <li>Dashboard <code class="bg-gray-100 px-1 rounded">accuracy_rate</code> is a fixed 98.5, not a live score.</li>
+                <li>Price a reading from the customer’s <code class="bg-gray-100 px-1 rounded">customer_type</code> slabs. Consumption of 0 uses only the 0–0 slab’s fixed charge. Consumption above 0 skips that slab. A null <code class="bg-gray-100 px-1 rounded">tier_to</code> takes the remaining units. Other charges are the fixed charge, and the total is water charges plus other charges.</li>
             </ul>
         </div>
 

@@ -72,6 +72,8 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::get('/customers/search', [MeterReadingApiController::class, 'searchCustomers']);
         Route::get('/customers/{customerId}', [MeterReadingApiController::class, 'getCustomerDetails']);
         Route::get('/customers/{customerId}/history', [MeterReadingApiController::class, 'getMeterHistory']);
+        Route::get('/rates', [MeterReadingApiController::class, 'getRates']);
+        Route::post('/quote', [MeterReadingApiController::class, 'quoteCharges']);
         
         // Reading submission
         Route::post('/submit', [MeterReadingApiController::class, 'submitReading']);

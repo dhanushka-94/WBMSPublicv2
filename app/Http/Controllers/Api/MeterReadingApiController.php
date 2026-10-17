@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\WaterMeter;
 use App\Models\MeterReading;
 use App\Models\Bill;
+use App\Models\Rate;
 use App\Models\ActivityLog;
 use App\Traits\LogsActivity;
 use Illuminate\Http\Request;
@@ -44,6 +45,7 @@ class MeterReadingApiController extends Controller
                         'name' => $customer->full_name,
                         'address' => $customer->full_address,
                         'phone' => $customer->phone,
+                        'customer_type' => $customer->customer_type,
                         'area' => null, // Area not implemented yet
                         'route' => null, // Route not implemented yet
                         'meter' => $waterMeter ? [
@@ -381,6 +383,7 @@ class MeterReadingApiController extends Controller
                     'address' => $customer->full_address,
                     'phone' => $customer->phone,
                     'email' => $customer->email,
+                    'customer_type' => $customer->customer_type,
                     'area' => null, // Area not implemented yet
                     'route' => null, // Route not implemented yet
                     'status' => $customer->status,
@@ -460,6 +463,7 @@ class MeterReadingApiController extends Controller
                         'name' => $customer->full_name,
                         'address' => $customer->full_address,
                         'phone' => $customer->phone,
+                        'customer_type' => $customer->customer_type,
                         'area' => null, // Area not implemented yet
                         'meter_number' => $waterMeter?->meter_number,
                         'current_reading' => $waterMeter?->current_reading,
@@ -547,6 +551,154 @@ class MeterReadingApiController extends Controller
     }
 
     /**
+     * Active tariff slabs the phone uses to price a reading offline.
+     */
+    public function getRates(): JsonResponse
+    {
+        $asOf = now()->toDateString();
+        $rates = Rate::active()
+            ->effective($asOf)
+            ->orderBy('customer_type')
+            ->orderBy('tier_from')
+            ->get();
+
+        $tariffs = $rates->groupBy('customer_type')->map(function ($slabs, $customerType) {
+            return [
+                'customer_type' => $customerType,
+                'slabs' => $slabs->map(function (Rate $rate) {
+                    return [
+                        'name' => $rate->name,
+                        'tier_from' => (int) $rate->tier_from,
+                        'tier_to' => $rate->tier_to === null ? null : (int) $rate->tier_to,
+                        'rate_per_unit' => round((float) $rate->rate_per_unit, 4),
+                        'fixed_charge' => round((float) $rate->fixed_charge, 2),
+                        'effective_from' => optional($rate->effective_from)->toDateString(),
+                        'effective_to' => optional($rate->effective_to)->toDateString(),
+                    ];
+                })->values(),
+            ];
+        })->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'currency' => 'LKR',
+                'unit' => 'cubic meters',
+                'as_of' => $asOf,
+                'rules' => [
+                    'consumption' => 'max(0, current_reading - previous_reading)',
+                    'zero_consumption' => 'Use only the slab where tier_from and tier_to are both 0. Its fixed_charge is other_charges. water_charges is 0.',
+                    'positive_consumption' => 'Skip the 0-0 slab. Apply the remaining slabs in tier_from order. A bounded slab covers units from tier_from through tier_to, inclusive. A null tier_to takes every remaining unit. water_charges is units times rate_per_unit. other_charges is 0.',
+                    'total' => 'water_charges + other_charges',
+                ],
+                'tariffs' => $tariffs,
+            ],
+        ]);
+    }
+
+    /**
+     * Price a reading without saving it.
+     */
+    public function quoteCharges(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'customer_id' => 'nullable|exists:customers,id',
+            'customer_type' => 'nullable|string',
+            'consumption' => 'nullable|numeric|min:0',
+            'previous_reading' => 'nullable|numeric|min:0',
+            'current_reading' => 'nullable|numeric|min:0',
+            'reading_date' => 'nullable|date',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $customer = $request->filled('customer_id')
+            ? Customer::find($request->customer_id)
+            : null;
+        $customerType = $customer->customer_type ?? $request->input('customer_type');
+
+        if (!$customerType) {
+            return response()->json([
+                'success' => false,
+                'message' => 'customer_id or customer_type is required',
+            ], 422);
+        }
+
+        $previous = $request->input('previous_reading');
+        if ($previous === null && $customer) {
+            $previous = $customer->waterMeter?->current_reading;
+        }
+
+        if ($request->filled('consumption')) {
+            $consumption = (float) $request->consumption;
+            $current = $request->filled('current_reading')
+                ? (float) $request->current_reading
+                : ($previous === null ? null : (float) $previous + $consumption);
+        } elseif ($request->filled('current_reading') && $previous !== null) {
+            $current = (float) $request->current_reading;
+            $previous = (float) $previous;
+            $consumption = max(0, $current - $previous);
+        } else {
+            return response()->json([
+                'success' => false,
+                'message' => 'Send consumption, or current_reading with previous_reading or customer_id',
+            ], 422);
+        }
+
+        $charges = $this->chargeSummary($customerType, $consumption, $request->input('reading_date'));
+
+        return response()->json([
+            'success' => true,
+            'data' => array_merge([
+                'customer_id' => $customer?->id,
+                'customer_type' => $customerType,
+                'previous_reading' => $previous === null ? null : round((float) $previous, 2),
+                'current_reading' => $current === null ? null : round((float) $current, 2),
+                'consumption' => round($consumption, 2),
+            ], $charges),
+        ]);
+    }
+
+    private function chargeSummary(?string $customerType, float $consumption, $date = null): array
+    {
+        $calculated = $customerType
+            ? Rate::calculateCharges($customerType, $consumption, $date)
+            : [
+                'breakdown' => [],
+                'water_charges' => 0,
+                'fixed_charges' => 0,
+                'total_charges' => 0,
+            ];
+
+        $otherCharges = round((float) $calculated['fixed_charges'], 2);
+
+        return [
+            'currency' => 'LKR',
+            'water_charges' => round((float) $calculated['water_charges'], 2),
+            'other_charges' => $otherCharges,
+            'fixed_charges' => $otherCharges,
+            'total' => round((float) $calculated['total_charges'], 2),
+            'breakdown' => collect($calculated['breakdown'])->map(function (array $tier) {
+                return [
+                    'tier_name' => $tier['tier_name'],
+                    'tier_from' => (int) $tier['tier_from'],
+                    'tier_to' => $tier['tier_to'] === null ? null : (int) $tier['tier_to'],
+                    'consumption' => round((float) $tier['consumption'], 2),
+                    'rate_per_unit' => round((float) $tier['rate_per_unit'], 4),
+                    'charge' => round((float) $tier['charge'], 2),
+                    'fixed_charge' => round((float) $tier['fixed_charge'], 2),
+                ];
+            })->values(),
+        ];
+    }
+
+    /**
      * Generate receipt data for mobile printing
      */
     private function generateReceiptData($customer, $meter, $reading): array
@@ -572,6 +724,11 @@ class MeterReadingApiController extends Controller
                 'consumption' => $reading->consumption,
                 'units' => 'cubic meters',
             ],
+            'charges' => $this->chargeSummary(
+                $customer->customer_type,
+                (float) $reading->consumption,
+                $reading->reading_date
+            ),
             'reader' => [
                 'name' => $reading->reader_name,
                 'signature_line' => '________________________',
