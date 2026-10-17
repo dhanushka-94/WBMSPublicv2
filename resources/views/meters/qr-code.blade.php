@@ -27,6 +27,14 @@
     </div>
 </div>
 
+@if(session('success'))
+<div class="mx-auto max-w-4xl px-6 pt-6">
+    <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800">
+        <i class="fas fa-check-circle mr-2"></i>{{ session('success') }}
+    </div>
+</div>
+@endif
+
 <div class="py-8 bg-gray-50 min-h-screen">
     <div class="max-w-4xl mx-auto px-6 lg:px-8">
         
@@ -160,6 +168,15 @@
                         <i class="fas fa-print mr-2"></i>
                         Print QR Code
                     </button>
+
+                    <form method="POST" action="{{ route('meters.qr-code.regenerate', $water_meter) }}">
+                        @csrf
+                        <button type="submit"
+                                class="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-300">
+                            <i class="fas fa-sync-alt mr-2"></i>
+                            Regenerate QR Image
+                        </button>
+                    </form>
                     
                     <a href="{{ route('meters.edit', $water_meter) }}" 
                        class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-300">

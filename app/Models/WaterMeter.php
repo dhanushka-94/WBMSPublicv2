@@ -302,7 +302,21 @@ class WaterMeter extends Model
     public function getQrCodeUrl($size = 200, $format = 'svg')
     {
         $path = $this->getQrCodePath($size, $format);
-        return Storage::disk('public')->url($path);
+        $url = Storage::disk('public')->url($path);
+        $version = Storage::disk('public')->exists($path)
+            ? Storage::disk('public')->lastModified($path)
+            : time();
+
+        return $url . '?v=' . $version;
+    }
+
+    public function regenerateQrCode(): void
+    {
+        $this->deleteQrCode();
+
+        foreach ([200, 300] as $size) {
+            $this->getQrCodePath($size, 'svg');
+        }
     }
 
     public function getQrCodeBase64($size = 200, $format = 'svg')

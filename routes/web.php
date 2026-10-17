@@ -120,6 +120,7 @@ Route::middleware(['auth', 'verified', 'system.check'])->group(function () {
     Route::post('meters/{meter}/maintenance', [WaterMeterController::class, 'recordMaintenance'])->name('meters.maintenance');
     Route::get('meters/{water_meter}/qr-code', [WaterMeterController::class, 'showQRCode'])->name('meters.qr-code');
     Route::get('meters/{water_meter}/qr-code/download', [WaterMeterController::class, 'downloadQRCode'])->name('meters.qr-code.download');
+    Route::post('meters/{water_meter}/qr-code/regenerate', [WaterMeterController::class, 'regenerateQrCode'])->name('meters.qr-code.regenerate');
     Route::get('api/check-meter-number', [WaterMeterController::class, 'checkMeterNumber'])->name('check.meter.number');
     
     // Bill Management (create/edit/delete - RESTRICTED)

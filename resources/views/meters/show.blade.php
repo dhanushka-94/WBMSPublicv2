@@ -37,6 +37,12 @@
         </div>
     </div>
 
+    @if(session('success'))
+    <div class="mx-6 mt-6 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800">
+        <i class="fas fa-check-circle mr-2"></i>{{ session('success') }}
+    </div>
+    @endif
+
     <div class="py-8 bg-gray-50 min-h-screen">
         <div class="w-full px-6 lg:px-8">
             
@@ -436,6 +442,15 @@
                                         <i class="fas fa-print mr-2"></i>
                                         Print QR Code
                                     </button>
+
+                                    <form method="POST" action="{{ route('meters.qr-code.regenerate', $water_meter) }}">
+                                        @csrf
+                                        <button type="submit"
+                                                class="w-full bg-amber-500 hover:bg-amber-600 text-white py-2 px-4 rounded-lg text-sm transition-colors">
+                                            <i class="fas fa-sync-alt mr-2"></i>
+                                            Regenerate QR Image
+                                        </button>
+                                    </form>
                                     
                                     <button onclick="showQrCodeInfo()" 
                                             class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg text-sm transition-colors">

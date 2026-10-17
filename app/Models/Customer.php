@@ -132,7 +132,12 @@ class Customer extends Model
             return null;
         }
 
-        return Storage::disk('public')->url($this->qr_code_path);
+        $url = Storage::disk('public')->url($this->qr_code_path);
+        if (!Storage::disk('public')->exists($this->qr_code_path)) {
+            return $url;
+        }
+
+        return $url . '?v=' . Storage::disk('public')->lastModified($this->qr_code_path);
     }
 
     public function getProfilePhotoUrlAttribute(): string

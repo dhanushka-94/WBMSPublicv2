@@ -423,4 +423,11 @@ class WaterMeterController extends Controller
         
         return view('meters.qr-code', compact('water_meter', 'qrCodeUrl', 'qrCodeData'));
     }
+
+    public function regenerateQrCode(WaterMeter $water_meter): RedirectResponse
+    {
+        $water_meter->regenerateQrCode();
+
+        return back()->with('success', 'QR code regenerated for meter ' . $water_meter->meter_number . '.');
+    }
 }
