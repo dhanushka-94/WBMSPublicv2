@@ -77,6 +77,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         
         // Reading submission
         Route::post('/submit', [MeterReadingApiController::class, 'submitReading']);
+        Route::post('/bills', [MeterReadingApiController::class, 'submitBill']);
         Route::post('/bulk-sync', [MeterReadingApiController::class, 'bulkSyncReadings']);
         
         // QR Code routes

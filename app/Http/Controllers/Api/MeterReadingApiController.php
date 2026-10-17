@@ -112,6 +112,9 @@ class MeterReadingApiController extends Controller
                 'gps_longitude' => 'nullable|numeric|between:-180,180',
                 'meter_photo' => 'nullable|image|mimes:jpeg,png,jpg|max:5120', // 5MB max
                 'notes' => 'nullable|string|max:500',
+                'service_charges' => 'nullable|numeric|min:0',
+                'taxes' => 'nullable|numeric|min:0',
+                'adjustments' => 'nullable|numeric',
                 'meter_condition' => 'nullable|in:good,damaged,broken,needs_repair',
                 'reading_accuracy' => 'nullable|in:exact,estimated,calculated,actual',
                 'offline_timestamp' => 'nullable|date', // For offline readings
@@ -208,6 +211,13 @@ class MeterReadingApiController extends Controller
                 'gps_longitude' => $request->gps_longitude ?? $meter->gps_longitude,
             ]);
 
+            $bill = $this->createBillFromReading($meterReading, $customer, [
+                'service_charges' => $request->input('service_charges', 0),
+                'taxes' => $request->input('taxes', 0),
+                'adjustments' => $request->input('adjustments', 0),
+                'notes' => $request->notes,
+            ]);
+
             // Log activity
             $this->logMobileActivity('meter_reading_submitted', [
                 'customer' => $customer->full_name,
@@ -241,14 +251,15 @@ class MeterReadingApiController extends Controller
                     'accuracy' => $request->reading_accuracy ?? 'exact',
                     'notes' => $request->notes,
                 ],
-                'receipt_data' => $this->generateReceiptData($customer, $meter, $meterReading),
+                'receipt_data' => $this->generateReceiptData($customer, $meter, $meterReading, $bill),
+                'bill' => $this->billPayload($bill),
                 'sync_status' => 'completed',
                 'timestamp' => now()->toISOString(),
             ];
 
             return response()->json([
                 'success' => true,
-                'message' => 'Meter reading submitted successfully',
+                'message' => 'Meter reading and bill submitted successfully',
                 'data' => $responseData
             ]);
 
@@ -551,6 +562,142 @@ class MeterReadingApiController extends Controller
     }
 
     /**
+     * Save a bill for a reading already stored by submit or bulk-sync.
+     * Water and fixed charges are calculated here from the tariff. Amounts sent by the phone are not used.
+     */
+    public function submitBill(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'reading_id' => 'required|exists:meter_readings,id',
+            'service_charges' => 'nullable|numeric|min:0',
+            'taxes' => 'nullable|numeric|min:0',
+            'adjustments' => 'nullable|numeric',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $reading = MeterReading::with('waterMeter.customer')->find($request->reading_id);
+        $customer = $reading->waterMeter?->customer;
+
+        if (!$customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Customer not found for this reading',
+            ], 404);
+        }
+
+        try {
+            DB::beginTransaction();
+            $bill = $this->createBillFromReading($reading, $customer, [
+                'service_charges' => $request->input('service_charges', 0),
+                'taxes' => $request->input('taxes', 0),
+                'adjustments' => $request->input('adjustments', 0),
+                'notes' => $request->input('notes'),
+            ]);
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to submit bill',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Bill submitted successfully',
+            'data' => [
+                'reading_id' => $reading->id,
+                'bill' => $this->billPayload($bill),
+                'receipt_data' => $this->generateReceiptData($customer, $reading->waterMeter, $reading, $bill),
+            ],
+        ]);
+    }
+
+    private function createBillFromReading(MeterReading $reading, Customer $customer, array $extras = []): Bill
+    {
+        $existing = Bill::where('meter_reading_id', $reading->id)->first();
+        if ($existing) {
+            return $existing;
+        }
+
+        $charges = Rate::calculateCharges(
+            $customer->customer_type,
+            (float) $reading->consumption,
+            $reading->reading_date
+        );
+
+        $bill = Bill::create([
+            'customer_id' => $customer->id,
+            'water_meter_id' => $reading->water_meter_id,
+            'meter_reading_id' => $reading->id,
+            'bill_date' => now()->toDateString(),
+            'due_date' => now()->addDays(30)->toDateString(),
+            'billing_period_from' => $reading->reading_date->copy()->startOfMonth()->toDateString(),
+            'billing_period_to' => $reading->reading_date->copy()->endOfMonth()->toDateString(),
+            'previous_reading' => $reading->previous_reading,
+            'current_reading' => $reading->current_reading,
+            'consumption' => $reading->consumption,
+            'water_charges' => $charges['water_charges'],
+            'fixed_charges' => $charges['fixed_charges'],
+            'service_charges' => $extras['service_charges'] ?? 0,
+            'taxes' => $extras['taxes'] ?? 0,
+            'adjustments' => $extras['adjustments'] ?? 0,
+            'late_fees' => 0,
+            'rate_breakdown' => $charges['breakdown'],
+            'notes' => $extras['notes'] ?? null,
+            'status' => 'generated',
+        ]);
+
+        $reading->markAsBilled();
+
+        return $bill;
+    }
+
+    private function billPayload(Bill $bill): array
+    {
+        $other = round(
+            (float) $bill->fixed_charges
+            + (float) $bill->service_charges
+            + (float) $bill->taxes
+            + (float) $bill->adjustments
+            + (float) $bill->late_fees,
+            2
+        );
+
+        return [
+            'id' => $bill->id,
+            'bill_number' => $bill->bill_number,
+            'status' => $bill->status,
+            'bill_date' => optional($bill->bill_date)->toDateString(),
+            'due_date' => optional($bill->due_date)->toDateString(),
+            'previous_reading' => round((float) $bill->previous_reading, 2),
+            'current_reading' => round((float) $bill->current_reading, 2),
+            'consumption' => round((float) $bill->consumption, 2),
+            'currency' => 'LKR',
+            'water_charges' => round((float) $bill->water_charges, 2),
+            'fixed_charges' => round((float) $bill->fixed_charges, 2),
+            'service_charges' => round((float) $bill->service_charges, 2),
+            'taxes' => round((float) $bill->taxes, 2),
+            'adjustments' => round((float) $bill->adjustments, 2),
+            'late_fees' => round((float) $bill->late_fees, 2),
+            'other_charges' => $other,
+            'total' => round((float) $bill->total_amount, 2),
+            'balance' => round((float) $bill->balance_amount, 2),
+            'breakdown' => $bill->rate_breakdown ?? [],
+        ];
+    }
+
+    /**
      * Active tariff slabs the phone uses to price a reading offline.
      */
     public function getRates(): JsonResponse
@@ -701,8 +848,12 @@ class MeterReadingApiController extends Controller
     /**
      * Generate receipt data for mobile printing
      */
-    private function generateReceiptData($customer, $meter, $reading): array
+    private function generateReceiptData($customer, $meter, $reading, ?Bill $bill = null): array
     {
+        $charges = $bill
+            ? $this->billPayload($bill)
+            : $this->chargeSummary($customer->customer_type, (float) $reading->consumption, $reading->reading_date);
+
         return [
             'receipt_number' => 'MR-' . str_pad($reading->id, 6, '0', STR_PAD_LEFT),
             'date' => $reading->reading_date,
@@ -724,11 +875,16 @@ class MeterReadingApiController extends Controller
                 'consumption' => $reading->consumption,
                 'units' => 'cubic meters',
             ],
-            'charges' => $this->chargeSummary(
-                $customer->customer_type,
-                (float) $reading->consumption,
-                $reading->reading_date
-            ),
+            'charges' => [
+                'currency' => 'LKR',
+                'water_charges' => $charges['water_charges'],
+                'fixed_charges' => $charges['fixed_charges'] ?? 0,
+                'service_charges' => $charges['service_charges'] ?? 0,
+                'taxes' => $charges['taxes'] ?? 0,
+                'adjustments' => $charges['adjustments'] ?? 0,
+                'other_charges' => $charges['other_charges'],
+                'total' => $charges['total'],
+            ],
             'reader' => [
                 'name' => $reading->reader_name,
                 'signature_line' => '________________________',

@@ -44,7 +44,7 @@
                 <li><code class="bg-gray-100 px-1 rounded">GET /meter-reading/route/today</code> for the day’s customer list.</li>
                 <li>Open a customer with <code class="bg-gray-100 px-1 rounded">GET /meter-reading/customers/{id}</code>, or find one with search or QR scan.</li>
                 <li>Price the new reading with the stored slabs, or call <code class="bg-gray-100 px-1 rounded">POST /meter-reading/quote</code> while online. The receipt shows previous reading, new reading, consumption, water charges, other charges, and the LKR total.</li>
-                <li><code class="bg-gray-100 px-1 rounded">POST /meter-reading/submit</code> for one reading while online. <code class="bg-gray-100 px-1 rounded">receipt_data.charges</code> repeats those amounts.</li>
+                <li><code class="bg-gray-100 px-1 rounded">POST /meter-reading/submit</code> saves the reading and creates the bill from the server tariff. The response <code class="bg-gray-100 px-1 rounded">data.bill</code> is the bill stored in this system. If the reading was saved earlier, create the bill with <code class="bg-gray-100 px-1 rounded">POST /meter-reading/bills</code>.</li>
                 <li>If the phone was offline, keep the readings on the device and upload them with <code class="bg-gray-100 px-1 rounded">POST /meter-reading/bulk-sync</code>.</li>
                 <li>Optional: show unpaid bills and record a cash payment.</li>
                 <li><code class="bg-gray-100 px-1 rounded">POST /logout</code> when the reader finishes.</li>
