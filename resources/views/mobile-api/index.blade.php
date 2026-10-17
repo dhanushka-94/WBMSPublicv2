@@ -3,14 +3,14 @@
 @section('content')
 <div class="min-h-screen bg-gray-50">
     <div class="bg-gradient-to-r from-slate-800 to-cyan-800 shadow-lg">
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+        <div class="w-full px-4 sm:px-6 lg:px-8 py-8">
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                     <p class="text-cyan-200 text-sm font-semibold uppercase tracking-wide">Admin only</p>
                     <h1 class="text-3xl font-bold text-white mt-1">
-                        <i class="fas fa-mobile-alt mr-3"></i>Mobile App API Reference
+                        <i class="fas fa-mobile-alt mr-3"></i>Meter Reader Mobile API Guide
                     </h1>
-                    <p class="text-slate-200 mt-2">Complete endpoints for building the meter reader Android / iOS app</p>
+                    <p class="text-slate-200 mt-2">Complete guide for building the Android / iOS meter reader app against AquaBill <code class="text-cyan-100">/api/v1</code></p>
                 </div>
                 <div class="bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white text-sm">
                     <div class="opacity-80">Base URL</div>
@@ -20,46 +20,82 @@
         </div>
     </div>
 
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {{-- Auth quick start --}}
+    <div class="w-full px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <h2 class="text-xl font-bold text-gray-900 mb-3">How to authenticate</h2>
-            <ol class="list-decimal list-inside text-gray-700 space-y-2 mb-4">
-                <li>Call <code class="bg-gray-100 px-1 rounded">POST {{ $baseUrl }}/login</code> with email, password, device_name.</li>
-                <li>Save <code class="bg-gray-100 px-1 rounded">data.token</code> from the response.</li>
-                <li>Send header on every protected request: <code class="bg-gray-100 px-1 rounded">Authorization: Bearer {token}</code></li>
-                <li>Also send <code class="bg-gray-100 px-1 rounded">Accept: application/json</code></li>
-            </ol>
-            <div class="grid md:grid-cols-2 gap-4">
-                <div>
-                    <p class="text-sm font-semibold text-gray-600 mb-2">Login body example</p>
-                    <pre class="bg-slate-900 text-green-300 text-xs p-4 rounded-lg overflow-x-auto">{{ json_encode($loginExample, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
-                </div>
-                <div>
-                    <p class="text-sm font-semibold text-gray-600 mb-2">Submit reading body example</p>
-                    <pre class="bg-slate-900 text-cyan-200 text-xs p-4 rounded-lg overflow-x-auto">{{ json_encode($submitExample, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
-                </div>
-            </div>
-            <p class="mt-4 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                Test meter reader: <strong>reader1@aquabill.olexto.com</strong> / <strong>password</strong>
-                (roles allowed for login: admin, meter_reader, supervisor)
+            <h2 class="text-xl font-bold text-gray-900 mb-3">Before the first request</h2>
+            <ul class="list-disc list-inside text-gray-700 space-y-2">
+                <li>Send <code class="bg-gray-100 px-1 rounded">Accept: application/json</code> on every call.</li>
+                <li>Send <code class="bg-gray-100 px-1 rounded">Content-Type: application/json</code> unless the call includes a photo. Photo calls use <code class="bg-gray-100 px-1 rounded">multipart/form-data</code>.</li>
+                <li>After login, send <code class="bg-gray-100 px-1 rounded">Authorization: Bearer {token}</code> on every protected call.</li>
+                <li>Roles that can log in: <strong>admin</strong>, <strong>meter_reader</strong>, <strong>supervisor</strong>. Manager and staff receive HTTP 403.</li>
+                <li>Currency is LKR. Dates are <code class="bg-gray-100 px-1 rounded">YYYY-MM-DD</code>. Server timezone is Asia/Colombo.</li>
+            </ul>
+            <p class="mt-4 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                Test meter reader: <strong>reader1@aquabill.olexto.com</strong> / <strong>password</strong>.
+                Readers 2 to 5 use the same password. Admin web login is <strong>admin@aquabill.olexto.com</strong> / <strong>password</strong>.
             </p>
         </div>
 
-        {{-- Suggested mobile flow --}}
         <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <h2 class="text-xl font-bold text-gray-900 mb-3">Suggested mobile flow</h2>
-            <div class="flex flex-wrap gap-2 text-sm">
-                <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-800">1. Login</span>
-                <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-800">2. Route today / Search</span>
-                <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-800">3. Customer detail + history</span>
-                <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-800">4. Submit reading</span>
-                <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-800">5. Optional payment</span>
-                <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-800">6. Bulk sync when offline</span>
+            <h2 class="text-xl font-bold text-gray-900 mb-3">App flow</h2>
+            <ol class="list-decimal list-inside text-gray-700 space-y-2">
+                <li><code class="bg-gray-100 px-1 rounded">POST /login</code> and store <code class="bg-gray-100 px-1 rounded">data.token</code>.</li>
+                <li><code class="bg-gray-100 px-1 rounded">GET /meter-reading/route/today</code> for the day’s customer list.</li>
+                <li>Open a customer with <code class="bg-gray-100 px-1 rounded">GET /meter-reading/customers/{id}</code>, or find one with search or QR scan.</li>
+                <li><code class="bg-gray-100 px-1 rounded">POST /meter-reading/submit</code> for one reading while online.</li>
+                <li>If the phone was offline, keep the readings on the device and upload them with <code class="bg-gray-100 px-1 rounded">POST /meter-reading/bulk-sync</code>.</li>
+                <li>Optional: show unpaid bills and record a cash payment.</li>
+                <li><code class="bg-gray-100 px-1 rounded">POST /logout</code> when the reader finishes.</li>
+            </ol>
+            <p class="mt-3 text-sm text-gray-600"><code class="bg-gray-100 px-1 rounded">GET /sync/pending</code> and <code class="bg-gray-100 px-1 rounded">POST /sync/force</code> do not upload anything. The offline upload is bulk-sync.</p>
+        </div>
+
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-3">Rules the app must follow</h2>
+            <ul class="list-disc list-inside text-gray-700 space-y-2">
+                <li>Do not submit a reading below <code class="bg-gray-100 px-1 rounded">meter.current_reading</code>. The server’s cumulative check does not run, so a lower number can be saved.</li>
+                <li>One reading per meter per calendar date. A second submit for the same meter and <code class="bg-gray-100 px-1 rounded">reading_date</code> fails.</li>
+                <li>QR sticker text is the meter number, for example <code class="bg-gray-100 px-1 rounded">WM-00118</code>. The field app only calls scan. Generate, download, and batch-generate are for printing stickers.</li>
+                <li>Customer search accepts <code class="bg-gray-100 px-1 rounded">q</code> or <code class="bg-gray-100 px-1 rounded">search</code>. Payment search accepts only <code class="bg-gray-100 px-1 rounded">search</code>.</li>
+                <li>Payment amount minimum is 0.01, and it cannot be higher than the bill balance. Amount 0 saves nothing.</li>
+                <li>A bulk-sync response of HTTP 200 can still contain failed rows. Keep those rows on the phone.</li>
+                <li>Areas, routes, and the sync pending/force calls are placeholders. Build the route list from <code class="bg-gray-100 px-1 rounded">route/today</code>.</li>
+                <li>Dashboard <code class="bg-gray-100 px-1 rounded">accuracy_rate</code> is a fixed 98.5, not a live score.</li>
+            </ul>
+        </div>
+
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-3">How to authenticate</h2>
+            <div class="grid md:grid-cols-3 gap-4">
+                <div>
+                    <p class="text-sm font-semibold text-gray-600 mb-2">Login body</p>
+                    <pre class="bg-slate-900 text-green-300 text-xs p-4 rounded-lg overflow-x-auto">{{ json_encode($loginExample, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+                </div>
+                <div>
+                    <p class="text-sm font-semibold text-gray-600 mb-2">Submit reading body</p>
+                    <pre class="bg-slate-900 text-cyan-200 text-xs p-4 rounded-lg overflow-x-auto">{{ json_encode($submitExample, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+                </div>
+                <div>
+                    <p class="text-sm font-semibold text-gray-600 mb-2">Offline bulk-sync body</p>
+                    <pre class="bg-slate-900 text-amber-200 text-xs p-4 rounded-lg overflow-x-auto">{{ json_encode($bulkExample, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+                </div>
             </div>
         </div>
 
-        {{-- Endpoint groups --}}
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 text-sm text-gray-700">
+            <h2 class="text-xl font-bold text-gray-900 mb-3">Response shape</h2>
+            <pre class="bg-slate-900 text-slate-100 text-xs p-4 rounded-lg overflow-x-auto">{
+  "success": true,
+  "message": "...",
+  "data": { }
+}</pre>
+            <ul class="list-disc list-inside mt-3 space-y-1">
+                <li>Validation errors are HTTP 422 with <code class="bg-gray-100 px-1 rounded">errors</code> keyed by field name.</li>
+                <li>A missing or expired token is HTTP 401 <code class="bg-gray-100 px-1 rounded">Unauthenticated.</code></li>
+                <li>An unknown path is HTTP 404 <code class="bg-gray-100 px-1 rounded">API endpoint not found</code>.</li>
+            </ul>
+        </div>
+
         @foreach($grouped as $group => $items)
             <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                 <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
@@ -93,7 +129,7 @@
 
                             @if(!empty($endpoint['params']))
                                 <div class="mt-3">
-                                    <p class="text-xs font-bold uppercase tracking-wide text-gray-500 mb-1">Query / path params</p>
+                                    <p class="text-xs font-bold uppercase tracking-wide text-gray-500 mb-1">Query / path</p>
                                     <ul class="text-sm text-gray-700 space-y-1">
                                         @foreach($endpoint['params'] as $key => $rule)
                                             <li><code class="bg-gray-100 px-1 rounded">{{ $key }}</code> — {{ $rule }}</li>
@@ -104,7 +140,7 @@
 
                             @if(!empty($endpoint['body']))
                                 <div class="mt-3">
-                                    <p class="text-xs font-bold uppercase tracking-wide text-gray-500 mb-1">Body fields</p>
+                                    <p class="text-xs font-bold uppercase tracking-wide text-gray-500 mb-1">Body</p>
                                     <ul class="text-sm text-gray-700 space-y-1">
                                         @foreach($endpoint['body'] as $key => $rule)
                                             <li><code class="bg-gray-100 px-1 rounded">{{ $key }}</code> — {{ $rule }}</li>
@@ -113,25 +149,29 @@
                                 </div>
                             @endif
 
+                            @if(!empty($endpoint['response']))
+                                <div class="mt-3">
+                                    <p class="text-xs font-bold uppercase tracking-wide text-gray-500 mb-1">Response fields</p>
+                                    <p class="text-sm text-gray-700">{{ implode(', ', $endpoint['response']) }}</p>
+                                </div>
+                            @endif
+
+                            @if(!empty($endpoint['statuses']))
+                                <div class="mt-3 flex flex-wrap gap-2">
+                                    @foreach($endpoint['statuses'] as $status)
+                                        <span class="px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-700">{{ $status }}</span>
+                                    @endforeach
+                                </div>
+                            @endif
+
                             @if(!empty($endpoint['notes']))
-                                <p class="mt-3 text-sm text-gray-600 italic">{{ $endpoint['notes'] }}</p>
+                                <p class="mt-3 text-sm text-gray-600">{{ $endpoint['notes'] }}</p>
                             @endif
                         </div>
                     @endforeach
                 </div>
             </div>
         @endforeach
-
-        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 text-sm text-gray-600">
-            <p class="font-semibold text-gray-800 mb-2">Response shape</p>
-            <p>Most endpoints return JSON like:</p>
-            <pre class="bg-slate-900 text-slate-100 text-xs p-4 rounded-lg overflow-x-auto mt-2">{
-  "success": true,
-  "message": "...",
-  "data": { }
-}</pre>
-            <p class="mt-3">Errors use HTTP 4xx/5xx with <code class="bg-gray-100 px-1 rounded">success: false</code> and optional <code class="bg-gray-100 px-1 rounded">errors</code> validation object.</p>
-        </div>
     </div>
 </div>
 @endsection
