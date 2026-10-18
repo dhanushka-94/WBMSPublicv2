@@ -734,9 +734,9 @@ class MeterReadingApiController extends Controller
                 'as_of' => $asOf,
                 'rules' => [
                     'consumption' => 'max(0, current_reading - previous_reading)',
-                    'zero_consumption' => 'Use only the slab where tier_from and tier_to are both 0. Its fixed_charge is other_charges. water_charges is 0.',
-                    'positive_consumption' => 'Skip the 0-0 slab. Apply the remaining slabs in tier_from order. A bounded slab covers units from tier_from through tier_to, inclusive. A null tier_to takes every remaining unit. water_charges is units times rate_per_unit. other_charges is 0.',
-                    'total' => 'water_charges + other_charges',
+                    'zero_consumption' => 'water_charges is 0. other_charges is the fixed_charge on the slab where tier_from and tier_to are both 0.',
+                    'positive_consumption' => 'Always add that same fixed_charge as other_charges. Also walk the other slabs in tier_from order. A bounded slab covers units from tier_from through tier_to, inclusive. A null tier_to takes every remaining unit. water_charges is units times rate_per_unit.',
+                    'total' => 'water_charges + other_charges. The fixed charge is included on every bill.',
                 ],
                 'tariffs' => $tariffs,
             ],

@@ -63,7 +63,7 @@
                 <li>A bulk-sync response of HTTP 200 can still contain failed rows. Keep those rows on the phone.</li>
                 <li>Areas, routes, and the sync pending/force calls are placeholders. Build the route list from <code class="bg-gray-100 px-1 rounded">route/today</code>.</li>
                 <li>Dashboard <code class="bg-gray-100 px-1 rounded">accuracy_rate</code> is a fixed 98.5, not a live score.</li>
-                <li>Price a reading from the customer’s <code class="bg-gray-100 px-1 rounded">customer_type</code> slabs. Consumption of 0 uses only the 0–0 slab’s fixed charge. Consumption above 0 skips that slab. A null <code class="bg-gray-100 px-1 rounded">tier_to</code> takes the remaining units. Other charges are the fixed charge, and the total is water charges plus other charges.</li>
+                <li>Price a reading from the customer’s <code class="bg-gray-100 px-1 rounded">customer_type</code> slabs. Add the 0–0 slab’s fixed charge on every bill. A null <code class="bg-gray-100 px-1 rounded">tier_to</code> takes the remaining units. The total is water charges plus the fixed charge.</li>
             </ul>
         </div>
 

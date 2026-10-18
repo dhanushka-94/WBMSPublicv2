@@ -55,7 +55,7 @@
                             <div>
                                 <label class="text-sm font-medium text-gray-500">Unit Range</label>
                                 <p class="text-lg text-gray-900">
-                                    @if($rate->tier_to)
+                                    @if($rate->tier_to !== null)
                                         {{ $rate->tier_from }} - {{ $rate->tier_to }} units
                                     @else
                                         {{ $rate->tier_from }}+ units

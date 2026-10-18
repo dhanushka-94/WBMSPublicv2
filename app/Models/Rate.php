@@ -81,35 +81,32 @@ class Rate extends Model
         $totalFixedCharges = 0;
         $remainingConsumption = $consumption;
 
-        // Handle special case for 0 consumption (fixed charge only)
-        if ($consumption == 0) {
-            $fixedRate = $rates->where('tier_from', 0)->where('tier_to', 0)->first();
-            if ($fixedRate) {
-                $totalFixedCharges = $fixedRate->fixed_charge;
-                $charges[] = [
-                    'tier_name' => $fixedRate->name,
-                    'tier_from' => 0,
-                    'tier_to' => 0,
-                    'consumption' => 0,
-                    'rate_per_unit' => 0,
-                    'charge' => 0,
-                    'fixed_charge' => $fixedRate->fixed_charge
-                ];
-            }
-            
-            return [
-                'breakdown' => $charges,
-                'water_charges' => $totalWaterCharges,
-                'fixed_charges' => $totalFixedCharges,
-                'total_charges' => $totalWaterCharges + $totalFixedCharges
+        $fixedRate = $rates->where('tier_from', 0)->where('tier_to', 0)->first();
+        if ($fixedRate) {
+            $totalFixedCharges = $fixedRate->fixed_charge;
+            $charges[] = [
+                'tier_name' => $fixedRate->name,
+                'tier_from' => 0,
+                'tier_to' => 0,
+                'consumption' => 0,
+                'rate_per_unit' => 0,
+                'charge' => 0,
+                'fixed_charge' => $fixedRate->fixed_charge
             ];
         }
 
-        // Process tiered rates for consumption > 0
+        if ($consumption == 0) {
+            return [
+                'breakdown' => $charges,
+                'water_charges' => 0,
+                'fixed_charges' => $totalFixedCharges,
+                'total_charges' => $totalFixedCharges
+            ];
+        }
+
         foreach ($rates as $rate) {
             if ($remainingConsumption <= 0) break;
-            
-            // Skip the fixed charge tier (0-0) for consumption > 0
+
             if ($rate->tier_from == 0 && $rate->tier_to == 0) {
                 continue;
             }
