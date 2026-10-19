@@ -61,7 +61,7 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:users',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'role' => 'required|in:admin,staff,manager,meter_reader',
+            'role' => 'required|in:admin,staff,manager,meter_reader,billing_officer,cashier',
             'is_active' => 'boolean'
         ]);
 
@@ -106,7 +106,7 @@ class UserController extends Controller
                 'max:255',
                 Rule::unique('users')->ignore($user->id)
             ],
-            'role' => 'required|in:admin,staff,manager,meter_reader',
+            'role' => 'required|in:admin,staff,manager,meter_reader,billing_officer,cashier',
             'is_active' => 'boolean'
         ]);
 

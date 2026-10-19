@@ -334,7 +334,7 @@ class AuthApiController extends Controller
             ],
             'server_info' => [
                 'timezone' => config('app.timezone'),
-                'datetime_format' => 'Y-m-d H:i:s',
+                'datetime_format' => 'Y-m-d h:i:s A',
                 'currency' => 'LKR', // Sri Lankan Rupees
             ]
         ];

@@ -86,6 +86,16 @@ class Customer extends Model
         return $this->hasMany(SmsNotification::class);
     }
 
+    public function connectionEvents(): HasMany
+    {
+        return $this->hasMany(ConnectionEvent::class)->latest('event_date');
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
     // Accessors
     public function getFullNameAttribute(): string
     {

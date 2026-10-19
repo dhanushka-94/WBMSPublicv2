@@ -30,7 +30,7 @@
                             <svg class="h-4 w-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                             </svg>
-                            <span id="current-time" class="text-lg font-semibold text-blue-700">{{ now()->format('H:i:s') }}</span>
+                            <span id="current-time" class="text-lg font-semibold text-blue-700">{{ now()->format('h:i:s A') }}</span>
                         </div>
                         <div class="text-xs text-gray-500">
                             <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full">Sri Lankan Time</span>
@@ -65,7 +65,7 @@
                                         <svg class="h-3 w-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
                                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
                                         </svg>
-                                        {{ $activeCustomers ?? 0 }} active
+                                        {{ $activeCustomers ?? 0 }} active · {{ $disconnectedCustomers ?? 0 }} disconnected
                                     </span>
                                 </p>
                             </div>
@@ -114,7 +114,7 @@
                             <div class="ml-4">
                                 <p class="text-sm font-semibold text-gray-600 uppercase tracking-wider">Monthly Revenue</p>
                                 <p class="text-3xl font-bold text-gray-900">@rupees($monthlyRevenue ?? 0)</p>
-                                <p class="text-sm text-emerald-600 font-medium">{{ $totalBillsThisMonth ?? 0 }} bills generated</p>
+                                <p class="text-sm text-emerald-600 font-medium">Billed @rupees($monthlyBilled ?? 0) · {{ $collectionPercent ?? 0 }}% collected</p>
                             </div>
                         </div>
                     </div>
@@ -443,8 +443,8 @@ function updateClock() {
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
-        hour12: false,
-        hourCycle: 'h23',
+        hour12: true,
+        hourCycle: 'h12',
         timeZone: 'Asia/Colombo'
     };
     const timeString = now.toLocaleTimeString('en-US', timeOptions);

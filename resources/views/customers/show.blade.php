@@ -32,6 +32,32 @@
             </div>
         @endif
 
+        <div class="mb-8 bg-white border border-gray-200 rounded-lg p-4">
+            <h2 class="text-sm font-semibold text-gray-900 mb-3">Connection</h2>
+            <p class="text-sm text-gray-600 mb-3">Status: {{ ucfirst($customer->status) }}</p>
+            <form method="POST" action="{{ $customer->status === 'disconnected' ? route('customers.reconnect', $customer) : route('customers.disconnect', $customer) }}" class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+                @csrf
+                <div>
+                    <label class="block text-xs text-gray-500">Date</label>
+                    <input type="date" name="event_date" value="{{ now()->toDateString() }}" class="mt-1 w-full border-gray-300 rounded-md text-sm" required>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-xs text-gray-500">Reason</label>
+                    <input type="text" name="reason" class="mt-1 w-full border-gray-300 rounded-md text-sm" required>
+                </div>
+                <button class="px-4 py-2 rounded-md text-sm text-white {{ $customer->status === 'disconnected' ? 'bg-emerald-600' : 'bg-red-600' }}">
+                    {{ $customer->status === 'disconnected' ? 'Reconnect' : 'Disconnect' }}
+                </button>
+            </form>
+            @if($customer->connectionEvents->isNotEmpty())
+                <ul class="mt-4 text-sm text-gray-700 space-y-1">
+                    @foreach($customer->connectionEvents->take(5) as $event)
+                        <li>{{ $event->event_date->format('Y-m-d') }} — {{ ucfirst($event->action) }} — {{ $event->reason }} — {{ $event->user?->name ?? 'Office' }}</li>
+                    @endforeach
+                </ul>
+            @endif
+        </div>
+
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
             <!-- Left Column - Customer Info -->

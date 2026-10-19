@@ -29,13 +29,13 @@ class MeterReadingApiController extends Controller
     {
         try {
             $user = Auth::user();
-            
-            // Get customers for meter reader's route
-            $customers = Customer::with(['waterMeters'])
-                ->where('status', 'active')
+
+            $divisionNames = $user->routeDivisions()->orderBy('divisions.name')->pluck('divisions.name');
+            $customers = $user->assignedRouteCustomers()
+                ->with(['waterMeters'])
                 ->orderBy('account_number')
                 ->get()
-                ->map(function ($customer) {
+                ->map(function ($customer) use ($divisionNames) {
                     $waterMeter = $customer->waterMeter;
                     $latestReading = $customer->latestReading;
                     
@@ -46,8 +46,8 @@ class MeterReadingApiController extends Controller
                         'address' => $customer->full_address,
                         'phone' => $customer->phone,
                         'customer_type' => $customer->customer_type,
-                        'area' => null, // Area not implemented yet
-                        'route' => null, // Route not implemented yet
+                        'area' => null,
+                        'route' => $divisionNames->join(', ') ?: null,
                         'meter' => $waterMeter ? [
                             'id' => $waterMeter->id,
                             'meter_number' => $waterMeter->meter_number,
@@ -73,14 +73,17 @@ class MeterReadingApiController extends Controller
                 'customer_count' => $customers->count(),
             ]);
 
+            $assigned = $user->hasRouteAssignment();
+
             return response()->json([
                 'success' => true,
+                'message' => $assigned ? null : 'No route is assigned to this reader.',
                 'data' => [
                     'customers' => $customers,
                     'total_count' => $customers->count(),
                     'route_info' => [
                         'area' => null,
-                        'route' => null,
+                        'route' => $divisionNames->join(', ') ?: null,
                         'date' => now()->toDateString(),
                         'reader' => $user->name,
                     ]
@@ -857,7 +860,7 @@ class MeterReadingApiController extends Controller
         return [
             'receipt_number' => 'MR-' . str_pad($reading->id, 6, '0', STR_PAD_LEFT),
             'date' => $reading->reading_date,
-            'time' => $reading->created_at->format('H:i:s'),
+            'time' => $reading->created_at->format('h:i:s A'),
             'customer' => [
                 'name' => $customer->full_name,
                 'connection_number' => $customer->account_number,

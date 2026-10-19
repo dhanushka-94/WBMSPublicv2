@@ -137,6 +137,13 @@ class SmsNotificationService
         );
     }
 
+    public function sendReconnectionNotice(Customer $customer): ?SmsNotification
+    {
+        $message = $this->templateService->reconnectionMessage($customer);
+
+        return $this->createAndSendNotification($customer, 'reconnection', $message, null, null);
+    }
+
     /**
      * Send meter reading reminder
      */

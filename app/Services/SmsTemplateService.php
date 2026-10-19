@@ -105,6 +105,16 @@ class SmsTemplateService
         ]);
     }
 
+    public function reconnectionMessage(Customer $customer): string
+    {
+        $template = config('sms.templates.reconnection');
+
+        return $this->replaceVariables($template, [
+            'customer_name' => $customer->full_name,
+            'account_number' => $customer->account_number,
+        ]);
+    }
+
     /**
      * Generate SMS message for meter reading reminder
      */

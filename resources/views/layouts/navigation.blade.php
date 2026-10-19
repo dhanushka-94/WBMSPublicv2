@@ -85,6 +85,9 @@
                                 <a href="{{ route('readings.schedule') }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-800 transition duration-150">
                                     <i class="fas fa-calendar-alt mr-3 text-indigo-600"></i>Reading Schedule
                                 </a>
+                                <a href="{{ route('meters.map') }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-800 transition duration-150">
+                                    <i class="fas fa-map-marked-alt mr-3 text-emerald-600"></i>Meter Map
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -106,7 +109,7 @@
                              x-transition:leave="transition ease-in duration-75"
                              x-transition:leave-start="opacity-100 scale-100"
                              x-transition:leave-end="opacity-0 scale-95"
-                             class="absolute z-50 mt-2 w-56 rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5 top-full">
+                             class="absolute z-50 mt-2 w-72 rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5 top-full">
                             <div class="py-1">
                                 <a href="{{ route('bills.index') }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-800 transition duration-150">
                                     <i class="fas fa-file-invoice mr-3 text-green-600"></i>Bills Management
@@ -128,6 +131,26 @@
                                 <a href="{{ route('reports.monthly-active') }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-800 transition duration-150">
                                     <i class="fas fa-users-cog mr-3 text-green-600"></i>Monthly Active Connections
                                 </a>
+                                <a href="{{ route('reports.reader-routes') }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-800 transition duration-150">
+                                    <i class="fas fa-clipboard-check mr-3 text-blue-600"></i>Reader Route Report
+                                </a>
+                                @foreach([
+                                    'customer-register' => ['Customer Register', 'fa-address-book', 'text-blue-600'],
+                                    'contacts' => ['Contact List', 'fa-address-card', 'text-cyan-600'],
+                                    'new-connections' => ['New Connections', 'fa-plug', 'text-green-600'],
+                                    'disconnected' => ['Disconnected Customers', 'fa-unlink', 'text-red-600'],
+                                    'usage-alerts' => ['Usage Alerts', 'fa-bell', 'text-amber-600'],
+                                    'meter-faults' => ['Meter Faults', 'fa-tools', 'text-orange-600'],
+                                    'billing-summary' => ['Billing Summary', 'fa-file-invoice-dollar', 'text-emerald-600'],
+                                    'daily-collection' => ['Daily Collection', 'fa-coins', 'text-yellow-600'],
+                                    'monthly-collection' => ['Monthly Collection', 'fa-calendar-alt', 'text-indigo-600'],
+                                    'collection-efficiency' => ['Collection Efficiency', 'fa-percentage', 'text-purple-600'],
+                                    'age-analysis' => ['Age Analysis', 'fa-hourglass-half', 'text-rose-600'],
+                                ] as $key => [$label, $icon, $color])
+                                <a href="{{ route('reports.office', $key) }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-800 transition duration-150">
+                                    <i class="fas {{ $icon }} mr-3 {{ $color }}"></i>{{ $label }}
+                                </a>
+                                @endforeach
                             </div>
                         </div>
                     </div>
@@ -151,6 +174,9 @@
                              x-transition:leave-end="opacity-0 scale-95"
                              class="absolute z-50 mt-2 w-56 rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5 top-full">
                             <div class="py-1">
+                                <a href="{{ route('sms.bulk') }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-800 transition duration-150">
+                                    <i class="fas fa-paper-plane mr-3 text-blue-600"></i>Bulk SMS
+                                </a>
                                 <a href="{{ route('sms.index') }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-800 transition duration-150">
                                     <i class="fas fa-list mr-3 text-blue-600"></i>SMS Log
                                 </a>
@@ -164,7 +190,7 @@
                     <!-- System Management Dropdown -->
                     <div class="relative flex items-center h-16" x-data="{ open: false }" @click.outside="open = false">
                         <button @click="open = !open" 
-                                class="inline-flex items-center px-3 py-2 h-10 text-sm font-medium text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 rounded-md transition duration-150 ease-in-out {{ request()->routeIs('users.*', 'settings.*', 'activity-logs.*', 'mobile-api.*') ? 'bg-white bg-opacity-20' : '' }}">
+                                class="inline-flex items-center px-3 py-2 h-10 text-sm font-medium text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 rounded-md transition duration-150 ease-in-out {{ request()->routeIs('users.*', 'reader-routes.*', 'settings.*', 'activity-logs.*', 'mobile-api.*') ? 'bg-white bg-opacity-20' : '' }}">
                             <i class="fas fa-cogs mr-2"></i>
                             <span>System</span>
                             <svg class="ml-1 h-4 w-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -182,6 +208,9 @@
                             <div class="py-1">
                                 <a href="{{ route('users.index') }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-800 transition duration-150">
                                     <i class="fas fa-users-cog mr-3 text-blue-600"></i>User Management
+                                </a>
+                                <a href="{{ route('reader-routes.index') }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-800 transition duration-150">
+                                    <i class="fas fa-route mr-3 text-indigo-600"></i>Reader Routes
                                 </a>
                                 <a href="{{ route('settings.index') }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-800 transition duration-150">
                                     <i class="fas fa-sliders-h mr-3 text-gray-600"></i>System Settings
@@ -202,6 +231,10 @@
                     <x-nav-link :href="route('about')" :active="request()->routeIs('about')" 
                                 class="text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 {{ request()->routeIs('about') ? 'bg-white bg-opacity-20 text-white' : '' }} flex items-center h-16">
                         <i class="fas fa-info-circle mr-2"></i>{{ __('About Us') }}
+                    </x-nav-link>
+                    <x-nav-link :href="route('changelog')" :active="request()->routeIs('changelog')"
+                                class="text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 {{ request()->routeIs('changelog') ? 'bg-white bg-opacity-20 text-white' : '' }} flex items-center h-16">
+                        <i class="fas fa-list-ul mr-2"></i>{{ __('Changelog') }}
                     </x-nav-link>
 
                     @php
@@ -344,6 +377,18 @@
                                    class="text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 ml-4">
                 <i class="fas fa-clipboard-list mr-2"></i>{{ __('Meter Readings') }}
             </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('meters.map')" :active="request()->routeIs('meters.map')"
+                                   class="text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 ml-4">
+                <i class="fas fa-map-marked-alt mr-2"></i>{{ __('Meter Map') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('readings.bulk')" :active="request()->routeIs('readings.bulk')"
+                                   class="text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 ml-4">
+                <i class="fas fa-list mr-2"></i>{{ __('Bulk Entry') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('readings.schedule')" :active="request()->routeIs('readings.schedule')"
+                                   class="text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 ml-4">
+                <i class="fas fa-calendar-alt mr-2"></i>{{ __('Reading Schedule') }}
+            </x-responsive-nav-link>
             
             <!-- Billing & Finance -->
             <div class="px-3 py-2 text-xs font-semibold text-blue-200 uppercase tracking-wide mt-4">Billing & Finance</div>
@@ -355,12 +400,60 @@
                                    class="text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 ml-4">
                 <i class="fas fa-dollar-sign mr-2"></i>{{ __('Rates') }}
             </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('reports.reader-routes')" :active="request()->routeIs('reports.reader-routes')"
+                                   class="text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 ml-4">
+                <i class="fas fa-clipboard-check mr-2"></i>{{ __('Reader Route Report') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('reports.consumption')" class="text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 ml-4">
+                <i class="fas fa-chart-line mr-2"></i>{{ __('Consumption Report') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('reports.revenue')" class="text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 ml-4">
+                <i class="fas fa-chart-bar mr-2"></i>{{ __('Revenue Report') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('reports.overdue')" class="text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 ml-4">
+                <i class="fas fa-exclamation-triangle mr-2"></i>{{ __('Overdue Report') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('reports.monthly-active')" class="text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 ml-4">
+                <i class="fas fa-users-cog mr-2"></i>{{ __('Monthly Active Connections') }}
+            </x-responsive-nav-link>
+            @foreach([
+                'customer-register' => ['Customer Register', 'fa-address-book'],
+                'contacts' => ['Contact List', 'fa-address-card'],
+                'new-connections' => ['New Connections', 'fa-plug'],
+                'disconnected' => ['Disconnected Customers', 'fa-unlink'],
+                'usage-alerts' => ['Usage Alerts', 'fa-bell'],
+                'meter-faults' => ['Meter Faults', 'fa-tools'],
+                'billing-summary' => ['Billing Summary', 'fa-file-invoice-dollar'],
+                'daily-collection' => ['Daily Collection', 'fa-coins'],
+                'monthly-collection' => ['Monthly Collection', 'fa-calendar-alt'],
+                'collection-efficiency' => ['Collection Efficiency', 'fa-percentage'],
+                'age-analysis' => ['Age Analysis', 'fa-hourglass-half'],
+            ] as $key => [$label, $icon])
+            <x-responsive-nav-link :href="route('reports.office', $key)" class="text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 ml-4">
+                <i class="fas {{ $icon }} mr-2"></i>{{ $label }}
+            </x-responsive-nav-link>
+            @endforeach
+
+            <div class="px-3 py-2 text-xs font-semibold text-blue-200 uppercase tracking-wide mt-4">SMS & Communications</div>
+            <x-responsive-nav-link :href="route('sms.bulk')" class="text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 ml-4">
+                <i class="fas fa-paper-plane mr-2"></i>{{ __('Bulk SMS') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('sms.index')" class="text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 ml-4">
+                <i class="fas fa-list mr-2"></i>{{ __('SMS Log') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('sms.statistics')" class="text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 ml-4">
+                <i class="fas fa-chart-bar mr-2"></i>{{ __('SMS Statistics') }}
+            </x-responsive-nav-link>
             
             <!-- System Management -->
             <div class="px-3 py-2 text-xs font-semibold text-blue-200 uppercase tracking-wide mt-4">System Management</div>
             <x-responsive-nav-link :href="route('users.index')" :active="request()->routeIs('users.*')"
                                    class="text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 ml-4">
                 <i class="fas fa-users-cog mr-2"></i>{{ __('Users') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('reader-routes.index')" :active="request()->routeIs('reader-routes.*')"
+                                   class="text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 ml-4">
+                <i class="fas fa-route mr-2"></i>{{ __('Reader Routes') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('settings.index')" :active="request()->routeIs('settings.*')"
                                    class="text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 ml-4">
@@ -382,6 +475,10 @@
             <x-responsive-nav-link :href="route('about')" :active="request()->routeIs('about')"
                                    class="text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 ml-4">
                 <i class="fas fa-info-circle mr-2"></i>{{ __('About Us') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('changelog')" :active="request()->routeIs('changelog')"
+                                   class="text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 ml-4">
+                <i class="fas fa-list-ul mr-2"></i>{{ __('Changelog') }}
             </x-responsive-nav-link>
         </div>
 

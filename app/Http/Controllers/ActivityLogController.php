@@ -298,7 +298,7 @@ class ActivityLogController extends Controller
             foreach ($activities as $activity) {
                 fputcsv($file, [
                     $activity->id,
-                    $activity->created_at->format('Y-m-d H:i:s'),
+                    $activity->created_at->format('Y-m-d h:i:s A'),
                     $activity->user_name,
                     $activity->user_email,
                     $activity->user_role,
@@ -328,7 +328,7 @@ class ActivityLogController extends Controller
         $data = $activities->map(function ($activity) {
             return [
                 'id' => $activity->id,
-                'datetime' => $activity->created_at->format('Y-m-d H:i:s'),
+                'datetime' => $activity->created_at->format('Y-m-d h:i:s A'),
                 'user' => [
                     'id' => $activity->user_id,
                     'name' => $activity->user_name,

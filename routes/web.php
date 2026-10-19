@@ -10,11 +10,16 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\RateController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\ReaderRouteController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\MobileApiDocsController;
 use App\Http\Controllers\SmsNotificationController;
 use App\Http\Controllers\MonthlyActiveReportController;
+use App\Http\Controllers\ReaderRouteReportController;
+use App\Http\Controllers\OfficeReportController;
+use App\Http\Controllers\BulkSmsController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\SystemControlController;
 
 // Redirect root to login for admin access
@@ -26,6 +31,10 @@ Route::get('/', function () {
 Route::get('/about', function () {
     return view('about');
 })->name('about');
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::view('changelog', 'changelog')->name('changelog');
+});
 
 // System Control Routes (for admin/super admin only)
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -62,6 +71,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/bills', [BillController::class, 'index'])->name('bills.index');
     Route::get('/bills/{bill}', [BillController::class, 'show'])->name('bills.show');
     Route::get('bills/{bill}/print', [BillController::class, 'print'])->name('bills.print');
+    Route::get('payments/{payment}/receipt', [PaymentController::class, 'print'])->name('payments.receipt');
     Route::get('bills/data/ajax', [BillController::class, 'getBillsData'])->name('bills.data');
     
     // Payment routes (always accessible)
@@ -73,6 +83,10 @@ Route::middleware(['auth', 'verified', 'system.check'])->group(function () {
     
     // User Management (admin only)
     Route::resource('users', UserController::class);
+    Route::get('reader-routes/customers/search', [ReaderRouteController::class, 'searchCustomers'])->name('reader-routes.customers.search');
+    Route::get('reader-routes', [ReaderRouteController::class, 'index'])->name('reader-routes.index');
+    Route::get('reader-routes/{user}/edit', [ReaderRouteController::class, 'edit'])->name('reader-routes.edit');
+    Route::put('reader-routes/{user}', [ReaderRouteController::class, 'update'])->name('reader-routes.update');
     
     // Settings routes (system management)
     Route::prefix('settings')->name('settings.')->group(function () {
@@ -109,6 +123,8 @@ Route::middleware(['auth', 'verified', 'system.check'])->group(function () {
     Route::post('/customers', [CustomerController::class, 'store'])->name('customers.store');
     Route::get('/customers/{customer}/edit', [CustomerController::class, 'edit'])->name('customers.edit');
     Route::put('/customers/{customer}', [CustomerController::class, 'update'])->name('customers.update');
+    Route::post('/customers/{customer}/disconnect', [CustomerController::class, 'disconnect'])->name('customers.disconnect');
+    Route::post('/customers/{customer}/reconnect', [CustomerController::class, 'reconnect'])->name('customers.reconnect');
     Route::delete('/customers/{customer}', [CustomerController::class, 'destroy'])->name('customers.destroy');
     
     // Guarantor Management  
@@ -130,6 +146,7 @@ Route::middleware(['auth', 'verified', 'system.check'])->group(function () {
     Route::put('/bills/{bill}', [BillController::class, 'update'])->name('bills.update');
     Route::delete('/bills/{bill}', [BillController::class, 'destroy'])->name('bills.destroy');
     Route::post('bills/generate', [BillController::class, 'generate'])->name('bills.generate');
+    Route::post('bills/{bill}/rebill', [BillController::class, 'rebill'])->name('bills.rebill');
     Route::post('bills/{bill}/send', [BillController::class, 'send'])->name('bills.send');
     Route::post('bills/calculate-late-fees', [BillController::class, 'calculateLateFees'])->name('bills.late-fees');
     
@@ -153,6 +170,8 @@ Route::middleware(['auth', 'verified', 'system.check'])->group(function () {
     Route::post('sms/bulk-delete', [SmsNotificationController::class, 'bulkDelete'])->name('sms.bulk-delete');
     Route::post('sms/{sms_notification}/resend', [SmsNotificationController::class, 'resend'])->name('sms.resend');
     Route::get('sms/templates', [SmsNotificationController::class, 'templates'])->name('sms.templates');
+    Route::get('sms/bulk', [BulkSmsController::class, 'create'])->name('sms.bulk');
+    Route::post('sms/bulk', [BulkSmsController::class, 'store'])->name('sms.bulk.send');
     Route::post('sms/due-reminders', [SmsNotificationController::class, 'sendDueReminders'])->name('sms.due-reminders');
     Route::post('sms/overdue-alerts', [SmsNotificationController::class, 'sendOverdueAlerts'])->name('sms.overdue-alerts');
     
@@ -160,6 +179,8 @@ Route::middleware(['auth', 'verified', 'system.check'])->group(function () {
     Route::get('reports/consumption', [DashboardController::class, 'consumptionReport'])->name('reports.consumption');
     Route::get('reports/revenue', [DashboardController::class, 'revenueReport'])->name('reports.revenue');
     Route::get('reports/overdue', [DashboardController::class, 'overdueReport'])->name('reports.overdue');
+    Route::get('reports/reader-routes', [ReaderRouteReportController::class, 'index'])->name('reports.reader-routes');
+    Route::get('reports/office/{report}', [OfficeReportController::class, 'show'])->name('reports.office');
     Route::get('reports/monthly-active', [MonthlyActiveReportController::class, 'index'])->name('reports.monthly-active');
     Route::get('reports/monthly-active/export', [MonthlyActiveReportController::class, 'export'])->name('reports.monthly-active.export');
     Route::get('reports/monthly-active/customers', [MonthlyActiveReportController::class, 'getMonthlyActiveCustomers'])->name('reports.monthly-active.customers');

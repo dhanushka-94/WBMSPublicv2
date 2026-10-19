@@ -206,7 +206,7 @@ class ActivityLog extends Model
     // Attribute accessors
     public function getFormattedCreatedAtAttribute(): string
     {
-        return $this->created_at->format('M d, Y H:i:s');
+        return $this->created_at->format('M d, Y h:i:s A');
     }
 
     public function getTimeAgoAttribute(): string

@@ -448,7 +448,7 @@
         <!-- Footer -->
         <div class="footer">
             <p>This is a computer-generated bill. No signature required.</p>
-            <p>Generated on {{ now()->format('F d, Y H:i') }}</p>
+            <p>Generated on {{ now()->format('F d, Y h:i A') }}</p>
             <p>Thank you for using AquaBill by olexto - Smart Water Supply, Billing, and Customer Management</p>
         </div>
     </div>

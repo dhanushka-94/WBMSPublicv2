@@ -32,11 +32,6 @@ class Rate extends Model
     ];
 
     // Relationships
-    public function bills()
-    {
-        return $this->hasMany(Bill::class);
-    }
-
     public function customerType()
     {
         return $this->belongsTo(CustomerType::class, 'customer_type', 'name');

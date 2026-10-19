@@ -175,7 +175,7 @@ class SmsNotificationController extends Controller
             foreach ($notifications as $notification) {
                 fputcsv($file, [
                     $notification->id,
-                    $notification->created_at->format('Y-m-d H:i:s'),
+                    $notification->created_at->format('Y-m-d h:i:s A'),
                     $notification->customer ? $notification->customer->full_name : 'N/A',
                     $notification->customer ? $notification->customer->account_number : 'N/A',
                     $notification->phone_number,

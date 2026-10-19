@@ -51,6 +51,8 @@
                     <option value="manager" {{ request('role') === 'manager' ? 'selected' : '' }}>Manager</option>
                     <option value="staff" {{ request('role') === 'staff' ? 'selected' : '' }}>Staff</option>
                     <option value="meter_reader" {{ request('role') === 'meter_reader' ? 'selected' : '' }}>Meter Reader</option>
+                    <option value="billing_officer" {{ request('role') === 'billing_officer' ? 'selected' : '' }}>Billing Officer</option>
+                    <option value="cashier" {{ request('role') === 'cashier' ? 'selected' : '' }}>Cashier</option>
                 </select>
             </div>
             

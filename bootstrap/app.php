@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web([
             \App\Http\Middleware\ActivityLogger::class,
+            \App\Http\Middleware\RestrictOfficeAccess::class,
         ]);
         
         // Register custom middleware aliases

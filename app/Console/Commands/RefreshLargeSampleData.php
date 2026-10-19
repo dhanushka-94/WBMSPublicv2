@@ -11,7 +11,7 @@ class RefreshLargeSampleData extends Command
     protected $signature = 'sample:refresh-large
                             {--force : Skip confirmation}';
 
-    protected $description = 'Wipe every database table (except migrations) and load system users plus a large sample dataset';
+    protected $description = 'Wipe every database table except migrations';
 
     public function handle(): int
     {
@@ -41,12 +41,7 @@ class RefreshLargeSampleData extends Command
         $this->restoreSystemConfiguration();
 
         $this->newLine();
-        $this->info('Seeding system users...');
-        $this->call('db:seed', ['--class' => 'SystemUsersSeeder', '--force' => true]);
-
-        $this->newLine();
-        $this->info('Seeding large sample data...');
-        $this->call('db:seed', ['--class' => 'LargeSampleDataSeeder', '--force' => true]);
+        $this->info('Tables cleared. Sample seeders have been removed, so no rows were added back.');
 
         return self::SUCCESS;
     }

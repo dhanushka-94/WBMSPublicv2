@@ -374,12 +374,8 @@ class PerformanceTest extends Command
      */
     private function ensureEssentialData(): void
     {
-        if (CustomerType::count() === 0) {
-            $this->call('db:seed', ['--class' => 'CustomerTypeSeeder']);
-        }
-        
-        if (Division::count() === 0) {
-            $this->call('db:seed', ['--class' => 'DivisionSeeder']);
+        if (CustomerType::count() === 0 || Division::count() === 0) {
+            $this->warn('Customer types or divisions are missing. They are no longer created by seeders.');
         }
 
         if (Guarantor::count() === 0) {

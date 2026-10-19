@@ -181,7 +181,7 @@
                                 <tr class="hover:bg-gray-50 transition duration-150">
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-sm font-medium text-gray-900">{{ $reading->reading_date->format('M d, Y') }}</div>
-                                        <div class="text-sm text-gray-500">{{ $reading->reading_date->format('H:i') }}</div>
+                                        <div class="text-sm text-gray-500">{{ $reading->reading_date->format('h:i A') }}</div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="flex items-center">

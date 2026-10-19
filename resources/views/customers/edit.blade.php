@@ -92,6 +92,7 @@
                                     <option value="inactive" {{ old('status', $customer->status) == 'inactive' ? 'selected' : '' }}>
                                         🔴 Inactive
                                     </option>
+                                    <option value="disconnected" {{ old('status', $customer->status) == 'disconnected' ? 'selected' : '' }}>Disconnected</option>
                                     <option value="suspended" {{ old('status', $customer->status) == 'suspended' ? 'selected' : '' }}>
                                         🟡 Suspended
                                     </option>

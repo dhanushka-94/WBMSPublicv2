@@ -246,7 +246,7 @@
                         @forelse($activities as $activity)
                             <tr class="hover:bg-gray-50">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    <div class="font-medium">{{ $activity->created_at->format('M d, H:i') }}</div>
+                                    <div class="font-medium">{{ $activity->created_at->format('M d, h:i A') }}</div>
                                     <div class="text-xs text-gray-500">{{ $activity->time_ago }}</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">

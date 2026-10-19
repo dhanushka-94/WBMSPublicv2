@@ -137,13 +137,17 @@
                                     </div>
                                     <p class="mt-2 text-sm text-gray-600">
                                         @if($user->role === 'admin')
-                                            Full system access including user management and system settings
+                                            Full access, including users, settings, rates, and every office screen
                                         @elseif($user->role === 'manager')
-                                            All staff permissions plus billing management and reports
+                                            Dashboard and reports only
+                                        @elseif($user->role === 'billing_officer')
+                                            Customers, meters, readings, bills, and SMS
+                                        @elseif($user->role === 'cashier')
+                                            Bills, payments, receipts, and collection reports
                                         @elseif($user->role === 'meter_reader')
-                                            Specialized access focused on meter readings and data collection
+                                            Meter list, map, and meter readings
                                         @else
-                                            Basic access to view and manage customers, meters, and readings
+                                            Customers, meters, readings, bills, and SMS
                                         @endif
                                     </p>
                                 </div>
@@ -164,13 +168,13 @@
 
                                 <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                                     <label class="block text-sm font-medium text-gray-500 mb-1">Account Created</label>
-                                    <p class="text-lg font-semibold text-gray-900">{{ $user->created_at->format('M d, Y H:i') }}</p>
+                                    <p class="text-lg font-semibold text-gray-900">{{ $user->created_at->format('M d, Y h:i A') }}</p>
                                     <p class="text-sm text-gray-500">{{ $user->created_at->diffForHumans() }}</p>
                                 </div>
 
                                 <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                                     <label class="block text-sm font-medium text-gray-500 mb-1">Last Updated</label>
-                                    <p class="text-lg font-semibold text-gray-900">{{ $user->updated_at->format('M d, Y H:i') }}</p>
+                                    <p class="text-lg font-semibold text-gray-900">{{ $user->updated_at->format('M d, Y h:i A') }}</p>
                                     <p class="text-sm text-gray-500">{{ $user->updated_at->diffForHumans() }}</p>
                                 </div>
                             </div>

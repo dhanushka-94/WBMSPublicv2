@@ -61,7 +61,7 @@
                 <li>Customer search accepts <code class="bg-gray-100 px-1 rounded">q</code> or <code class="bg-gray-100 px-1 rounded">search</code>. Payment search accepts only <code class="bg-gray-100 px-1 rounded">search</code>.</li>
                 <li>Payment amount minimum is 0.01, and it cannot be higher than the bill balance. Amount 0 saves nothing.</li>
                 <li>A bulk-sync response of HTTP 200 can still contain failed rows. Keep those rows on the phone.</li>
-                <li>Areas, routes, and the sync pending/force calls are placeholders. Build the route list from <code class="bg-gray-100 px-1 rounded">route/today</code>.</li>
+                <li>Today’s route contains only the divisions and customers assigned to the signed-in reader. With no assignment, <code class="bg-gray-100 px-1 rounded">route/today</code> returns an empty list.</li>
                 <li>Dashboard <code class="bg-gray-100 px-1 rounded">accuracy_rate</code> is a fixed 98.5, not a live score.</li>
                 <li>Price a reading from the customer’s <code class="bg-gray-100 px-1 rounded">customer_type</code> slabs. Add the 0–0 slab’s fixed charge on every bill. A null <code class="bg-gray-100 px-1 rounded">tier_to</code> takes the remaining units. The total is water charges plus the fixed charge.</li>
             </ul>

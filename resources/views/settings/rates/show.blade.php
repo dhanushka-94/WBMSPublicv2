@@ -131,51 +131,9 @@
                 <div class="p-6">
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">Usage Statistics</h3>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="bg-blue-50 p-4 rounded-lg">
-                            <div class="flex items-center">
-                                <div class="flex-shrink-0">
-                                    <i class="fas fa-file-invoice text-blue-600 text-xl"></i>
-                                </div>
-                                <div class="ml-3">
-                                    <p class="text-sm font-medium text-gray-500">Bills Generated</p>
-                                    <p class="text-lg font-semibold text-gray-900">{{ $rate->bills()->count() }}</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="bg-green-50 p-4 rounded-lg">
-                            <div class="flex items-center">
-                                <div class="flex-shrink-0">
-                                    <i class="fas fa-money-bill-wave text-green-600 text-xl"></i>
-                                </div>
-                                <div class="ml-3">
-                                    <p class="text-sm font-medium text-gray-500">Total Revenue</p>
-                                    <p class="text-lg font-semibold text-gray-900">
-                                        Rs. {{ number_format($rate->bills()->sum('total_amount'), 2) }}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="bg-purple-50 p-4 rounded-lg">
-                            <div class="flex items-center">
-                                <div class="flex-shrink-0">
-                                    <i class="fas fa-calendar text-purple-600 text-xl"></i>
-                                </div>
-                                <div class="ml-3">
-                                    <p class="text-sm font-medium text-gray-500">Last Used</p>
-                                    <p class="text-lg font-semibold text-gray-900">
-                                        @if($rate->bills()->exists())
-                                            {{ $rate->bills()->latest()->first()->created_at->format('M d, Y') }}
-                                        @else
-                                            <span class="text-gray-500 text-sm">Never used</span>
-                                        @endif
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <p class="text-sm text-gray-600">
+                        A bill can use several slabs, and the calculated charges are saved on the bill. This rate is not linked to individual bills, so saved bills keep their amounts if this slab changes.
+                    </p>
                 </div>
             </div>
 
@@ -266,17 +224,15 @@
                         </button>
                     </form>
 
-                    @if(!$rate->bills()->exists())
-                        <form action="{{ route('settings.rates.destroy', $rate) }}" method="POST">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" 
-                                    class="w-full bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors flex items-center justify-center"
-                                    onclick="return confirm('Are you sure you want to delete this rate? This action cannot be undone.')">
-                                <i class="fas fa-trash mr-2"></i>Delete Rate
-                            </button>
-                        </form>
-                    @endif
+                    <form action="{{ route('settings.rates.destroy', $rate) }}" method="POST">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" 
+                                class="w-full bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors flex items-center justify-center"
+                                onclick="return confirm('Are you sure you want to delete this rate? This action cannot be undone.')">
+                            <i class="fas fa-trash mr-2"></i>Delete Rate
+                        </button>
+                    </form>
                 </div>
             </div>
 
@@ -299,14 +255,6 @@
                     </div>
                 </div>
 
-                @if($rate->bills()->exists())
-                    <div class="mt-4 pt-4 border-t border-gray-200">
-                        <div class="flex items-center text-sm text-yellow-600">
-                            <i class="fas fa-exclamation-triangle mr-2"></i>
-                            <span>Rate is in use and cannot be deleted</span>
-                        </div>
-                    </div>
-                @endif
             </div>
         </div>
     </div>

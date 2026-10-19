@@ -20,7 +20,7 @@
                     </p>
                     <div class="flex flex-col sm:flex-row gap-2 text-sm opacity-90">
                         <span class="bg-white/20 px-3 py-1 rounded-full">
-                            <i class="fas fa-desktop mr-1"></i>System Version 2.0.0v
+                            <i class="fas fa-desktop mr-1"></i>System Version {{ config('changelog.0.version') }}
                         </span>
                         <span class="bg-white/20 px-3 py-1 rounded-full">
                             <i class="fas fa-mobile-alt mr-1"></i>Mobile App Version 2.0.0v

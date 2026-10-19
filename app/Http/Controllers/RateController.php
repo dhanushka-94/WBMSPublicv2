@@ -117,12 +117,6 @@ class RateController extends Controller
      */
     public function destroy(Rate $rate)
     {
-        // Check if rate is being used in any bills
-        if ($rate->bills()->exists()) {
-            return redirect()->route('settings.rates.index')
-                ->with('error', 'Cannot delete rate that is being used in bills.');
-        }
-
         $rate->delete();
 
         return redirect()->route('settings.rates.index')

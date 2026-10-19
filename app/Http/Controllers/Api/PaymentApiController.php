@@ -310,7 +310,7 @@ class PaymentApiController extends Controller
                         'id' => $bill->id,
                         'bill_number' => $bill->bill_number,
                         'payment_amount' => $bill->paid_amount,
-                        'payment_date' => $bill->paid_at ? $bill->paid_at->format('Y-m-d H:i:s') : null,
+                        'payment_date' => $bill->paid_at ? $bill->paid_at->format('Y-m-d h:i:s A') : null,
                         'bill_amount' => $bill->total_amount,
                         'status' => $bill->status,
                         'billing_period' => [
@@ -430,7 +430,7 @@ class PaymentApiController extends Controller
     {
         return [
             'receipt_number' => $this->generateReceiptNumber($bill),
-            'date' => now()->format('Y-m-d H:i:s'),
+            'date' => now()->format('Y-m-d h:i:s A'),
             'customer' => [
                 'name' => $customer->full_name,
                 'account_number' => $customer->account_number,

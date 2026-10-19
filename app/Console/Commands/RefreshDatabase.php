@@ -227,14 +227,7 @@ class RefreshDatabase extends Command
      */
     private function createEssentialData()
     {
-        $this->line("   🌱 Creating essential system data only...");
-        
-        // Run only essential seeders (no sample data)
-        $this->call('db:seed', ['--class' => 'CustomerTypeSeeder']);
-        $this->call('db:seed', ['--class' => 'DivisionSeeder']);
-        $this->call('db:seed', ['--class' => 'RateSeeder']);
-        
-        $this->line("   ✅ Essential system data created successfully");
+        $this->line('   Essential lookup data is no longer seeded.');
     }
 
     /**

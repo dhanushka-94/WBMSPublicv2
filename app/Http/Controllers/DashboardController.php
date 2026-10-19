@@ -48,6 +48,15 @@ class DashboardController extends Controller
             ->whereYear('bill_date', Carbon::now()->year)
             ->sum('total_amount');
         $outstandingAmount = Bill::unpaid()->sum('balance_amount');
+        $monthlyBilled = Bill::whereMonth('bill_date', Carbon::now()->month)
+            ->whereYear('bill_date', Carbon::now()->year)
+            ->where('status', '!=', 'cancelled')
+            ->sum('total_amount');
+        $monthlyCollected = \App\Models\Payment::whereMonth('paid_on', Carbon::now()->month)
+            ->whereYear('paid_on', Carbon::now()->year)
+            ->sum('amount');
+        $collectionPercent = $monthlyBilled > 0 ? round(($monthlyCollected / $monthlyBilled) * 100, 1) : 0;
+        $disconnectedCustomers = Customer::where('status', 'disconnected')->count();
 
         // Recent Activities
         $recentCustomers = Customer::latest()->limit(5)->get();
@@ -121,6 +130,9 @@ class DashboardController extends Controller
             'overdueBills',
             'totalRevenue',
             'monthlyRevenue',
+            'monthlyBilled',
+            'collectionPercent',
+            'disconnectedCustomers',
             'outstandingAmount',
             'recentCustomers',
             'recentReadings',

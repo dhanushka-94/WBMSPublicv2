@@ -249,24 +249,11 @@
                     </div>
                 </div>
 
-                <!-- Warning if used in bills -->
-                @if($rate->bills()->exists())
-                    <div class="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                        <div class="flex">
-                            <div class="flex-shrink-0">
-                                <i class="fas fa-exclamation-triangle text-yellow-400"></i>
-                            </div>
-                            <div class="ml-3">
-                                <h3 class="text-sm font-medium text-yellow-800">
-                                    Rate in Use
-                                </h3>
-                                <div class="mt-2 text-sm text-yellow-700">
-                                    <p>This rate is currently being used in existing bills. Changes may affect historical billing calculations. Please proceed with caution.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                @endif
+                <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p class="text-sm text-blue-800">
+                        Saved bills keep their existing charges. Changing this slab only affects bills created after you save.
+                    </p>
+                </div>
             </div>
 
             <!-- Form Actions -->

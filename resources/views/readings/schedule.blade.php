@@ -302,7 +302,7 @@
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             @if($latestReading && $latestReading->reading_date)
                                             <div class="text-sm text-gray-900">{{ $latestReading->reading_date->format('M d, Y') }}</div>
-                                            <div class="text-sm text-gray-500">{{ $latestReading->reading_date->format('H:i') }}</div>
+                                            <div class="text-sm text-gray-500">{{ $latestReading->reading_date->format('h:i A') }}</div>
                                             @else
                                                 <div class="text-sm text-gray-500">No date available</div>
                                             @endif

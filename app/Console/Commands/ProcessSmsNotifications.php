@@ -45,7 +45,7 @@ class ProcessSmsNotifications extends Command
     public function handle(): int
     {
         $this->info('🔔 SMS Notification Processor Started');
-        $this->info('⏰ ' . now()->format('Y-m-d H:i:s'));
+        $this->info('⏰ ' . now()->format('Y-m-d h:i:s A'));
 
         try {
             // Test connection if requested

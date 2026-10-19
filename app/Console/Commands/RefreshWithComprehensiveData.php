@@ -79,10 +79,7 @@ class RefreshWithComprehensiveData extends Command
         $this->info('✅ All data cleared successfully!');
         $this->line('');
         
-        $this->info('🌱 Seeding comprehensive data...');
-        
-        // Run the comprehensive seeder
-        $this->call('db:seed', ['--class' => 'ComprehensiveSeeder']);
+        $this->info('Sample seeders have been removed, so no rows were added back.');
         
         $this->line('');
         $this->info('🎉 Comprehensive data refresh completed!');

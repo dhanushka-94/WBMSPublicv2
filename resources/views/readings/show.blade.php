@@ -161,7 +161,7 @@
 
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Recorded On</label>
-                                    <p class="text-lg font-semibold text-gray-900">{{ $reading->created_at ? $reading->created_at->format('M d, Y H:i') : 'Not recorded' }}</p>
+                                    <p class="text-lg font-semibold text-gray-900">{{ $reading->created_at ? $reading->created_at->format('M d, Y h:i A') : 'Not recorded' }}</p>
                                     <p class="text-sm text-gray-500">{{ $reading->created_at ? $reading->created_at->diffForHumans() : 'No timestamp' }}</p>
                                 </div>
 

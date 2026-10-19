@@ -145,6 +145,16 @@ class Bill extends Model
             $bill->updateStatusBasedOnPayment();
         });
 
+        static::created(function ($bill) {
+            if ($bill->status === 'generated') {
+                try {
+                    $bill->sendNewBillNotification();
+                } catch (\Throwable $exception) {
+                    \Illuminate\Support\Facades\Log::warning('New bill SMS was not sent: '.$exception->getMessage());
+                }
+            }
+        });
+
         static::updated(function ($bill) {
             // Send SMS notifications based on status changes
             if ($bill->wasChanged('status')) {
@@ -249,7 +259,12 @@ class Bill extends Model
         return $this;
     }
 
-    public function recordPayment(float $amount, string $paymentMethod = 'cash'): bool
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    public function recordPayment(float $amount, string $paymentMethod = 'cash', array $details = []): bool
     {
         if ($amount <= 0 || $amount > $this->balance_amount) {
             return false;
@@ -258,7 +273,35 @@ class Bill extends Model
         $this->paid_amount += $amount;
         $this->save();
 
+        Payment::create([
+            'bill_id' => $this->id,
+            'customer_id' => $this->customer_id,
+            'received_by' => $details['received_by'] ?? auth()->id(),
+            'receipt_number' => Payment::nextReceiptNumber(),
+            'amount' => $amount,
+            'payment_method' => $paymentMethod,
+            'paid_on' => $details['paid_on'] ?? now()->toDateString(),
+            'reference' => $details['reference'] ?? null,
+            'notes' => $details['notes'] ?? null,
+        ]);
+
         return true;
+    }
+
+    public function rebill(): void
+    {
+        $customer = $this->customer;
+        $charges = Rate::calculateCharges(
+            $customer->customer_type ?: 'residential',
+            (float) $this->consumption,
+            $this->bill_date
+        );
+
+        $this->update([
+            'water_charges' => $charges['water_charges'],
+            'fixed_charges' => $charges['fixed_charges'],
+            'rate_breakdown' => $charges['breakdown'],
+        ]);
     }
 
     public function markAsSent(): bool

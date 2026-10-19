@@ -20,7 +20,7 @@
             <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 text-left">
                 @if($disableInfo['disabled_at'])
                     <div class="text-sm text-red-700 mb-2">
-                        <strong>Disabled Since:</strong> {{ \Carbon\Carbon::parse($disableInfo['disabled_at'])->format('M d, Y H:i') }}
+                        <strong>Disabled Since:</strong> {{ \Carbon\Carbon::parse($disableInfo['disabled_at'])->format('M d, Y h:i A') }}
                     </div>
                 @endif
                 

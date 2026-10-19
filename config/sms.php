@@ -55,17 +55,18 @@ return [
     */
 
     'templates' => [
-        'new_bill' => 'Dear {customer_name}, your water bill #{bill_number} for Rs.{amount} is ready. Due date: {due_date}. Pay online: {payment_link}',
+        'new_bill' => 'Your water bill has been generated. Bill {bill_number} for {customer_name} is Rs.{amount}. Due date: {due_date}.',
         
-        'due_reminder' => 'Reminder: Your water bill #{bill_number} of Rs.{amount} is due on {due_date}. Please pay to avoid late charges.',
+        'due_reminder' => 'Your account has an outstanding balance of Rs.{amount} for bill {bill_number}. Due date: {due_date}.',
         
         'overdue_alert' => 'URGENT: Your water bill #{bill_number} of Rs.{amount} is overdue. Late fees may apply. Pay now: {payment_link}',
         
-        'payment_confirmation' => 'Payment received! Rs.{amount} paid for bill #{bill_number}. Thank you. Remaining balance: Rs.{balance}',
+        'payment_confirmation' => 'Thank you for your payment of Rs.{amount} for bill {bill_number}. Remaining balance: Rs.{balance}.',
         
         'late_fee_notice' => 'Late fee of Rs.{late_fee} added to your account for overdue bill #{bill_number}. Total due: Rs.{total_due}',
         
-        'service_disconnection' => 'NOTICE: Water service may be disconnected due to unpaid bills totaling Rs.{total_due}. Pay immediately to avoid disconnection.',
+        'service_disconnection' => 'Your water connection is scheduled for disconnection due to unpaid dues of Rs.{total_due}.',
+        'reconnection' => 'Your water connection has been restored. Account {account_number}.',
         
         'meter_reading_reminder' => 'Dear {customer_name}, our meter reader will visit your premises on {date} between {time_range} for monthly reading.',
         

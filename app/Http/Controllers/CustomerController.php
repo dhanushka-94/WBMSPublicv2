@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
+use App\Models\ConnectionEvent;
 use App\Models\Division;
 use App\Models\CustomerType;
 use App\Models\Guarantor;
@@ -174,7 +175,7 @@ class CustomerController extends Controller
             $query->latest('reading_date')->limit(5);
         }, 'bills' => function ($query) {
             $query->latest('bill_date')->limit(10);
-        }, 'customerType', 'division']);
+        }, 'customerType', 'division', 'connectionEvents.user']);
 
         // Log customer view activity
         $this->logActivity('view', "Viewed customer profile for {$customer->full_name}", $customer);
@@ -245,7 +246,7 @@ class CustomerController extends Controller
             'address' => 'nullable|string', // Optional
             'city' => 'nullable|string|max:255', // Optional
             'postal_code' => 'nullable|string|max:10',
-            'status' => 'required|in:active,inactive,suspended',
+            'status' => 'required|in:active,inactive,suspended,disconnected',
             'customer_type_id' => 'required|exists:customer_types,id', // Required
             'division_id' => 'required|exists:divisions,id', // Required
             'guarantor_id' => 'nullable|exists:guarantors,id',
@@ -299,6 +300,57 @@ class CustomerController extends Controller
 
         return redirect()->route('customers.index')
             ->with('success', 'Customer deleted successfully.');
+    }
+
+    public function disconnect(Request $request, Customer $customer): RedirectResponse
+    {
+        $validated = $request->validate([
+            'event_date' => 'required|date',
+            'reason' => 'required|string|max:500',
+        ]);
+
+        $customer->update(['status' => 'disconnected']);
+        ConnectionEvent::create([
+            'customer_id' => $customer->id,
+            'user_id' => $request->user()->id,
+            'action' => 'disconnected',
+            'event_date' => $validated['event_date'],
+            'reason' => $validated['reason'],
+        ]);
+
+        try {
+            app(\App\Services\SmsNotificationService::class)
+                ->sendServiceDisconnectionWarning($customer, $customer->getOutstandingBalance());
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
+
+        return back()->with('success', 'Customer disconnected.');
+    }
+
+    public function reconnect(Request $request, Customer $customer): RedirectResponse
+    {
+        $validated = $request->validate([
+            'event_date' => 'required|date',
+            'reason' => 'required|string|max:500',
+        ]);
+
+        $customer->update(['status' => 'active']);
+        ConnectionEvent::create([
+            'customer_id' => $customer->id,
+            'user_id' => $request->user()->id,
+            'action' => 'reconnected',
+            'event_date' => $validated['event_date'],
+            'reason' => $validated['reason'],
+        ]);
+
+        try {
+            app(\App\Services\SmsNotificationService::class)->sendReconnectionNotice($customer);
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
+
+        return back()->with('success', 'Customer reconnected.');
     }
 
     /**

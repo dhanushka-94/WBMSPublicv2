@@ -19,12 +19,26 @@
                     <a href="{{ route('bills.print', $bill) }}" target="_blank" class="bg-green-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-600 transition duration-200">
                         <i class="fas fa-print mr-2"></i>Print Bill
                     </a>
+                    @if($bill->status !== 'paid')
+                    <form method="POST" action="{{ route('bills.rebill', $bill) }}" class="inline">
+                        @csrf
+                        <button class="bg-amber-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-amber-600">Recalculate</button>
+                    </form>
+                    @endif
                 </div>
             </div>
         </div>
     </div>
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        @if($bill->payments->isNotEmpty())
+        <div class="bg-white rounded-xl border border-gray-200 p-4 mb-6">
+            <h2 class="text-sm font-semibold mb-2">Receipts</h2>
+            @foreach($bill->payments as $payment)
+                <a href="{{ route('payments.receipt', $payment) }}" target="_blank" class="block text-sm text-blue-700">{{ $payment->receipt_number }} — LKR {{ number_format($payment->amount, 2) }} — {{ $payment->paid_on->format('Y-m-d') }}</a>
+            @endforeach
+        </div>
+        @endif
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <!-- Main Bill Details -->
             <div class="lg:col-span-2">

@@ -105,6 +105,8 @@
                                         <option value="">Select Role</option>
                                         <option value="staff" {{ old('role') === 'staff' ? 'selected' : '' }}>Staff</option>
                                         <option value="meter_reader" {{ old('role') === 'meter_reader' ? 'selected' : '' }}>Meter Reader</option>
+                                        <option value="billing_officer" {{ old('role') === 'billing_officer' ? 'selected' : '' }}>Billing Officer</option>
+                                        <option value="cashier" {{ old('role') === 'cashier' ? 'selected' : '' }}>Cashier</option>
                                         <option value="manager" {{ old('role') === 'manager' ? 'selected' : '' }}>Manager</option>
                                         <option value="admin" {{ old('role') === 'admin' ? 'selected' : '' }}>Admin</option>
                                     </select>
@@ -138,31 +140,45 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div class="bg-white p-3 rounded-lg border border-blue-100">
                                     <div class="flex items-center mb-2">
-                                        <i class="fas fa-user text-gray-600 mr-2"></i>
-                                        <strong class="text-gray-800">Staff:</strong>
+                                        <i class="fas fa-crown text-yellow-600 mr-2"></i>
+                                        <strong class="text-gray-800">Admin:</strong>
                                     </div>
-                                    <p class="text-sm text-gray-600">Basic access to view and manage customers, meters, and readings</p>
-                                </div>
-                                <div class="bg-white p-3 rounded-lg border border-blue-100">
-                                    <div class="flex items-center mb-2">
-                                        <i class="fas fa-tachometer-alt text-cyan-600 mr-2"></i>
-                                        <strong class="text-gray-800">Meter Reader:</strong>
-                                    </div>
-                                    <p class="text-sm text-gray-600">Specialized access focused on meter readings and data collection</p>
+                                    <p class="text-sm text-gray-600">Full access, including users, settings, rates, and every office screen</p>
                                 </div>
                                 <div class="bg-white p-3 rounded-lg border border-blue-100">
                                     <div class="flex items-center mb-2">
                                         <i class="fas fa-chart-line text-green-600 mr-2"></i>
                                         <strong class="text-gray-800">Manager:</strong>
                                     </div>
-                                    <p class="text-sm text-gray-600">All staff permissions plus billing management and reports</p>
+                                    <p class="text-sm text-gray-600">Dashboard and reports only</p>
                                 </div>
                                 <div class="bg-white p-3 rounded-lg border border-blue-100">
                                     <div class="flex items-center mb-2">
-                                        <i class="fas fa-crown text-yellow-600 mr-2"></i>
-                                        <strong class="text-gray-800">Admin:</strong>
+                                        <i class="fas fa-file-invoice text-indigo-600 mr-2"></i>
+                                        <strong class="text-gray-800">Billing Officer:</strong>
                                     </div>
-                                    <p class="text-sm text-gray-600">Full system access including user management and system settings</p>
+                                    <p class="text-sm text-gray-600">Customers, meters, readings, bills, and SMS</p>
+                                </div>
+                                <div class="bg-white p-3 rounded-lg border border-blue-100">
+                                    <div class="flex items-center mb-2">
+                                        <i class="fas fa-cash-register text-emerald-600 mr-2"></i>
+                                        <strong class="text-gray-800">Cashier:</strong>
+                                    </div>
+                                    <p class="text-sm text-gray-600">Bills, payments, receipts, and collection reports</p>
+                                </div>
+                                <div class="bg-white p-3 rounded-lg border border-blue-100">
+                                    <div class="flex items-center mb-2">
+                                        <i class="fas fa-user text-gray-600 mr-2"></i>
+                                        <strong class="text-gray-800">Staff:</strong>
+                                    </div>
+                                    <p class="text-sm text-gray-600">Customers, meters, readings, bills, and SMS</p>
+                                </div>
+                                <div class="bg-white p-3 rounded-lg border border-blue-100">
+                                    <div class="flex items-center mb-2">
+                                        <i class="fas fa-tachometer-alt text-cyan-600 mr-2"></i>
+                                        <strong class="text-gray-800">Meter Reader:</strong>
+                                    </div>
+                                    <p class="text-sm text-gray-600">Meter list, map, and meter readings</p>
                                 </div>
                             </div>
                         </div>

@@ -128,7 +128,7 @@ class BillController extends Controller
 
             // Get customer and calculate charges
             $customer = Customer::findOrFail($request->customer_id);
-            $customerType = $customer->customerType->type ?? 'residential';
+            $customerType = $customer->customer_type ?: 'residential';
             $charges = Rate::calculateCharges($customerType, $consumption, $request->bill_date);
 
             // Create the bill
@@ -169,7 +169,7 @@ class BillController extends Controller
      */
     public function show(Bill $bill): View
     {
-        $bill->load(['customer', 'waterMeter', 'meterReading']);
+        $bill->load(['customer', 'waterMeter', 'meterReading', 'payments.receiver']);
         
         return view('bills.show', compact('bill'));
     }
@@ -223,7 +223,7 @@ class BillController extends Controller
 
             // Get customer and calculate charges
             $customer = Customer::findOrFail($request->customer_id);
-            $customerType = $customer->customerType->type ?? 'residential';
+            $customerType = $customer->customer_type ?: 'residential';
             $charges = Rate::calculateCharges($customerType, $consumption, $request->bill_date);
 
             // Update the bill
@@ -336,7 +336,7 @@ class BillController extends Controller
                     $consumption = max(0, $latestReading->current_reading - $prevReading);
 
                     // Calculate charges
-                    $customerType = $customer->customerType->type ?? 'residential';
+                    $customerType = $customer->customer_type ?: 'residential';
                     $charges = Rate::calculateCharges($customerType, $consumption, $billDate);
 
                     // Create bill
@@ -412,7 +412,12 @@ class BillController extends Controller
         try {
             DB::beginTransaction();
 
-            $success = $bill->recordPayment($request->amount, $request->payment_method);
+            $success = $bill->recordPayment($request->amount, $request->payment_method, [
+                'paid_on' => $request->payment_date,
+                'reference' => $request->reference,
+                'notes' => $request->notes,
+                'received_by' => $request->user()->id,
+            ]);
             
             if ($success) {
                 // Log payment details (you might want to create a separate payments table)
@@ -437,11 +442,24 @@ class BillController extends Controller
     /**
      * Generate printable bill.
      */
-    public function print(Bill $bill): View
+    public function print(Request $request, Bill $bill): View
     {
-        $bill->load(['customer', 'waterMeter', 'meterReading']);
-        
-        return view('bills.print', compact('bill'));
+        $bill->load(['customer', 'waterMeter', 'meterReading', 'payments']);
+        $language = in_array($request->input('lang'), ['en', 'ta', 'both'], true) ? $request->input('lang') : 'both';
+        $format = $request->input('format') === 'thermal' ? 'thermal' : 'a4';
+
+        return view('bills.dunsinane', compact('bill', 'language', 'format'));
+    }
+
+    public function rebill(Bill $bill): RedirectResponse
+    {
+        if ($bill->status === 'paid') {
+            return redirect()->route('bills.show', $bill)->with('error', 'A paid bill cannot be recalculated.');
+        }
+
+        $bill->rebill();
+
+        return redirect()->route('bills.show', $bill)->with('success', 'Bill recalculated from the current tariff.');
     }
 
     /**

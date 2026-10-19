@@ -104,8 +104,13 @@
     </div>
 </div>
 
-<!-- Google Maps API -->
-<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&callback=initMap" async defer></script>
+@if(config('services.google_maps.key'))
+<script src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}&callback=initMap" async defer></script>
+@else
+<div class="mx-6 mb-6 rounded border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+    Add GOOGLE_MAPS_API_KEY to the server environment to show this map.
+</div>
+@endif
 
 <script>
 let map;
