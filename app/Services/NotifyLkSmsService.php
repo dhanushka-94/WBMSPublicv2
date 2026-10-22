@@ -16,10 +16,10 @@ class NotifyLkSmsService
 
     public function __construct()
     {
-        $this->userId = config('sms.drivers.notify_lk.user_id');
-        $this->apiKey = config('sms.drivers.notify_lk.api_key');
-        $this->senderId = config('sms.drivers.notify_lk.sender_id');
-        $this->baseUrl = config('sms.drivers.notify_lk.base_url', 'https://app.notify.lk/api/v1');
+        $this->userId = (string) config('sms.drivers.notify_lk.user_id', '');
+        $this->apiKey = (string) config('sms.drivers.notify_lk.api_key', '');
+        $this->senderId = (string) config('sms.drivers.notify_lk.sender_id', 'NotifyDEMO');
+        $this->baseUrl = (string) config('sms.drivers.notify_lk.base_url', 'https://app.notify.lk/api/v1');
     }
 
     /**
@@ -34,6 +34,15 @@ class NotifyLkSmsService
         ?string $contactAddress = null,
         bool $unicode = false
     ): array {
+        $errors = $this->validateConfiguration();
+        if ($errors !== []) {
+            return [
+                'success' => false,
+                'message' => implode('. ', $errors),
+                'response' => null,
+            ];
+        }
+
         try {
             // Format phone number to Sri Lankan format (94XXXXXXXXX)
             $formattedNumber = $this->formatPhoneNumber($phoneNumber);
@@ -137,6 +146,15 @@ class NotifyLkSmsService
      */
     public function getAccountStatus(): array
     {
+        $errors = $this->validateConfiguration();
+        if ($errors !== []) {
+            return [
+                'success' => false,
+                'message' => implode('. ', $errors),
+                'response' => null,
+            ];
+        }
+
         try {
             $response = Http::timeout(15)->get("{$this->baseUrl}/status", [
                 'user_id' => $this->userId,

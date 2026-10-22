@@ -14,8 +14,8 @@ return [
 
     'drivers' => [
         'notify_lk' => [
-            'user_id' => env('NOTIFYLK_USER_ID'),
-            'api_key' => env('NOTIFYLK_API_KEY'),
+            'user_id' => env('NOTIFYLK_USER_ID', ''),
+            'api_key' => env('NOTIFYLK_API_KEY', ''),
             'sender_id' => env('NOTIFYLK_SENDER_ID', 'NotifyDEMO'),
             'base_url' => env('NOTIFYLK_BASE_URL', 'https://app.notify.lk/api/v1'),
         ],
