@@ -128,7 +128,7 @@ class BillController extends Controller
 
             // Get customer and calculate charges
             $customer = Customer::findOrFail($request->customer_id);
-            $customerType = $customer->customer_type ?: 'residential';
+            $customerType = $customer->billingCategory();
             $charges = Rate::calculateCharges($customerType, $consumption, $request->bill_date);
 
             // Create the bill
@@ -223,7 +223,7 @@ class BillController extends Controller
 
             // Get customer and calculate charges
             $customer = Customer::findOrFail($request->customer_id);
-            $customerType = $customer->customer_type ?: 'residential';
+            $customerType = $customer->billingCategory();
             $charges = Rate::calculateCharges($customerType, $consumption, $request->bill_date);
 
             // Update the bill
@@ -336,7 +336,7 @@ class BillController extends Controller
                     $consumption = max(0, $latestReading->current_reading - $prevReading);
 
                     // Calculate charges
-                    $customerType = $customer->customer_type ?: 'residential';
+                    $customerType = $customer->billingCategory();
                     $charges = Rate::calculateCharges($customerType, $consumption, $billDate);
 
                     // Create bill

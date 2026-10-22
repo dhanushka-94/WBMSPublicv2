@@ -175,9 +175,9 @@ class MeterReadingController extends Controller
     {
         $reading->load(['waterMeter.customer', 'bill', 'reader']);
 
-        $customerType = $reading->waterMeter?->customer?->customer_type;
-        $charges = $customerType
-            ? Rate::calculateCharges($customerType, (float) $reading->consumption, $reading->reading_date)
+        $customer = $reading->waterMeter?->customer;
+        $charges = $customer
+            ? Rate::calculateCharges($customer->billingCategory(), (float) $reading->consumption, $reading->reading_date)
             : null;
 
         return view('readings.show', compact('reading', 'charges'));

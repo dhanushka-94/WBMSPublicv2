@@ -117,4 +117,15 @@ class SystemConfiguration extends Model
     {
         static::set('billing_cycle_type', $type, 'string', 'Billing cycle frequency (monthly, quarterly, etc.)');
     }
+
+    public static function googleMapsKey(): string
+    {
+        $saved = trim((string) static::get('google_maps_api_key', ''));
+
+        if ($saved !== '') {
+            return $saved;
+        }
+
+        return trim((string) config('services.google_maps.key', ''));
+    }
 }

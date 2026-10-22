@@ -75,6 +75,11 @@ class User extends Authenticatable
         return $this->role === 'admin';
     }
 
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === 'super_admin';
+    }
+
     /**
      * Check if user is manager
      */
@@ -105,6 +110,8 @@ class User extends Authenticatable
     public function getRoleDisplayAttribute(): string
     {
         return match ($this->role) {
+            'super_admin' => 'Super Admin',
+            'admin' => 'Admin',
             'meter_reader' => 'Meter Reader',
             'billing_officer' => 'Billing Officer',
             'cashier' => 'Cashier',

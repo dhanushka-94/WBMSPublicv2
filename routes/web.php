@@ -19,6 +19,9 @@ use App\Http\Controllers\MonthlyActiveReportController;
 use App\Http\Controllers\ReaderRouteReportController;
 use App\Http\Controllers\OfficeReportController;
 use App\Http\Controllers\BulkSmsController;
+use App\Http\Controllers\SmsLinkController;
+use App\Http\Controllers\SmsSettingsController;
+use App\Http\Controllers\SmsTemplateController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\SystemControlController;
 
@@ -31,6 +34,12 @@ Route::get('/', function () {
 Route::get('/about', function () {
     return view('about');
 })->name('about');
+
+Route::middleware('signed')->group(function () {
+    Route::get('/sms-link/bills/{bill}', [SmsLinkController::class, 'bill'])->name('sms.bill');
+    Route::get('/sms-link/receipts/{payment}', [SmsLinkController::class, 'receipt'])->name('sms.receipt');
+    Route::get('/sms-link/customers/{customer}/due', [SmsLinkController::class, 'due'])->name('sms.due');
+});
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::view('changelog', 'changelog')->name('changelog');
@@ -91,6 +100,7 @@ Route::middleware(['auth', 'verified', 'system.check'])->group(function () {
     // Settings routes (system management)
     Route::prefix('settings')->name('settings.')->group(function () {
         Route::get('/', [SettingsController::class, 'index'])->name('index');
+        Route::put('/map-key', [SettingsController::class, 'updateMapKey'])->name('map-key');
         
         // Division routes
         Route::post('/divisions', [SettingsController::class, 'storeDivision'])->name('divisions.store');
@@ -168,10 +178,14 @@ Route::middleware(['auth', 'verified', 'system.check'])->group(function () {
     // SMS Notifications (RESTRICTED)
     Route::resource('sms-notifications', SmsNotificationController::class)->names('sms');
     Route::get('sms/statistics', [SmsNotificationController::class, 'statistics'])->name('sms.statistics');
-    Route::post('sms/export', [SmsNotificationController::class, 'export'])->name('sms.export');
+    Route::post('sms/export', [SmsNotificationController::class, 'export']);
     Route::post('sms/bulk-delete', [SmsNotificationController::class, 'bulkDelete'])->name('sms.bulk-delete');
     Route::post('sms/{sms_notification}/resend', [SmsNotificationController::class, 'resend'])->name('sms.resend');
-    Route::get('sms/templates', [SmsNotificationController::class, 'templates'])->name('sms.templates');
+    Route::get('sms/templates', [SmsTemplateController::class, 'index'])->name('sms.templates');
+    Route::put('sms/templates/{template}', [SmsTemplateController::class, 'update'])->name('sms.templates.update');
+    Route::get('sms/settings', [SmsSettingsController::class, 'edit'])->name('sms.settings');
+    Route::put('sms/settings', [SmsSettingsController::class, 'update'])->name('sms.settings.update');
+    Route::get('sms/export', [SmsNotificationController::class, 'export'])->name('sms.export');
     Route::get('sms/bulk', [BulkSmsController::class, 'create'])->name('sms.bulk');
     Route::post('sms/bulk', [BulkSmsController::class, 'store'])->name('sms.bulk.send');
     Route::post('sms/due-reminders', [SmsNotificationController::class, 'sendDueReminders'])->name('sms.due-reminders');

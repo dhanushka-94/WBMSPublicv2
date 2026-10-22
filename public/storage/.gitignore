@@ -1,2 +1,5 @@
 *
 !.gitignore
+!qr-codes/
+!qr-codes/meters/
+!qr-codes/meters/*

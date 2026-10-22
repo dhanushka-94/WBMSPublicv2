@@ -172,7 +172,7 @@ class Bill extends Model
             }
 
             // Send payment confirmation when payment is recorded
-            if ($bill->wasChanged('paid_amount') && $bill->paid_amount > $bill->getOriginal('paid_amount')) {
+            if ($bill->wasChanged('paid_amount') && $bill->paid_amount > $bill->getOriginal('paid_amount') && empty($bill->deferPaymentSms)) {
                 $paidAmount = $bill->paid_amount - $bill->getOriginal('paid_amount');
                 $bill->sendPaymentConfirmation($paidAmount);
             }
@@ -236,8 +236,8 @@ class Bill extends Model
     {
         $customer = $reading->waterMeter->customer;
         $charges = Rate::calculateCharges(
-            $customer->customer_type, 
-            $reading->consumption, 
+            $customer->billingCategory(),
+            $reading->consumption,
             $this->bill_date ?? Carbon::now()
         );
 
@@ -264,16 +264,19 @@ class Bill extends Model
         return $this->hasMany(Payment::class);
     }
 
+    public bool $deferPaymentSms = false;
+
     public function recordPayment(float $amount, string $paymentMethod = 'cash', array $details = []): bool
     {
         if ($amount <= 0 || $amount > $this->balance_amount) {
             return false;
         }
 
+        $this->deferPaymentSms = true;
         $this->paid_amount += $amount;
         $this->save();
 
-        Payment::create([
+        $payment = Payment::create([
             'bill_id' => $this->id,
             'customer_id' => $this->customer_id,
             'received_by' => $details['received_by'] ?? auth()->id(),
@@ -285,6 +288,8 @@ class Bill extends Model
             'notes' => $details['notes'] ?? null,
         ]);
 
+        $this->sendPaymentConfirmation($amount, $payment);
+
         return true;
     }
 
@@ -292,7 +297,7 @@ class Bill extends Model
     {
         $customer = $this->customer;
         $charges = Rate::calculateCharges(
-            $customer->customer_type ?: 'residential',
+            $customer->billingCategory(),
             (float) $this->consumption,
             $this->bill_date
         );
@@ -388,11 +393,11 @@ class Bill extends Model
         }
     }
 
-    public function sendPaymentConfirmation(float $paidAmount): bool
+    public function sendPaymentConfirmation(float $paidAmount, ?Payment $payment = null): bool
     {
         try {
             $smsService = app(SmsNotificationService::class);
-            $notification = $smsService->sendPaymentConfirmation($this, $paidAmount);
+            $notification = $smsService->sendPaymentConfirmation($this, $paidAmount, null, $payment);
             return $notification !== null;
         } catch (\Exception $e) {
             \Log::error("Failed to send payment confirmation SMS: " . $e->getMessage());

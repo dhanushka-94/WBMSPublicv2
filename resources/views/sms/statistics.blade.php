@@ -11,7 +11,7 @@
                 <div class="flex items-center justify-between">
                     <div class="flex items-center">
                         <i class="fas fa-chart-bar text-white text-2xl mr-3"></i>
-                        <h1 class="text-2xl font-bold text-white">SMS Statistics Dashboard</h1>
+                        <h1 class="text-2xl font-bold text-white">SMS Dashboard</h1>
                     </div>
                     <a href="{{ route('sms.index') }}" 
                        class="bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-md font-medium transition duration-200 flex items-center">
@@ -26,8 +26,8 @@
                     <div class="bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 rounded-xl p-6 text-white shadow-xl">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-blue-100 text-sm">Total SMS Sent</p>
-                                <p class="text-3xl font-bold">{{ number_format($stats['total']) }}</p>
+                                <p class="text-blue-100 text-sm">Sent</p>
+                                <p class="text-3xl font-bold">{{ number_format($stats['sent']) }}</p>
                             </div>
                             <div class="bg-white bg-opacity-20 rounded-full p-3">
                                 <i class="fas fa-envelope text-2xl"></i>
@@ -38,8 +38,8 @@
                     <div class="bg-gradient-to-br from-green-500 via-green-600 to-green-700 rounded-xl p-6 text-white shadow-xl">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-green-100 text-sm">Success Rate</p>
-                                <p class="text-3xl font-bold">{{ $stats['success_rate'] }}%</p>
+                                <p class="text-green-100 text-sm">Delivered</p>
+                                <p class="text-3xl font-bold">{{ number_format($stats['sent']) }}</p>
                             </div>
                             <div class="bg-white bg-opacity-20 rounded-full p-3">
                                 <i class="fas fa-percentage text-2xl"></i>
@@ -50,8 +50,8 @@
                     <div class="bg-gradient-to-br from-purple-500 via-purple-600 to-purple-700 rounded-xl p-6 text-white shadow-xl">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-purple-100 text-sm">Today's SMS</p>
-                                <p class="text-3xl font-bold">{{ number_format($stats['today']) }}</p>
+                                <p class="text-purple-100 text-sm">Pending</p>
+                                <p class="text-3xl font-bold">{{ number_format($stats['pending']) }}</p>
                             </div>
                             <div class="bg-white bg-opacity-20 rounded-full p-3">
                                 <i class="fas fa-calendar-day text-2xl"></i>
@@ -62,8 +62,8 @@
                     <div class="bg-gradient-to-br from-indigo-500 via-indigo-600 to-indigo-700 rounded-xl p-6 text-white shadow-xl">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-indigo-100 text-sm">This Month</p>
-                                <p class="text-3xl font-bold">{{ number_format($stats['this_month']) }}</p>
+                                <p class="text-indigo-100 text-sm">Failed</p>
+                                <p class="text-3xl font-bold">{{ number_format($stats['failed']) }}</p>
                             </div>
                             <div class="bg-white bg-opacity-20 rounded-full p-3">
                                 <i class="fas fa-calendar-alt text-2xl"></i>

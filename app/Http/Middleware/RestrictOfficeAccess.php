@@ -12,11 +12,19 @@ class RestrictOfficeAccess
     {
         $user = $request->user();
 
-        if (!$user || $user->role === 'admin' || $user->id === 1) {
+        if (!$user || $user->role === 'super_admin') {
             return $next($request);
         }
 
         $name = $request->route()?->getName() ?? '';
+
+        if ($this->superAdminOnly($name)) {
+            abort(403, 'Only a Super Admin can open this page.');
+        }
+
+        if ($user->role === 'admin') {
+            return $next($request);
+        }
 
         if ($name === '' || $this->allowed($user->role, $name)) {
             return $next($request);
@@ -27,7 +35,7 @@ class RestrictOfficeAccess
 
     private function allowed(string $role, string $name): bool
     {
-        foreach (['profile.', 'about', 'changelog', 'logout', 'login', 'password.', 'verification.', 'system.disabled', 'system.status', 'system.get-status'] as $open) {
+        foreach (['profile.', 'about', 'changelog', 'logout', 'login', 'password.', 'verification.', 'system.disabled'] as $open) {
             if ($name === $open || str_starts_with($name, $open)) {
                 return true;
             }
@@ -43,6 +51,21 @@ class RestrictOfficeAccess
 
         foreach ($prefixes as $prefix) {
             if ($name === $prefix || str_starts_with($name, $prefix)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function superAdminOnly(string $name): bool
+    {
+        if ($name === 'settings.rates' || str_starts_with($name, 'settings.rates.')) {
+            return false;
+        }
+
+        foreach (['settings.', 'sms.settings', 'system.enable', 'system.disable', 'system.status', 'system.get-status', 'mobile-api.'] as $only) {
+            if ($name === $only || str_starts_with($name, $only)) {
                 return true;
             }
         }

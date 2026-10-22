@@ -11,7 +11,7 @@
                 <div class="flex items-center justify-between">
                     <div class="flex items-center">
                         <i class="fas fa-sms text-white text-2xl mr-3"></i>
-                        <h1 class="text-2xl font-bold text-white">SMS Notifications Log</h1>
+                        <h1 class="text-2xl font-bold text-white">SMS Logs</h1>
                     </div>
                     <a href="{{ route('sms.statistics') }}" 
                        class="bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-md font-medium transition duration-200 flex items-center">
@@ -133,6 +133,7 @@
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
                                         <input type="checkbox" id="select-all" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                                     </th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Log</th>
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date/Time</th>
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
@@ -148,6 +149,17 @@
                                         <td class="px-4 py-4">
                                             <input type="checkbox" name="selected_ids[]" 
                                                    value="{{ $notification->id }}" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 row-checkbox">
+                                        </td>
+                                        <td class="px-4 py-4 text-sm text-gray-700">
+                                            <div>#{{ $notification->id }}</div>
+                                            <div class="text-xs text-gray-500">{{ ucfirst($notification->source ?? 'automated') }}</div>
+                                            <div class="text-xs text-gray-500">{{ $notification->segments ?? 1 }} segment(s)</div>
+                                            @if($notification->bill)
+                                                <div class="text-xs text-gray-500">{{ $notification->bill->bill_number }}</div>
+                                            @endif
+                                            @if($notification->receipt_number)
+                                                <div class="text-xs text-gray-500">{{ $notification->receipt_number }}</div>
+                                            @endif
                                         </td>
                                         <td class="px-4 py-4 text-sm text-gray-600">
                                             <div>{{ $notification->created_at->format('M d, Y') }}</div>
@@ -210,7 +222,6 @@
                                                     <form method="POST" action="{{ route('sms.resend', $notification) }}" 
                                                           style="display: inline;">
                                                         @csrf
-                                                        @method('PATCH')
                                                         <button type="submit" class="text-yellow-600 hover:text-yellow-800 transition duration-200" 
                                                                 title="Resend SMS" onclick="return confirm('Resend this SMS?')">
                                                             <i class="fas fa-redo"></i>

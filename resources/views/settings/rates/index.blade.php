@@ -9,7 +9,7 @@
         <div class="flex justify-between items-center">
             <div>
                 <h1 class="text-3xl font-bold text-white">Rate Management</h1>
-                <p class="text-blue-100 mt-1">Manage billing rates and unit charges</p>
+                <p class="text-blue-100 mt-1">Same slabs for every division. Fixed charge is LKR 200 per billing period.</p>
             </div>
             <div class="flex space-x-3">
                 <a href="{{ route('settings.index') }}" 

@@ -59,6 +59,28 @@
         </div>
     @endif
 
+    <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
+        <h2 class="text-lg font-semibold text-gray-900">Map API key</h2>
+        <p class="mt-1 text-sm text-gray-600">Google Maps key for the meter map, meter location, and meter details. Leave the box blank to keep the saved key.</p>
+        <form method="POST" action="{{ route('settings.map-key') }}" class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+            @csrf
+            @method('PUT')
+            <div class="flex-1">
+                <label for="google_maps_api_key" class="block text-sm font-medium text-gray-700 mb-1">Google Maps API key</label>
+                <input type="password" name="google_maps_api_key" id="google_maps_api_key" autocomplete="off"
+                       placeholder="{{ $mapKeySaved ? 'Saved key is hidden' : 'Paste the API key' }}"
+                       class="w-full rounded-md border-gray-300">
+                @error('google_maps_api_key')
+                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                @enderror
+                <p class="mt-1 text-xs text-gray-500">{{ $mapKeySaved ? 'A key is saved.' : 'No key is saved yet.' }}</p>
+            </div>
+            <button type="submit" class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-2 font-medium text-white hover:bg-blue-700">
+                Save key
+            </button>
+        </form>
+    </div>
+
     <!-- Quick Access Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8 animate-fade-in-up">
         <!-- Rate Management Card -->

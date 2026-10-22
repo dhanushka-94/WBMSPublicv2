@@ -104,11 +104,11 @@
     </div>
 </div>
 
-@if(config('services.google_maps.key'))
-<script src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}&callback=initMap" async defer></script>
+@if(\App\Models\SystemConfiguration::googleMapsKey() !== '')
+<script src="https://maps.googleapis.com/maps/api/js?key={{ \App\Models\SystemConfiguration::googleMapsKey() }}&callback=initMap" async defer></script>
 @else
 <div class="mx-6 mb-6 rounded border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-    Add GOOGLE_MAPS_API_KEY to the server environment to show this map.
+    Add the Google Maps API key in System Settings to show this map.
 </div>
 @endif
 

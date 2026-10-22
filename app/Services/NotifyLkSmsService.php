@@ -5,6 +5,7 @@ namespace App\Services;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use App\Models\SmsNotification;
+use App\Models\SystemConfiguration;
 use Exception;
 
 class NotifyLkSmsService
@@ -16,9 +17,9 @@ class NotifyLkSmsService
 
     public function __construct()
     {
-        $this->userId = (string) config('sms.drivers.notify_lk.user_id', '');
-        $this->apiKey = (string) config('sms.drivers.notify_lk.api_key', '');
-        $this->senderId = (string) config('sms.drivers.notify_lk.sender_id', 'NotifyDEMO');
+        $this->userId = (string) (SystemConfiguration::get('sms_user_id') ?: config('sms.drivers.notify_lk.user_id', ''));
+        $this->apiKey = (string) (SystemConfiguration::get('sms_api_key') ?: config('sms.drivers.notify_lk.api_key', ''));
+        $this->senderId = (string) (SystemConfiguration::get('sms_sender_id') ?: config('sms.drivers.notify_lk.sender_id', 'NotifyDEMO'));
         $this->baseUrl = (string) config('sms.drivers.notify_lk.base_url', 'https://app.notify.lk/api/v1');
     }
 
@@ -191,6 +192,25 @@ class NotifyLkSmsService
     /**
      * Format phone number to Sri Lankan format (94XXXXXXXXX)
      */
+    public function hasValidPhone(string $phoneNumber): bool
+    {
+        return $this->formatPhoneNumber($phoneNumber) !== null;
+    }
+
+    public static function segmentCount(string $message): int
+    {
+        $isGsm = preg_match('/^[\n\r\x20-\x7E]*$/u', $message) === 1;
+        $length = mb_strlen($message);
+        $single = $isGsm ? 160 : 70;
+        $multi = $isGsm ? 153 : 67;
+
+        if ($length <= $single) {
+            return max(1, $length === 0 ? 0 : 1);
+        }
+
+        return (int) ceil($length / $multi);
+    }
+
     private function formatPhoneNumber(string $phoneNumber): ?string
     {
         // Remove all non-numeric characters

@@ -2,9 +2,13 @@
 
 namespace App\Services;
 
+use App\Jobs\SendSmsNotificationJob;
 use App\Models\Bill;
 use App\Models\Customer;
+use App\Models\Payment;
 use App\Models\SmsNotification;
+use App\Models\SmsTemplate;
+use App\Models\SystemConfiguration;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
@@ -84,20 +88,21 @@ class SmsNotificationService
     /**
      * Send payment confirmation
      */
-    public function sendPaymentConfirmation(Bill $bill, float $paidAmount, ?Carbon $scheduledAt = null): ?SmsNotification
+    public function sendPaymentConfirmation(Bill $bill, float $paidAmount, ?Carbon $scheduledAt = null, ?Payment $payment = null): ?SmsNotification
     {
         if (!config('sms.bill_notifications.payment_confirmation', true)) {
             return null;
         }
 
-        $message = $this->templateService->paymentConfirmationMessage($bill, $paidAmount);
-        
+        $message = $this->templateService->paymentConfirmationMessage($bill, $paidAmount, $payment);
+
         return $this->createAndSendNotification(
             $bill->customer,
             'payment_confirmation',
             $message,
             $bill,
-            $scheduledAt
+            $scheduledAt,
+            ['payment' => $payment]
         );
     }
 
@@ -124,9 +129,9 @@ class SmsNotificationService
     /**
      * Send service disconnection warning
      */
-    public function sendServiceDisconnectionWarning(Customer $customer, float $totalDue, ?Carbon $scheduledAt = null): ?SmsNotification
+    public function sendServiceDisconnectionWarning(Customer $customer, float $totalDue, ?Carbon $scheduledAt = null, ?Carbon $disconnectionDate = null): ?SmsNotification
     {
-        $message = $this->templateService->serviceDisconnectionMessage($customer, $totalDue);
+        $message = $this->templateService->serviceDisconnectionMessage($customer, $totalDue, $disconnectionDate ?? $scheduledAt);
         
         return $this->createAndSendNotification(
             $customer,
@@ -201,7 +206,8 @@ class SmsNotificationService
             'custom',
             $message,
             null,
-            $scheduledAt
+            $scheduledAt,
+            ['source' => 'manual', 'queue' => true]
         );
     }
 
@@ -300,37 +306,67 @@ class SmsNotificationService
     /**
      * Create and send SMS notification
      */
+    public function sendExisting(SmsNotification $notification): array
+    {
+        return $this->sendSmsNotification($notification);
+    }
+
+    protected function smsEnabled(): bool
+    {
+        $stored = SystemConfiguration::get('sms_enabled');
+
+        if ($stored === null) {
+            return (bool) config('sms.notifications.enabled', true);
+        }
+
+        return !in_array($stored, ['0', 0, false], true);
+    }
+
     protected function createAndSendNotification(
         Customer $customer,
         string $type,
         string $message,
         ?Bill $bill = null,
-        ?Carbon $scheduledAt = null
+        ?Carbon $scheduledAt = null,
+        array $meta = []
     ): ?SmsNotification {
-        if (!config('sms.notifications.enabled', true)) {
+        if (!$this->smsEnabled()) {
             Log::info('SMS notifications are disabled');
             return null;
         }
 
-        if (!$customer->phone) {
-            Log::warning("Customer {$customer->id} has no phone number for SMS notification");
+        if (!SmsTemplate::allows($type)) {
+            Log::info("SMS template {$type} is turned off");
+            return null;
+        }
+
+        if (!$customer->phone || !$this->smsService->hasValidPhone($customer->phone)) {
+            Log::warning("Customer {$customer->id} has no usable phone number for SMS");
             return null;
         }
 
         try {
-            // Create notification record
+            $payment = $meta['payment'] ?? null;
             $notification = SmsNotification::create([
                 'customer_id' => $customer->id,
                 'bill_id' => $bill?->id,
+                'payment_id' => $payment?->id,
+                'receipt_number' => $payment?->receipt_number,
                 'phone_number' => $customer->phone,
                 'message' => $message,
+                'segments' => NotifyLkSmsService::segmentCount($message),
                 'type' => $type,
+                'source' => $meta['source'] ?? 'automated',
                 'scheduled_at' => $scheduledAt,
             ]);
 
-            // Send immediately if not scheduled
+            $shouldQueue = ($meta['queue'] ?? false) || (bool) config('sms.notifications.queue', false);
             if (!$scheduledAt || $scheduledAt <= now()) {
-                $this->sendSmsNotification($notification);
+                if ($shouldQueue) {
+                    SendSmsNotificationJob::dispatch($notification->id);
+                } else {
+                    $this->sendSmsNotification($notification);
+                }
             }
 
             return $notification;

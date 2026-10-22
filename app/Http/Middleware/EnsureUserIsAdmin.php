@@ -12,7 +12,7 @@ class EnsureUserIsAdmin
     {
         $user = $request->user();
 
-        if (!$user || ($user->role !== 'admin' && $user->id !== 1)) {
+        if (!$user || !in_array($user->role, ['admin', 'super_admin'], true)) {
             abort(403, 'Admin access only.');
         }
 

@@ -325,7 +325,12 @@ class CustomerController extends Controller
 
         try {
             app(\App\Services\SmsNotificationService::class)
-                ->sendServiceDisconnectionWarning($customer, $customer->getOutstandingBalance());
+                ->sendServiceDisconnectionWarning(
+                    $customer,
+                    $customer->getOutstandingBalance(),
+                    null,
+                    \Carbon\Carbon::parse($validated['event_date'])
+                );
         } catch (\Throwable $exception) {
             report($exception);
         }

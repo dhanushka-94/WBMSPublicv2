@@ -686,8 +686,9 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<!-- Google Maps API -->
-<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=places&callback=initMap" async defer></script>
+@if(\App\Models\SystemConfiguration::googleMapsKey() !== '')
+<script src="https://maps.googleapis.com/maps/api/js?key={{ \App\Models\SystemConfiguration::googleMapsKey() }}&libraries=places&callback=initMap" async defer></script>
+@endif
 
 <script>
 let map;

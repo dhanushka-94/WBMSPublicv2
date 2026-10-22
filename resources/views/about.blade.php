@@ -43,10 +43,10 @@
                             Transforming Water Management
                         </h2>
                         <p class="text-lg text-gray-700 mb-6">
-                            Our comprehensive AquaBill by olexto is designed to streamline and digitize the entire water utility ecosystem. From customer onboarding to automated billing, we provide a complete solution that enhances operational efficiency while improving customer experience.
+                            AquaBill keeps the Dunsinane connections, meters, readings, bills, receipts, and SMS in one office system. Staff and Non Staff use the same unit tariff in every division, and a fixed charge of LKR 200 is added to every bill.
                         </p>
                         <p class="text-gray-600">
-                            Built as a Software as a System (SaaS) solution, our platform offers scalability, reliability, and cutting-edge features that adapt to the evolving needs of modern water utility providers.
+                            Meter readers submit readings from the phone. The office prints the Dunsinane bill in English and Tamil, and customers can open their own bill or receipt from the link in an SMS.
                         </p>
                     </div>
                     <div class="relative">
@@ -76,53 +76,85 @@
 
             <!-- Key Features Section -->
             <section class="bg-white rounded-xl shadow-lg p-8">
-                <h2 class="text-3xl font-bold text-gray-900 mb-8 text-center">
+                <h2 class="text-3xl font-bold text-gray-900 mb-2 text-center">
                     <i class="fas fa-star text-yellow-500 mr-3"></i>
-                    Comprehensive Features
+                    What this system does
                 </h2>
-                <div class="grid md:grid-cols-3 gap-8">
-                    <div class="text-center p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
-                        <div class="bg-blue-500 text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i class="fas fa-user-plus text-2xl"></i>
+                <p class="text-center text-gray-600 mb-8">Office screens, the meter-reader phone, and customer SMS for the Dunsinane water supply.</p>
+                <div class="grid md:grid-cols-2 gap-6">
+                    @foreach([
+                        ['fa-users', 'bg-blue-500', 'from-blue-50 to-blue-100', 'Customers', [
+                            'Each connection has a name and title, account number, division, and category: Staff or Non Staff.',
+                            'Guarantors are kept with the customer.',
+                            'A connection can be active, suspended, inactive, or disconnected.',
+                            'Disconnect and reconnect record the date, the reason, and the staff member.',
+                            'The customer QR is the same code as the meter QR. The code is the meter number.',
+                        ]],
+                        ['fa-tachometer-alt', 'bg-green-500', 'from-green-50 to-green-100', 'Meters and readings', [
+                            'One meter is linked to each customer, with a printable QR image.',
+                            'Bulk Meter Reading Entry is the monthly reading list.',
+                            'Initial Readings is the one-time page for the opening dial and the opening bill amount. A blank cell is skipped and does not send an SMS.',
+                            'A reading saved in the office does not create a bill. A reading sent from the phone does.',
+                            'Reading Schedule plans the round. The meter map opens when a Google Maps key is saved in System Settings.',
+                        ]],
+                        ['fa-file-invoice-dollar', 'bg-orange-500', 'from-orange-50 to-orange-100', 'Billing', [
+                            'The same tariff is used for Staff and Non Staff in every division.',
+                            'A fixed charge of LKR 200 is added to every bill, including a bill with no units.',
+                            'Unit prices: 0–5 at LKR 0, 6–10 at LKR 12, 11–15 at LKR 18, 16–20 at LKR 25, 21–25 at LKR 35, and 26–100000 at LKR 40.',
+                            'Example: 100 units is LKR 3,450 for water plus LKR 200 fixed, LKR 3,650 in total.',
+                            'Monthly bills can be generated, and an unpaid bill can be recalculated.',
+                            'The Dunsinane bill prints in English, Tamil, or both, on A4 paper or a narrow thermal slip.',
+                        ]],
+                        ['fa-receipt', 'bg-emerald-500', 'from-emerald-50 to-emerald-100', 'Payments and receipts', [
+                            'Each office payment is stored with its own receipt number, date, amount, and method.',
+                            'The receipt can be opened again and printed.',
+                            'Daily collection and monthly collection use these receipts.',
+                        ]],
+                        ['fa-chart-bar', 'bg-purple-500', 'from-purple-50 to-purple-100', 'Reports', [
+                            'Consumption, revenue, overdue bills, and monthly active connections.',
+                            'Customer register, contact list, new connections, and disconnected customers.',
+                            'Usage alerts, meter faults, and the billing summary.',
+                            'Daily collection, monthly collection, collection efficiency, and age analysis.',
+                            'Reader route report shows who finished the round and who was missed.',
+                        ]],
+                        ['fa-sms', 'bg-cyan-500', 'from-cyan-50 to-cyan-100', 'SMS', [
+                            'A new bill, a recorded payment, an overdue balance, and a disconnection each send an SMS to that customer’s mobile number.',
+                            'Each message can include a signed link that opens only that customer’s bill, receipt, or amount due.',
+                            'Templates can be edited, previewed, and turned on or off. Placeholders such as the name, amount, and due date are filled in when the message is sent.',
+                            'A custom SMS can go to every customer with a mobile number, to selected divisions, or to chosen customers. Invalid and duplicate numbers are skipped.',
+                            'SMS Logs keep one row per message, with the gateway reply, the segment count, and a retry that updates the same row.',
+                            'The Notify.lk user id, API key, and sender id are saved in SMS Settings.',
+                        ]],
+                        ['fa-user-shield', 'bg-indigo-500', 'from-indigo-50 to-indigo-100', 'Who can sign in', [
+                            'Super Admin: the full office, plus System Settings, SMS Settings, turning the system on or off, the mobile API guide, and deleting an administrator.',
+                            'Admin: the full office, except System Settings, SMS Settings, system on/off, the mobile API guide, and deleting an administrator.',
+                            'Manager: the dashboard and reports.',
+                            'Billing Officer and Staff: customers, meters, readings, bills, and SMS.',
+                            'Cashier: bills, payments, and the collection reports.',
+                            'Meter Reader: readings, the meter list, and the meter map. On the phone, the reader sees only the assigned route.',
+                        ]],
+                        ['fa-cogs', 'bg-slate-600', 'from-slate-50 to-slate-100', 'System', [
+                            'Reader routes assign divisions or individual customers to a meter reader.',
+                            'Activity Logs record office actions.',
+                            'An administrator can pause the system, save the Google Maps key, and open the mobile API guide.',
+                            'Times are shown in 12-hour form. The clock uses Sri Lanka time, and amounts are in LKR.',
+                            'The changelog lists each released version.',
+                        ]],
+                    ] as [$icon, $badge, $wash, $title, $points])
+                    <div class="p-6 bg-gradient-to-br {{ $wash }} rounded-lg">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="{{ $badge }} text-white w-12 h-12 rounded-full flex items-center justify-center shrink-0">
+                                <i class="fas {{ $icon }} text-lg"></i>
+                            </div>
+                            <h3 class="text-xl font-semibold text-gray-900">{{ $title }}</h3>
                         </div>
-                        <h3 class="text-xl font-semibold mb-3">Customer Registration</h3>
-                        <p class="text-gray-600">Streamlined customer onboarding with digital documentation and verification processes.</p>
+                        <ul class="space-y-2 text-sm text-gray-700">
+                            @foreach($points as $point)
+                            <li class="flex gap-2"><i class="fas fa-check text-green-600 mt-1"></i><span>{{ $point }}</span></li>
+                            @endforeach
+                        </ul>
                     </div>
-                    <div class="text-center p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-lg">
-                        <div class="bg-green-500 text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i class="fas fa-qrcode text-2xl"></i>
-                        </div>
-                        <h3 class="text-xl font-semibold mb-3">Smart Meter Tracking</h3>
-                        <p class="text-gray-600">Advanced meter management with QR code integration and real-time monitoring capabilities.</p>
-                    </div>
-                    <div class="text-center p-6 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg">
-                        <div class="bg-purple-500 text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i class="fas fa-chart-line text-2xl"></i>
-                        </div>
-                        <h3 class="text-xl font-semibold mb-3">Reading Management</h3>
-                        <p class="text-gray-600">Efficient meter reading collection with mobile apps and automated data validation.</p>
-                    </div>
-                    <div class="text-center p-6 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg">
-                        <div class="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i class="fas fa-calculator text-2xl"></i>
-                        </div>
-                        <h3 class="text-xl font-semibold mb-3">Automated Billing</h3>
-                        <p class="text-gray-600">Intelligent billing system with customizable tariff structures and automatic calculations.</p>
-                    </div>
-                    <div class="text-center p-6 bg-gradient-to-br from-red-50 to-red-100 rounded-lg">
-                        <div class="bg-red-500 text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i class="fas fa-credit-card text-2xl"></i>
-                        </div>
-                        <h3 class="text-xl font-semibold mb-3">Payment Processing</h3>
-                        <p class="text-gray-600">Comprehensive payment history tracking with multiple payment gateway integrations.</p>
-                    </div>
-                    <div class="text-center p-6 bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-lg">
-                        <div class="bg-cyan-500 text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i class="fas fa-bell text-2xl"></i>
-                        </div>
-                        <h3 class="text-xl font-semibold mb-3">Smart Notifications</h3>
-                        <p class="text-gray-600">Automated SMS and email notifications for bills, payments, and service updates.</p>
-                    </div>
+                    @endforeach
                 </div>
             </section>
 
@@ -192,13 +224,13 @@
                             </div>
                             <h3 class="text-2xl font-bold text-blue-800 mb-2">Web System</h3>
                             <div class="bg-blue-500 text-white px-4 py-2 rounded-full inline-block mb-4">
-                                <span class="text-lg font-bold">Version 2.0.0v</span>
+                                <span class="text-lg font-bold">Version {{ config('changelog.0.version') }}</span>
                             </div>
                             <div class="text-sm text-blue-700 space-y-2">
                                 <p><strong>Platform:</strong> Web Application</p>
                                 <p><strong>Technology:</strong> Laravel + Tailwind CSS</p>
-                                <p><strong>Release Date:</strong> {{ date('F Y') }}</p>
-                                <p><strong>License:</strong> SaaS Licensed</p>
+                                <p><strong>Current release:</strong> {{ config('changelog.0.date') }}</p>
+                                <p><strong>Currency and time:</strong> LKR, Asia/Colombo</p>
                             </div>
                         </div>
                     </div>
@@ -225,27 +257,19 @@
 
                 <!-- Version Features -->
                 <div class="mt-8 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-6">
-                    <h4 class="text-xl font-bold text-gray-800 mb-4 text-center">
+                    <h4 class="text-xl font-bold text-gray-800 mb-1 text-center">
                         <i class="fas fa-star text-yellow-500 mr-2"></i>
-                        What's New in Version 2.0.0v
+                        Version {{ config('changelog.0.version') }} — {{ config('changelog.0.title') }}
                     </h4>
-                    <div class="grid md:grid-cols-3 gap-4">
-                        <div class="text-center p-4">
-                            <i class="fas fa-sms text-2xl text-blue-500 mb-2"></i>
-                            <h5 class="font-semibold text-gray-800">SMS Notifications</h5>
-                            <p class="text-sm text-gray-600">Automated customer alerts and billing notifications</p>
-                        </div>
-                        <div class="text-center p-4">
-                            <i class="fas fa-chart-line text-2xl text-green-500 mb-2"></i>
-                            <h5 class="font-semibold text-gray-800">Advanced Reporting</h5>
-                            <p class="text-sm text-gray-600">Monthly active connections and billing reports</p>
-                        </div>
-                        <div class="text-center p-4">
-                            <i class="fas fa-qrcode text-2xl text-purple-500 mb-2"></i>
-                            <h5 class="font-semibold text-gray-800">QR Code Integration</h5>
-                            <p class="text-sm text-gray-600">Smart meter tracking and identification</p>
-                        </div>
-                    </div>
+                    <p class="text-center text-sm text-gray-500 mb-4">{{ config('changelog.0.date') }}</p>
+                    <ul class="max-w-3xl mx-auto space-y-2 text-sm text-gray-700">
+                        @foreach(config('changelog.0.changes') as $change)
+                        <li class="flex gap-2"><i class="fas fa-check text-purple-600 mt-1"></i><span>{{ $change }}</span></li>
+                        @endforeach
+                    </ul>
+                    <p class="text-center mt-4">
+                        <a href="{{ route('changelog') }}" class="text-blue-700 font-medium hover:underline">Open the full changelog</a>
+                    </p>
                 </div>
             </section>
 

@@ -61,7 +61,7 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:users',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'role' => 'required|in:admin,staff,manager,meter_reader,billing_officer,cashier',
+            'role' => 'required|in:'.implode(',', $this->assignableRoles()),
             'is_active' => 'boolean'
         ]);
 
@@ -88,6 +88,8 @@ class UserController extends Controller
      */
     public function edit(User $user): View
     {
+        $this->protectSuperAdmin($user);
+
         return view('users.edit', compact('user'));
     }
 
@@ -96,6 +98,8 @@ class UserController extends Controller
      */
     public function update(Request $request, User $user): RedirectResponse
     {
+        $this->protectSuperAdmin($user);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => [
@@ -106,7 +110,7 @@ class UserController extends Controller
                 'max:255',
                 Rule::unique('users')->ignore($user->id)
             ],
-            'role' => 'required|in:admin,staff,manager,meter_reader,billing_officer,cashier',
+            'role' => 'required|in:'.implode(',', $this->assignableRoles()),
             'is_active' => 'boolean'
         ]);
 
@@ -136,14 +140,35 @@ class UserController extends Controller
             return back()->with('error', 'You cannot delete your own account.');
         }
 
-        // Check if this is the last admin user
-        if ($user->isAdmin() && User::where('role', 'admin')->count() === 1) {
-            return back()->with('error', 'Cannot delete the last admin user.');
+        if (in_array($user->role, ['admin', 'super_admin'], true) && !auth()->user()->isSuperAdmin()) {
+            return back()->with('error', 'Only a Super Admin can delete an administrator.');
+        }
+
+        if ($user->isSuperAdmin() && User::where('role', 'super_admin')->count() === 1) {
+            return back()->with('error', 'Cannot delete the last Super Admin.');
         }
 
         $user->delete();
 
         return redirect()->route('users.index')
             ->with('success', 'User deleted successfully.');
+    }
+
+    private function assignableRoles(): array
+    {
+        $roles = ['admin', 'staff', 'manager', 'meter_reader', 'billing_officer', 'cashier'];
+
+        if (auth()->user()->isSuperAdmin()) {
+            array_unshift($roles, 'super_admin');
+        }
+
+        return $roles;
+    }
+
+    private function protectSuperAdmin(User $user): void
+    {
+        if ($user->isSuperAdmin() && !auth()->user()->isSuperAdmin()) {
+            abort(403, 'Only a Super Admin can change a Super Admin account.');
+        }
     }
 }

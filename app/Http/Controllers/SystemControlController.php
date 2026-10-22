@@ -12,8 +12,8 @@ class SystemControlController extends Controller
      */
     private function checkAdminAccess()
     {
-        if (!auth()->check() || (auth()->id() !== 1 && auth()->user()->role !== 'admin')) {
-            abort(403, 'Unauthorized access to system controls.');
+        if (!auth()->check() || auth()->user()->role !== 'super_admin') {
+            abort(403, 'Only a Super Admin can change system status.');
         }
     }
 

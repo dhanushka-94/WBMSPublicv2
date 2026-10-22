@@ -58,7 +58,7 @@ class AuthApiController extends Controller
             }
 
             // Check if user has meter reader permissions
-            if (!in_array($user->role, ['admin', 'meter_reader', 'supervisor'])) {
+            if (!in_array($user->role, ['super_admin', 'admin', 'meter_reader', 'supervisor'])) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized access. Meter reader permissions required.'
@@ -298,13 +298,13 @@ class AuthApiController extends Controller
     private function getUserPermissions(User $user): array
     {
         $permissions = [
-            'can_read_meters' => in_array($user->role, ['admin', 'meter_reader', 'supervisor']),
-            'can_view_customer_details' => in_array($user->role, ['admin', 'meter_reader', 'supervisor']),
-            'can_take_photos' => in_array($user->role, ['admin', 'meter_reader', 'supervisor']),
-            'can_add_notes' => in_array($user->role, ['admin', 'meter_reader', 'supervisor']),
-            'can_view_history' => in_array($user->role, ['admin', 'supervisor']),
-            'can_edit_readings' => in_array($user->role, ['admin', 'supervisor']),
-            'can_generate_reports' => in_array($user->role, ['admin', 'supervisor']),
+            'can_read_meters' => in_array($user->role, ['super_admin', 'admin', 'meter_reader', 'supervisor']),
+            'can_view_customer_details' => in_array($user->role, ['super_admin', 'admin', 'meter_reader', 'supervisor']),
+            'can_take_photos' => in_array($user->role, ['super_admin', 'admin', 'meter_reader', 'supervisor']),
+            'can_add_notes' => in_array($user->role, ['super_admin', 'admin', 'meter_reader', 'supervisor']),
+            'can_view_history' => in_array($user->role, ['super_admin', 'admin', 'supervisor']),
+            'can_edit_readings' => in_array($user->role, ['super_admin', 'admin', 'supervisor']),
+            'can_generate_reports' => in_array($user->role, ['super_admin', 'admin', 'supervisor']),
         ];
 
         return $permissions;

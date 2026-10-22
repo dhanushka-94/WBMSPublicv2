@@ -17,7 +17,7 @@ class CheckSystemStatus
     public function handle(Request $request, Closure $next): Response
     {
         // Skip check for super admin (user with ID 1) or admin role
-        if (auth()->check() && (auth()->id() === 1 || auth()->user()->role === 'admin')) {
+        if (auth()->check() && auth()->user()->role === 'super_admin') {
             return $next($request);
         }
 
@@ -35,7 +35,6 @@ class CheckSystemStatus
                 'profile.*',
                 'logout',
                 'about',
-                'system.status', // Allow viewing system status
             ];
 
             $currentRoute = $request->route()->getName();

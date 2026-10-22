@@ -61,6 +61,17 @@ class Customer extends Model
         return $this->belongsTo(CustomerType::class);
     }
 
+    public function billingCategory(): string
+    {
+        $name = $this->customerType?->name;
+
+        if (is_string($name) && $name !== '') {
+            return $name;
+        }
+
+        return $this->customer_type ?: 'residential';
+    }
+
     public function guarantor(): BelongsTo
     {
         return $this->belongsTo(Guarantor::class);

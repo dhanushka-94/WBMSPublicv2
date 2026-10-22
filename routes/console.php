@@ -29,6 +29,11 @@ Schedule::command('bills:calculate-late-fees')
     ->runInBackground();
 
 // Schedule daily backup of critical data at 2:00 AM
+Schedule::command('sms:process --overdue-alerts --scheduled --retry')
+    ->dailyAt('08:00')
+    ->timezone('Asia/Colombo')
+    ->withoutOverlapping();
+
 Schedule::command('backup:run')
     ->dailyAt('02:00')
     ->timezone('Asia/Colombo')

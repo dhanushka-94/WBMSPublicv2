@@ -2,6 +2,20 @@
 
 return [
     [
+        'version' => '2.5.0',
+        'date' => '23 October 2026',
+        'title' => 'SMS templates, links, and logs',
+        'changes' => [
+            'Send bill, payment, overdue, and disconnection SMS with a signed link to that customer’s bill or receipt.',
+            'Manage SMS templates, send a custom message to divisions or customers, and review the full SMS log.',
+            'Split the main menu into a brand bar and a shorter menu bar, with Customers, Meters, Billing, Reports, SMS, and System in their own submenus.',
+            'Set the water tariff for Staff and Non Staff in every division: LKR 200 fixed, then 0, 12, 18, 25, 35, and 40 per unit.',
+            'Save the Google Maps API key from System Settings. The meter map uses that key.',
+            'Describe the office features, the tariff, and the current version on the About page.',
+            'Add a Super Admin level for settings, SMS settings, system on/off, the mobile API, and deleting an administrator. Admin keeps the rest of the office.',
+        ],
+    ],
+    [
         'version' => '2.4.0',
         'date' => '23 October 2026',
         'title' => 'Customer details and footer',

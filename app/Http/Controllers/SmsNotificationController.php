@@ -24,7 +24,7 @@ class SmsNotificationController extends Controller
      */
     public function index(Request $request)
     {
-        $query = SmsNotification::with(['customer', 'bill'])
+        $query = SmsNotification::with(['customer', 'bill', 'payment'])
             ->orderBy('created_at', 'desc');
 
         // Apply filters
@@ -83,19 +83,14 @@ class SmsNotificationController extends Controller
         }
 
         try {
-            $result = $this->smsService->sendSmsNotification(
-                $sms_notification->phone_number,
-                $sms_notification->message,
-                $sms_notification->type,
-                $sms_notification->customer_id,
-                $sms_notification->bill_id
-            );
+            $sms_notification->update(['status' => 'pending', 'error_message' => null]);
+            $result = $this->smsService->sendExisting($sms_notification->fresh());
 
             if ($result['success']) {
                 return redirect()->back()->with('success', 'SMS resent successfully.');
-            } else {
-                return redirect()->back()->with('error', 'Failed to resend SMS: ' . $result['error']);
             }
+
+            return redirect()->back()->with('error', 'Failed to resend SMS: ' . ($result['message'] ?? 'Unknown error'));
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Failed to resend SMS: ' . $e->getMessage());
         }
@@ -124,7 +119,7 @@ class SmsNotificationController extends Controller
      */
     public function export(Request $request)
     {
-        $query = SmsNotification::with(['customer', 'bill'])
+        $query = SmsNotification::with(['customer', 'bill', 'payment'])
             ->orderBy('created_at', 'desc');
 
         // Apply same filters as index
@@ -169,7 +164,11 @@ class SmsNotificationController extends Controller
                 'HTTP Status',
                 'Response',
                 'Retry Count',
-                'Error Message'
+                'Error Message',
+                'Bill',
+                'Receipt',
+                'Segments',
+                'Source'
             ]);
 
             foreach ($notifications as $notification) {
@@ -185,7 +184,11 @@ class SmsNotificationController extends Controller
                     $notification->http_status,
                     $notification->response_data ? json_encode($notification->response_data) : '',
                     $notification->retry_count,
-                    $notification->error_message
+                    $notification->error_message,
+                    $notification->bill->bill_number ?? '',
+                    $notification->receipt_number,
+                    $notification->segments,
+                    $notification->source
                 ]);
             }
 
@@ -279,7 +282,7 @@ class SmsNotificationController extends Controller
             ->get();
 
         // Recent activity
-        $recentActivity = SmsNotification::with(['customer', 'bill'])
+        $recentActivity = SmsNotification::with(['customer', 'bill', 'payment'])
             ->orderBy('created_at', 'desc')
             ->limit(10)
             ->get();

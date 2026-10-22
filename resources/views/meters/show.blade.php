@@ -490,14 +490,18 @@
                             <div class="space-y-4">
                                 <!-- Google Maps Embed -->
                                 <div class="w-full h-64 border-2 border-gray-200 rounded-lg overflow-hidden">
+                                    @if(\App\Models\SystemConfiguration::googleMapsKey() !== '')
                                     <iframe 
-                                        src="https://www.google.com/maps/embed/v1/place?key=YOUR_GOOGLE_MAPS_API_KEY&q={{ $water_meter->latitude }},{{ $water_meter->longitude }}&zoom=17"
+                                        src="https://www.google.com/maps/embed/v1/place?key={{ \App\Models\SystemConfiguration::googleMapsKey() }}&q={{ $water_meter->latitude }},{{ $water_meter->longitude }}&zoom=17"
                                         width="100%" 
                                         height="100%" 
                                         style="border:0;" 
                                         allowfullscreen="" 
                                         loading="lazy">
                                     </iframe>
+                                    @else
+                                    <p class="p-4 text-sm text-amber-800">Add the Google Maps API key in System Settings to show this map.</p>
+                                    @endif
                                 </div>
                                 
                                 <!-- Location Details -->

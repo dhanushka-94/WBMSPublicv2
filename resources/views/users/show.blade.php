@@ -52,7 +52,8 @@
                             <p class="text-gray-600 text-lg">{{ $user->email }}</p>
                             <div class="flex items-center space-x-4 mt-3">
                                 <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium
-                                    @if($user->role === 'admin') bg-red-100 text-red-800
+                                    @if($user->role === 'super_admin') bg-amber-100 text-amber-800
+                                    @elseif($user->role === 'admin') bg-red-100 text-red-800
                                     @elseif($user->role === 'manager') bg-purple-100 text-purple-800
                                     @elseif($user->role === 'meter_reader') bg-green-100 text-green-800
                                     @else bg-blue-100 text-blue-800 @endif">
@@ -119,11 +120,14 @@
                                     <label class="block text-sm font-medium text-gray-500 mb-1">Role</label>
                                     <div class="flex items-center justify-between">
                                         <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium
-                                            @if($user->role === 'admin') bg-red-100 text-red-800
+                                            @if($user->role === 'super_admin') bg-amber-100 text-amber-800
+                                            @elseif($user->role === 'admin') bg-red-100 text-red-800
                                             @elseif($user->role === 'manager') bg-purple-100 text-purple-800
                                             @elseif($user->role === 'meter_reader') bg-green-100 text-green-800
                                             @else bg-blue-100 text-blue-800 @endif">
-                                            @if($user->role === 'admin')
+                                            @if($user->role === 'super_admin')
+                                                <i class="fas fa-user-shield mr-2"></i>
+                                            @elseif($user->role === 'admin')
                                                 <i class="fas fa-crown mr-2"></i>
                                             @elseif($user->role === 'manager')
                                                 <i class="fas fa-chart-line mr-2"></i>
@@ -136,8 +140,10 @@
                                         </span>
                                     </div>
                                     <p class="mt-2 text-sm text-gray-600">
-                                        @if($user->role === 'admin')
-                                            Full access, including users, settings, rates, and every office screen
+                                        @if($user->role === 'super_admin')
+                                            Full office access, plus settings, SMS settings, system on/off, the mobile API, and deleting an administrator
+                                        @elseif($user->role === 'admin')
+                                            Full office access, except settings, SMS settings, system on/off, the mobile API, and deleting an administrator
                                         @elseif($user->role === 'manager')
                                             Dashboard and reports only
                                         @elseif($user->role === 'billing_officer')
@@ -191,7 +197,7 @@
                             </a>
                         </div>
 
-                        @if($user->id !== auth()->id())
+                        @if($user->id !== auth()->id() && (auth()->user()->isSuperAdmin() || !in_array($user->role, ['admin', 'super_admin'], true)))
                             <form method="POST" action="{{ route('users.destroy', $user) }}" 
                                   onsubmit="return confirm('Are you sure you want to delete this user? This action cannot be undone.')" 
                                   class="inline">

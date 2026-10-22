@@ -114,7 +114,7 @@ class GenerateMonthlyBills extends Command
                         $consumption = max(0, $latestReading->current_reading - $prevReading);
 
                         // Calculate charges
-                        $customerType = $customer->customer_type ?: 'residential';
+                        $customerType = $customer->billingCategory();
                         $charges = Rate::calculateCharges($customerType, $consumption, $billDate);
 
                         // Create bill

@@ -4,7 +4,10 @@ namespace App\Services;
 
 use App\Models\Bill;
 use App\Models\Customer;
+use App\Models\Payment;
+use App\Models\SmsTemplate;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\URL;
 
 class SmsTemplateService
 {
@@ -13,15 +16,7 @@ class SmsTemplateService
      */
     public function newBillMessage(Bill $bill): string
     {
-        $template = config('sms.templates.new_bill');
-        
-        return $this->replaceVariables($template, [
-            'customer_name' => $bill->customer->full_name,
-            'bill_number' => $bill->bill_number,
-            'amount' => number_format($bill->total_amount, 2),
-            'due_date' => $bill->due_date->format('M d, Y'),
-            'payment_link' => $this->generatePaymentLink($bill),
-        ]);
+        return $this->fill('new_bill', $this->billVariables($bill));
     }
 
     /**
@@ -29,15 +24,7 @@ class SmsTemplateService
      */
     public function dueReminderMessage(Bill $bill): string
     {
-        $template = config('sms.templates.due_reminder');
-        
-        return $this->replaceVariables($template, [
-            'customer_name' => $bill->customer->full_name,
-            'bill_number' => $bill->bill_number,
-            'amount' => number_format($bill->balance_amount, 2),
-            'due_date' => $bill->due_date->format('M d, Y'),
-            'payment_link' => $this->generatePaymentLink($bill),
-        ]);
+        return $this->fill('due_reminder', $this->billVariables($bill));
     }
 
     /**
@@ -45,33 +32,22 @@ class SmsTemplateService
      */
     public function overdueAlertMessage(Bill $bill): string
     {
-        $template = config('sms.templates.overdue_alert');
-        
-        $daysOverdue = $bill->due_date->diffInDays(now());
-        
-        return $this->replaceVariables($template, [
-            'customer_name' => $bill->customer->full_name,
-            'bill_number' => $bill->bill_number,
-            'amount' => number_format($bill->balance_amount, 2),
-            'days_overdue' => $daysOverdue,
-            'payment_link' => $this->generatePaymentLink($bill),
-        ]);
+        return $this->fill('overdue_alert', $this->billVariables($bill));
     }
 
     /**
      * Generate SMS message for payment confirmation
      */
-    public function paymentConfirmationMessage(Bill $bill, float $paidAmount): string
+    public function paymentConfirmationMessage(Bill $bill, float $paidAmount, ?Payment $payment = null): string
     {
-        $template = config('sms.templates.payment_confirmation');
-        
-        return $this->replaceVariables($template, [
-            'customer_name' => $bill->customer->full_name,
-            'amount' => number_format($paidAmount, 2),
-            'bill_number' => $bill->bill_number,
-            'balance' => number_format($bill->balance_amount, 2),
-            'payment_date' => now()->format('M d, Y'),
-        ]);
+        $variables = $this->billVariables($bill);
+        $variables['paid_amount'] = number_format($paidAmount, 2);
+        $variables['amount'] = $variables['paid_amount'];
+        $variables['payment_date'] = ($payment?->paid_on ?? now())->format('M d, Y');
+        $variables['receipt_number'] = $payment->receipt_number ?? '';
+        $variables['receipt_link'] = $payment ? $this->receiptLink($payment) : '';
+
+        return $this->fill('payment_confirmation', $variables);
     }
 
     /**
@@ -79,37 +55,32 @@ class SmsTemplateService
      */
     public function lateFeeNoticeMessage(Bill $bill, float $lateFeeAmount): string
     {
-        $template = config('sms.templates.late_fee_notice');
-        
-        return $this->replaceVariables($template, [
-            'customer_name' => $bill->customer->full_name,
-            'late_fee' => number_format($lateFeeAmount, 2),
-            'bill_number' => $bill->bill_number,
-            'total_due' => number_format($bill->balance_amount, 2),
-            'payment_link' => $this->generatePaymentLink($bill),
-        ]);
+        $variables = $this->billVariables($bill);
+        $variables['late_fee'] = number_format($lateFeeAmount, 2);
+
+        return $this->fill('late_fee_notice', $variables);
     }
 
     /**
      * Generate SMS message for service disconnection warning
      */
-    public function serviceDisconnectionMessage(Customer $customer, float $totalDue): string
+    public function serviceDisconnectionMessage(Customer $customer, float $totalDue, ?Carbon $disconnectionDate = null): string
     {
-        $template = config('sms.templates.service_disconnection');
-        
-        return $this->replaceVariables($template, [
+        return $this->fill('service_disconnection', [
             'customer_name' => $customer->full_name,
-            'total_due' => number_format($totalDue, 2),
             'account_number' => $customer->account_number,
-            'payment_link' => $this->generateCustomerPaymentLink($customer),
+            'outstanding_amount' => number_format($totalDue, 2),
+            'bill_amount' => number_format($totalDue, 2),
+            'total_due' => number_format($totalDue, 2),
+            'disconnection_date' => ($disconnectionDate ?? now())->format('M d, Y'),
+            'payment_link' => $this->customerDueLink($customer),
+            'bill_link' => $this->customerDueLink($customer),
         ]);
     }
 
     public function reconnectionMessage(Customer $customer): string
     {
-        $template = config('sms.templates.reconnection');
-
-        return $this->replaceVariables($template, [
+        return $this->fill('reconnection', [
             'customer_name' => $customer->full_name,
             'account_number' => $customer->account_number,
         ]);
@@ -156,36 +127,70 @@ class SmsTemplateService
         return $this->replaceVariables($template, $variables);
     }
 
+    public function fill(string $key, array $variables): string
+    {
+        $template = SmsTemplate::bodyFor($key, (string) config("sms.templates.{$key}", ''));
+
+        return $this->replaceVariables($template, $variables);
+    }
+
+    public function billVariables(Bill $bill): array
+    {
+        $period = $bill->billing_period_from->format('M d, Y').' - '.$bill->billing_period_to->format('M d, Y');
+        $outstanding = number_format((float) $bill->balance_amount, 2);
+        $amount = number_format((float) $bill->total_amount, 2);
+        $link = $this->billLink($bill);
+
+        return [
+            'customer_name' => $bill->customer->full_name,
+            'account_number' => $bill->customer->account_number,
+            'bill_number' => $bill->bill_number,
+            'billing_period' => $period,
+            'bill_amount' => $amount,
+            'amount' => $amount,
+            'outstanding_amount' => $outstanding,
+            'balance' => $outstanding,
+            'total_due' => $outstanding,
+            'due_date' => $bill->due_date->format('M d, Y'),
+            'days_overdue' => (string) $bill->due_date->diffInDays(now()),
+            'bill_link' => $link,
+            'payment_link' => $link,
+        ];
+    }
+
+    public function billLink(Bill $bill): string
+    {
+        return URL::signedRoute('sms.bill', ['bill' => $bill->id]);
+    }
+
+    public function receiptLink(Payment $payment): string
+    {
+        return URL::signedRoute('sms.receipt', ['payment' => $payment->id]);
+    }
+
+    public function customerDueLink(Customer $customer): string
+    {
+        $bill = $customer->bills()
+            ->where('balance_amount', '>', 0)
+            ->whereNotIn('status', ['cancelled', 'draft', 'paid'])
+            ->orderByDesc('balance_amount')
+            ->first();
+
+        return $bill ? $this->billLink($bill) : URL::signedRoute('sms.due', ['customer' => $customer->id]);
+    }
+
     /**
      * Replace variables in template with actual values
      */
-    private function replaceVariables(string $template, array $variables): string
+    public function replaceVariables(string $template, array $variables): string
     {
         foreach ($variables as $key => $value) {
-            $template = str_replace('{' . $key . '}', $value, $template);
+            $template = str_replace('{' . $key . '}', (string) $value, $template);
         }
-        
-        // Remove any unreplaced variables
+
         $template = preg_replace('/\{[^}]+\}/', '', $template);
-        
+
         return trim($template);
-    }
-
-    /**
-     * Generate payment link for a bill
-     */
-    private function generatePaymentLink(Bill $bill): string
-    {
-        // You can customize this to your actual payment gateway URL
-        return url("/bills/{$bill->id}/pay");
-    }
-
-    /**
-     * Generate payment link for a customer
-     */
-    private function generateCustomerPaymentLink(Customer $customer): string
-    {
-        return url("/customers/{$customer->id}/bills");
     }
 
     /**
@@ -260,11 +265,19 @@ class SmsTemplateService
             'start_time' => '6:00 AM',
             'end_time' => '2:00 PM',
             'reason' => 'routine maintenance',
-            'payment_link' => 'https://example.com/pay/123'
+            'payment_link' => 'https://example.com/bills/1',
+            'bill_link' => 'https://example.com/bills/1',
+            'receipt_link' => 'https://example.com/receipts/1',
+            'bill_amount' => '2,500.00',
+            'paid_amount' => '1,000.00',
+            'outstanding_amount' => '1,500.00',
+            'billing_period' => 'Jul 01, 2026 - Jul 31, 2026',
+            'receipt_number' => 'RCT-00021',
+            'disconnection_date' => 'Aug 01, 2026',
         ];
 
         $variables = array_merge($defaults, $sampleData);
-        $template = config("sms.templates.{$templateType}");
+        $template = SmsTemplate::bodyFor($templateType, (string) config("sms.templates.{$templateType}", ''));
 
         return $this->replaceVariables($template, $variables);
     }

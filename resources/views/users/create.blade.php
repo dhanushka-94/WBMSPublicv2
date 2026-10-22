@@ -109,6 +109,9 @@
                                         <option value="cashier" {{ old('role') === 'cashier' ? 'selected' : '' }}>Cashier</option>
                                         <option value="manager" {{ old('role') === 'manager' ? 'selected' : '' }}>Manager</option>
                                         <option value="admin" {{ old('role') === 'admin' ? 'selected' : '' }}>Admin</option>
+                                        @if(auth()->user()->isSuperAdmin())
+                                        <option value="super_admin" {{ old('role') === 'super_admin' ? 'selected' : '' }}>Super Admin</option>
+                                        @endif
                                     </select>
                                     @error('role')
                                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>

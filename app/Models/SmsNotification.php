@@ -14,10 +14,14 @@ class SmsNotification extends Model
     protected $fillable = [
         'customer_id',
         'bill_id',
+        'payment_id',
+        'receipt_number',
         'phone_number',
         'message',
+        'segments',
         'type',
         'status',
+        'source',
         'response_data',
         'http_status',
         'retry_count',
@@ -31,7 +35,8 @@ class SmsNotification extends Model
         'sent_at' => 'datetime',
         'scheduled_at' => 'datetime',
         'retry_count' => 'integer',
-        'http_status' => 'integer'
+        'http_status' => 'integer',
+        'segments' => 'integer',
     ];
 
     // Relationships
@@ -43,6 +48,11 @@ class SmsNotification extends Model
     public function bill(): BelongsTo
     {
         return $this->belongsTo(Bill::class);
+    }
+
+    public function payment(): BelongsTo
+    {
+        return $this->belongsTo(Payment::class);
     }
 
     // Scopes
@@ -146,7 +156,8 @@ class SmsNotification extends Model
             'service_disconnection' => 'Service Disconnection',
             'meter_reading_reminder' => 'Meter Reading Reminder',
             'maintenance_notice' => 'Maintenance Notice',
-            'custom' => 'Custom Message',
+            'custom' => 'Custom SMS',
+            'reconnection' => 'Reconnection Notice',
             default => ucfirst(str_replace('_', ' ', $this->type))
         };
     }

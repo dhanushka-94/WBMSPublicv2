@@ -47,6 +47,7 @@
                 <label for="role" class="block text-sm font-medium text-gray-700 mb-2">Role</label>
                 <select name="role" id="role" class="form-select w-full rounded-md border-gray-300">
                     <option value="">All Roles</option>
+                    <option value="super_admin" {{ request('role') === 'super_admin' ? 'selected' : '' }}>Super Admin</option>
                     <option value="admin" {{ request('role') === 'admin' ? 'selected' : '' }}>Admin</option>
                     <option value="manager" {{ request('role') === 'manager' ? 'selected' : '' }}>Manager</option>
                     <option value="staff" {{ request('role') === 'staff' ? 'selected' : '' }}>Staff</option>
@@ -107,7 +108,8 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                    @if($user->role === 'admin') bg-red-100 text-red-800
+                                    @if($user->role === 'super_admin') bg-amber-100 text-amber-800
+                                    @elseif($user->role === 'admin') bg-red-100 text-red-800
                                     @elseif($user->role === 'manager') bg-purple-100 text-purple-800
                                     @elseif($user->role === 'meter_reader') bg-green-100 text-green-800
                                     @else bg-blue-100 text-blue-800 @endif">
@@ -135,7 +137,7 @@
                                        title="Edit User">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    @if($user->id !== auth()->id())
+                                    @if($user->id !== auth()->id() && (auth()->user()->isSuperAdmin() || !in_array($user->role, ['admin', 'super_admin'], true)))
                                         <form method="POST" action="{{ route('users.destroy', $user) }}" 
                                               onsubmit="return confirm('Are you sure you want to delete this user?')" 
                                               class="inline">

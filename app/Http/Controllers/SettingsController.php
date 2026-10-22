@@ -19,8 +19,28 @@ class SettingsController extends Controller
     {
         $divisions = Division::orderBy('name')->get();
         $customerTypes = CustomerType::orderBy('name')->get();
-        
-        return view('settings.index', compact('divisions', 'customerTypes'));
+        $mapKeySaved = SystemConfiguration::googleMapsKey() !== '';
+
+        return view('settings.index', compact('divisions', 'customerTypes', 'mapKeySaved'));
+    }
+
+    public function updateMapKey(Request $request): RedirectResponse
+    {
+        $user = auth()->user();
+        abort_unless($user && $user->role === 'super_admin', 403);
+
+        $validated = $request->validate([
+            'google_maps_api_key' => 'nullable|string|max:255',
+        ]);
+
+        $key = trim((string) ($validated['google_maps_api_key'] ?? ''));
+
+        if ($key !== '') {
+            SystemConfiguration::set('google_maps_api_key', $key, 'string', 'Google Maps API key');
+        }
+
+        return redirect()->route('settings.index')
+            ->with('success', $key === '' ? 'Map key left unchanged.' : 'Map API key saved.');
     }
 
     // DIVISION CRUD METHODS

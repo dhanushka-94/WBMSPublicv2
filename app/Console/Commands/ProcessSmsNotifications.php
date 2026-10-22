@@ -19,7 +19,7 @@ class ProcessSmsNotifications extends Command
     protected $signature = 'sms:process 
                             {--scheduled : Process scheduled notifications}
                             {--retry : Retry failed notifications}
-                            {--due-reminders=3 : Send due reminders for bills due in X days}
+                            {--due-reminders= : Send due reminders for bills due in X days}
                             {--overdue-alerts : Send overdue alerts}
                             {--test-connection : Test SMS service connection}
                             {--account-status : Check SMS account status}';

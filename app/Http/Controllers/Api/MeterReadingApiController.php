@@ -634,7 +634,7 @@ class MeterReadingApiController extends Controller
         }
 
         $charges = Rate::calculateCharges(
-            $customer->customer_type,
+            $customer->billingCategory(),
             (float) $reading->consumption,
             $reading->reading_date
         );
@@ -771,7 +771,7 @@ class MeterReadingApiController extends Controller
         $customer = $request->filled('customer_id')
             ? Customer::find($request->customer_id)
             : null;
-        $customerType = $customer->customer_type ?? $request->input('customer_type');
+        $customerType = $customer ? $customer->billingCategory() : $request->input('customer_type');
 
         if (!$customerType) {
             return response()->json([
@@ -855,7 +855,7 @@ class MeterReadingApiController extends Controller
     {
         $charges = $bill
             ? $this->billPayload($bill)
-            : $this->chargeSummary($customer->customer_type, (float) $reading->consumption, $reading->reading_date);
+            : $this->chargeSummary($customer->billingCategory(), (float) $reading->consumption, $reading->reading_date);
 
         return [
             'receipt_number' => 'MR-' . str_pad($reading->id, 6, '0', STR_PAD_LEFT),
