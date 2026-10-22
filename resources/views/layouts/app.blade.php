@@ -40,11 +40,11 @@
                 <div class="w-full">
                     <div class="flex flex-col md:flex-row justify-between items-center space-y-2 md:space-y-0">
                         <div class="flex flex-col md:flex-row items-center space-y-1 md:space-y-0 md:space-x-4 text-sm text-gray-300">
-<span>© {{ date('Y') }} AquaBill by olexto - All rights reserved</span>
+                            <span>© {{ date('Y') }} AquaBill by olexto - All rights reserved</span>
                             <div class="flex space-x-3">
-                                <span class="bg-gray-700 px-2 py-1 rounded text-xs">
-                                    <i class="fas fa-desktop mr-1"></i>v2.0.0
-                                </span>
+                                <a href="{{ route('changelog') }}" class="bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded text-xs transition-colors duration-200">
+                                    <i class="fas fa-desktop mr-1"></i>v{{ config('changelog.0.version') }}
+                                </a>
                                 <span class="bg-gray-700 px-2 py-1 rounded text-xs">
                                     <i class="fas fa-mobile-alt mr-1"></i>v2.0.0
                                 </span>

@@ -217,10 +217,13 @@
                         </div>
                         @endif
 
-                        @if($customer->notes)
+                        @php
+                            $displayNotes = trim(preg_replace('/\s*Imported from customer-readings-payments\.xlsx\.\s*Sheet name:.*$/i', '', (string) $customer->notes));
+                        @endphp
+                        @if($displayNotes !== '')
                         <div class="mt-6 pt-6 border-t border-gray-200">
                             <label class="block text-sm font-medium text-gray-500">Notes</label>
-                            <p class="mt-1 text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">{{ $customer->notes }}</p>
+                            <p class="mt-1 text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">{{ $displayNotes }}</p>
                         </div>
                         @endif
                     </div>
@@ -285,8 +288,7 @@
                     </div>
                     <div class="p-6 text-center">
                         <img src="{{ $customer->qr_code_url }}" alt="QR code for {{ $customer->account_number }}" class="mx-auto h-48 w-48 rounded-lg border border-gray-200 bg-white">
-                        <p class="mt-4 text-sm text-gray-600">Linked to {{ $customer->full_name }}</p>
-                        <p class="mt-1 font-mono text-sm text-blue-800">{{ $customer->meter_number }}</p>
+                        <p class="mt-4 font-mono text-sm text-blue-800">{{ $customer->meter_number }}</p>
                         <p class="text-xs text-gray-500">{{ $customer->account_number }}</p>
                         @if($activeMeters->first())
                         <a href="{{ route('meters.qr-code.download', $activeMeters->first()) }}"

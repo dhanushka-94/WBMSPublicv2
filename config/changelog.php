@@ -2,6 +2,15 @@
 
 return [
     [
+        'version' => '2.4.0',
+        'date' => '23 October 2026',
+        'title' => 'Customer details and footer',
+        'changes' => [
+            'Show each customer’s name once on the details page, and stop repeating the title on the customer list.',
+            'Show the current system version in the footer, with a link to this changelog.',
+        ],
+    ],
+    [
         'version' => '2.3.0',
         'date' => '23 October 2026',
         'title' => 'Opening bill amounts',

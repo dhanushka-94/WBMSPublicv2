@@ -209,9 +209,6 @@
                                             @endif
                                             <div class="ml-4">
                                                 <div class="text-base font-bold text-gray-900">{{ $customer->full_name }}</div>
-                                                @if($customer->title)
-                                                    <div class="text-sm text-gray-500">{{ $customer->title }}</div>
-                                                @endif
                                                 @if($customer->address || $customer->city)
                                                     <div class="text-sm text-gray-500">
                                                         {{ $customer->address }}@if($customer->address && $customer->city), @endif{{ $customer->city }}

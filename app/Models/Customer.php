@@ -100,7 +100,8 @@ class Customer extends Model
     public function getFullNameAttribute(): string
     {
         $title = $this->title ? $this->title . ' ' : '';
-        return $title . $this->first_name . ' ' . $this->last_name;
+
+        return trim($title . $this->first_name . ' ' . $this->last_name);
     }
 
     // Scopes
