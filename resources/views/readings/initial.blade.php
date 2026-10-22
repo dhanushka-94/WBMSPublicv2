@@ -9,7 +9,7 @@
                     <h1 class="text-3xl font-bold text-white">
                         <i class="fas fa-tachometer-alt mr-3"></i>Initial Meter Readings
                     </h1>
-                    <p class="text-amber-100 mt-2">Enter each meter’s opening dial once. This does not create a bill.</p>
+                    <p class="text-amber-100 mt-2">Enter each meter’s opening dial and that customer’s starting bill amount in one place.</p>
                 </div>
                 <a href="{{ route('readings.bulk') }}" class="bg-white text-amber-700 px-4 py-2 rounded-lg font-medium hover:bg-amber-50 transition duration-200">
                     <i class="fas fa-list mr-2"></i>Bulk Meter Reading Entry
@@ -50,7 +50,7 @@
                                 {{ $waterMeters->count() }} meters
                                 <span class="text-sm font-normal text-gray-500">· {{ $waterMeters->where('initial_reading', 0)->count() }} still at 0</span>
                             </h2>
-                            <p class="text-sm text-gray-600 mt-1">Type a dial in the Initial reading column. Blank rows are skipped.</p>
+                            <p class="text-sm text-gray-600 mt-1">Fill the dial, the bill amount, or both. A blank cell is left as it is.</p>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full md:w-auto">
                             <input type="text" id="initialSearch" placeholder="Name, reference, or meter"
@@ -80,12 +80,15 @@
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Meter number</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Saved initial</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Initial reading</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Saved bill</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Initial bill amount</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             @foreach($waterMeters as $meter)
                                 @php
                                     $saved = (float) $meter->initial_reading;
+                                    $openingBill = $meter->bills->first();
                                 @endphp
                                 <tr class="initial-row hover:bg-amber-50"
                                     data-search="{{ strtolower(($meter->customer?->full_name ?? '') . ' ' . ($meter->customer?->account_number ?? '') . ' ' . $meter->meter_number) }}"
@@ -108,6 +111,15 @@
                                                placeholder="Enter dial"
                                                class="initial-entry w-32 px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm">
                                     </td>
+                                    <td class="px-4 py-3 text-sm text-gray-900">{{ $openingBill ? 'Rs. ' . number_format($openingBill->total_amount, 2) : '—' }}</td>
+                                    <td class="px-4 py-3">
+                                        <input type="number"
+                                               name="initial_readings[{{ $meter->id }}][bill_amount]"
+                                               value="{{ old('initial_readings.'.$meter->id.'.bill_amount') }}"
+                                               min="0" max="99999999" step="0.01"
+                                               placeholder="Rs."
+                                               class="bill-entry w-32 px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm">
+                                    </td>
                                 </tr>
                             @endforeach
                         </tbody>
@@ -117,7 +129,7 @@
                 <div class="p-6 border-t border-gray-200 flex items-center justify-between">
                     <p id="entryCount" class="text-sm text-gray-600">No new readings typed yet</p>
                     <button type="submit" id="saveInitials" class="bg-amber-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-amber-700 disabled:opacity-50" disabled>
-                        <i class="fas fa-save mr-2"></i>Save initial readings
+                        <i class="fas fa-save mr-2"></i>Save readings and bill amounts
                     </button>
                 </div>
             </div>
@@ -134,6 +146,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const count = document.getElementById('entryCount');
     const button = document.getElementById('saveInitials');
 
+    function rowHasValue(row) {
+        const reading = row.querySelector('.initial-entry').value.trim();
+        const amount = row.querySelector('.bill-entry').value.trim();
+        return reading !== '' || amount !== '';
+    }
+
     function refresh() {
         const term = search.value.trim().toLowerCase();
         const divisionId = division.value;
@@ -141,12 +159,13 @@ document.addEventListener('DOMContentLoaded', function () {
         let typed = 0;
 
         rows.forEach(row => {
-            const entry = row.querySelector('.initial-entry');
+            const reading = row.querySelector('.initial-entry');
+            const amount = row.querySelector('.bill-entry');
             const key = row.querySelector('.meter-key');
-            const hasValue = entry.value.trim() !== '';
-            entry.disabled = false;
-            key.disabled = !hasValue;
-            if (hasValue) {
+            reading.disabled = false;
+            amount.disabled = false;
+            key.disabled = !rowHasValue(row);
+            if (rowHasValue(row)) {
                 typed++;
             }
 
@@ -159,28 +178,30 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         count.textContent = typed === 0
-            ? 'No new readings typed yet'
-            : typed + (typed === 1 ? ' reading ready to save' : ' readings ready to save');
+            ? 'No new values typed yet'
+            : typed + (typed === 1 ? ' row ready to save' : ' rows ready to save');
         button.disabled = typed === 0;
     }
 
     rows.forEach(row => {
-        row.querySelector('.initial-entry').addEventListener('input', function () {
-            const key = row.querySelector('.meter-key');
-            const hasValue = this.value.trim() !== '';
-            this.disabled = false;
-            key.disabled = !hasValue;
-            refresh();
+        ['.initial-entry', '.bill-entry'].forEach(selector => {
+            row.querySelector(selector).addEventListener('input', function () {
+                this.disabled = false;
+                row.querySelector('.meter-key').disabled = !rowHasValue(row);
+                refresh();
+            });
         });
     });
 
     document.getElementById('initialReadingForm').addEventListener('submit', function (event) {
         let typed = 0;
         rows.forEach(row => {
-            const entry = row.querySelector('.initial-entry');
+            const reading = row.querySelector('.initial-entry');
+            const amount = row.querySelector('.bill-entry');
             const key = row.querySelector('.meter-key');
-            const hasValue = entry.value.trim() !== '';
-            entry.disabled = !hasValue;
+            const hasValue = rowHasValue(row);
+            reading.disabled = reading.value.trim() === '';
+            amount.disabled = amount.value.trim() === '';
             key.disabled = !hasValue;
             if (hasValue) {
                 typed++;

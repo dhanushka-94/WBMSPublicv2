@@ -2,6 +2,15 @@
 
 return [
     [
+        'version' => '2.3.0',
+        'date' => '23 October 2026',
+        'title' => 'Opening bill amounts',
+        'changes' => [
+            'Enter each customer’s starting bill amount beside the opening dial on the Initial Readings page.',
+            'The amount is saved as one opening bill. A blank cell is left as it is, and no SMS is sent.',
+        ],
+    ],
+    [
         'version' => '2.2.0',
         'date' => '23 October 2026',
         'title' => 'Initial meter readings',

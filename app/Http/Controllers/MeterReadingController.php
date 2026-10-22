@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Bill;
 use App\Models\MeterReading;
 use App\Models\WaterMeter;
 use App\Models\Customer;
@@ -407,7 +408,12 @@ class MeterReadingController extends Controller
     public function initialEntry(): View
     {
         $waterMeters = WaterMeter::query()
-            ->with(['customer.division'])
+            ->with([
+                'customer.division',
+                'bills' => function ($query) {
+                    $query->where('notes', 'Opening balance');
+                },
+            ])
             ->get()
             ->sortBy(function (WaterMeter $meter) {
                 $division = $meter->customer?->division?->name ?? '';
@@ -428,16 +434,21 @@ class MeterReadingController extends Controller
     }
 
     /**
-     * Save opening dials. Blank rows are left unchanged and no bill is created.
+     * Save opening dials and starting bill amounts. Blank cells are left unchanged.
      */
     public function initialStore(Request $request): RedirectResponse
     {
         $rows = collect($request->input('initial_readings', []))
-            ->filter(fn ($row) => is_array($row) && ($row['initial_reading'] ?? '') !== '')
-            ->values();
+            ->filter(function ($row) {
+                if (!is_array($row)) {
+                    return false;
+                }
+
+                return ($row['initial_reading'] ?? '') !== '' || ($row['bill_amount'] ?? '') !== '';
+            });
 
         if ($rows->isEmpty()) {
-            return back()->with('error', 'Enter at least one initial reading before saving.');
+            return back()->with('error', 'Enter at least one initial reading or bill amount before saving.');
         }
 
         $request->merge(['initial_readings' => $rows->all()]);
@@ -445,36 +456,105 @@ class MeterReadingController extends Controller
         $validated = $request->validate([
             'initial_readings' => 'required|array|min:1',
             'initial_readings.*.water_meter_id' => 'required|integer|exists:water_meters,id',
-            'initial_readings.*.initial_reading' => 'required|numeric|min:0|max:9999999',
+            'initial_readings.*.initial_reading' => 'nullable|numeric|min:0|max:9999999',
+            'initial_readings.*.bill_amount' => 'nullable|numeric|min:0|max:99999999',
         ]);
 
         try {
             DB::beginTransaction();
 
-            $saved = 0;
-            foreach ($validated['initial_readings'] as $row) {
-                $meter = WaterMeter::findOrFail($row['water_meter_id']);
-                $reading = round((float) $row['initial_reading'], 2);
-                $changes = ['initial_reading' => $reading];
+            $readingsSaved = 0;
+            $billsSaved = 0;
 
-                if (!$meter->meterReadings()->exists()) {
-                    $changes['current_reading'] = $reading;
+            foreach ($validated['initial_readings'] as $row) {
+                $meter = WaterMeter::with('customer')->findOrFail($row['water_meter_id']);
+
+                if (($row['initial_reading'] ?? '') !== '') {
+                    $reading = round((float) $row['initial_reading'], 2);
+                    $changes = ['initial_reading' => $reading];
+
+                    if (!$meter->meterReadings()->exists()) {
+                        $changes['current_reading'] = $reading;
+                    }
+
+                    $meter->update($changes);
+                    $meter->initial_reading = $reading;
+                    $readingsSaved++;
                 }
 
-                $meter->update($changes);
-                $saved++;
+                if (($row['bill_amount'] ?? '') !== '') {
+                    if (!$meter->customer_id) {
+                        throw new \RuntimeException("Meter {$meter->meter_number} has no customer for an opening bill.");
+                    }
+
+                    $this->saveOpeningBill($meter, round((float) $row['bill_amount'], 2));
+                    $billsSaved++;
+                }
             }
 
             DB::commit();
 
+            $readingLabel = $readingsSaved === 1 ? 'initial reading' : 'initial readings';
+            $billLabel = $billsSaved === 1 ? 'opening bill amount' : 'opening bill amounts';
+
             return redirect()->route('readings.initial')
-                ->with('success', "Saved the initial reading for {$saved} " . ($saved === 1 ? 'meter' : 'meters') . '.');
+                ->with('success', "Saved {$readingsSaved} {$readingLabel} and {$billsSaved} {$billLabel}.");
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error saving initial meter readings: ' . $e->getMessage());
 
             return back()->with('error', 'Failed to save the initial readings. Please try again.');
         }
+    }
+
+    /**
+     * Store the typed starting amount on one opening bill for this meter.
+     */
+    private function saveOpeningBill(WaterMeter $meter, float $amount): void
+    {
+        $dial = round((float) $meter->initial_reading, 2);
+        $today = Carbon::today();
+        $existing = Bill::where('water_meter_id', $meter->id)
+            ->where('notes', 'Opening balance')
+            ->first();
+        $paid = $existing ? (float) $existing->paid_amount : 0;
+        $balance = round($amount - $paid, 2);
+
+        $attributes = [
+            'customer_id' => $meter->customer_id,
+            'water_meter_id' => $meter->id,
+            'meter_reading_id' => null,
+            'bill_date' => $existing?->bill_date ?? $today,
+            'due_date' => $existing?->due_date ?? $today->copy()->addDays(30),
+            'billing_period_from' => $existing?->billing_period_from ?? $today,
+            'billing_period_to' => $existing?->billing_period_to ?? $today,
+            'previous_reading' => $dial,
+            'current_reading' => $dial,
+            'consumption' => 0,
+            'water_charges' => 0,
+            'fixed_charges' => 0,
+            'service_charges' => 0,
+            'late_fees' => 0,
+            'taxes' => 0,
+            'adjustments' => $amount,
+            'total_amount' => $amount,
+            'paid_amount' => $paid,
+            'balance_amount' => $balance,
+            'status' => $balance > 0 ? 'generated' : 'paid',
+            'notes' => 'Opening balance',
+        ];
+
+        Bill::withoutEvents(function () use ($existing, $attributes, $today) {
+            if ($existing) {
+                $existing->update($attributes);
+                return;
+            }
+
+            $bill = new Bill();
+            $bill->bill_date = $today;
+            $attributes['bill_number'] = $bill->generateBillNumber();
+            Bill::create($attributes);
+        });
     }
 
     /**
