@@ -402,6 +402,82 @@ class MeterReadingController extends Controller
     }
 
     /**
+     * One-time sheet for typing each meter's opening dial.
+     */
+    public function initialEntry(): View
+    {
+        $waterMeters = WaterMeter::query()
+            ->with(['customer.division'])
+            ->get()
+            ->sortBy(function (WaterMeter $meter) {
+                $division = $meter->customer?->division?->name ?? '';
+                $account = $meter->customer?->account_number ?? '';
+
+                return $division . '|' . $account . '|' . $meter->meter_number;
+            })
+            ->values();
+
+        $divisions = $waterMeters
+            ->map(fn (WaterMeter $meter) => $meter->customer?->division)
+            ->filter()
+            ->unique('id')
+            ->sortBy('name')
+            ->values();
+
+        return view('readings.initial', compact('waterMeters', 'divisions'));
+    }
+
+    /**
+     * Save opening dials. Blank rows are left unchanged and no bill is created.
+     */
+    public function initialStore(Request $request): RedirectResponse
+    {
+        $rows = collect($request->input('initial_readings', []))
+            ->filter(fn ($row) => is_array($row) && ($row['initial_reading'] ?? '') !== '')
+            ->values();
+
+        if ($rows->isEmpty()) {
+            return back()->with('error', 'Enter at least one initial reading before saving.');
+        }
+
+        $request->merge(['initial_readings' => $rows->all()]);
+
+        $validated = $request->validate([
+            'initial_readings' => 'required|array|min:1',
+            'initial_readings.*.water_meter_id' => 'required|integer|exists:water_meters,id',
+            'initial_readings.*.initial_reading' => 'required|numeric|min:0|max:9999999',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $saved = 0;
+            foreach ($validated['initial_readings'] as $row) {
+                $meter = WaterMeter::findOrFail($row['water_meter_id']);
+                $reading = round((float) $row['initial_reading'], 2);
+                $changes = ['initial_reading' => $reading];
+
+                if (!$meter->meterReadings()->exists()) {
+                    $changes['current_reading'] = $reading;
+                }
+
+                $meter->update($changes);
+                $saved++;
+            }
+
+            DB::commit();
+
+            return redirect()->route('readings.initial')
+                ->with('success', "Saved the initial reading for {$saved} " . ($saved === 1 ? 'meter' : 'meters') . '.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error saving initial meter readings: ' . $e->getMessage());
+
+            return back()->with('error', 'Failed to save the initial readings. Please try again.');
+        }
+    }
+
+    /**
      * Get meter readings data for AJAX requests.
      */
     public function getReadingsData(Request $request)

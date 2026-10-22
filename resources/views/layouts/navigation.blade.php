@@ -82,6 +82,9 @@
                                 <a href="{{ route('readings.bulk') }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-800 transition duration-150">
                                     <i class="fas fa-list mr-3 text-orange-600"></i>Bulk Entry
                                 </a>
+                                <a href="{{ route('readings.initial') }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-800 transition duration-150">
+                                    <i class="fas fa-tachometer-alt mr-3 text-amber-600"></i>Initial Readings
+                                </a>
                                 <a href="{{ route('readings.schedule') }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-800 transition duration-150">
                                     <i class="fas fa-calendar-alt mr-3 text-indigo-600"></i>Reading Schedule
                                 </a>
@@ -384,6 +387,10 @@
             <x-responsive-nav-link :href="route('readings.bulk')" :active="request()->routeIs('readings.bulk')"
                                    class="text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 ml-4">
                 <i class="fas fa-list mr-2"></i>{{ __('Bulk Entry') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('readings.initial')" :active="request()->routeIs('readings.initial')"
+                                   class="text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 ml-4">
+                <i class="fas fa-tachometer-alt mr-2"></i>{{ __('Initial Readings') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('readings.schedule')" :active="request()->routeIs('readings.schedule')"
                                    class="text-white hover:text-blue-200 hover:bg-white hover:bg-opacity-10 ml-4">

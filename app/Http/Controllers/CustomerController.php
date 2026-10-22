@@ -50,13 +50,18 @@ class CustomerController extends Controller
             $query->where('customer_type_id', $request->input('customer_type_id'));
         }
 
+        $statusCounts = (clone $query)
+            ->select('status', DB::raw('COUNT(*) as aggregate'))
+            ->groupBy('status')
+            ->pluck('aggregate', 'status');
+
         $customers = $query->with(['waterMeters', 'customerType'])
             ->orderBy('created_at', 'desc')
             ->paginate(15);
 
         $customerTypes = CustomerType::active()->orderBy('name')->get();
 
-        return view('customers.index', compact('customers', 'customerTypes'));
+        return view('customers.index', compact('customers', 'customerTypes', 'statusCounts'));
     }
 
     /**

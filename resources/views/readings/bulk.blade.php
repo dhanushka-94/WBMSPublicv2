@@ -13,6 +13,9 @@
                     <p class="text-blue-100 mt-2">Enter multiple meter readings efficiently for monthly billing</p>
                 </div>
                 <div class="flex space-x-3">
+                    <a href="{{ route('readings.initial') }}" class="bg-amber-400 text-amber-950 px-4 py-2 rounded-lg font-medium hover:bg-amber-300 transition duration-200">
+                        <i class="fas fa-tachometer-alt mr-2"></i>Initial Readings
+                    </a>
                     <a href="{{ route('readings.index') }}" class="bg-white text-blue-600 px-4 py-2 rounded-lg font-medium hover:bg-blue-50 transition duration-200">
                         <i class="fas fa-arrow-left mr-2"></i>Back to Readings
                     </a>

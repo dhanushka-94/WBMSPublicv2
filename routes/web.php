@@ -158,6 +158,8 @@ Route::middleware(['auth', 'verified', 'system.check'])->group(function () {
     Route::post('readings/{reading}/verify', [MeterReadingController::class, 'verify'])->name('readings.verify');
     Route::get('readings/bulk-entry', [MeterReadingController::class, 'bulkEntry'])->name('readings.bulk');
     Route::post('readings/bulk-store', [MeterReadingController::class, 'bulkStore'])->name('readings.bulk.store');
+    Route::get('readings/initial-readings', [MeterReadingController::class, 'initialEntry'])->name('readings.initial');
+    Route::post('readings/initial-readings', [MeterReadingController::class, 'initialStore'])->name('readings.initial.store');
     Route::get('readings/monthly-schedule', [MeterReadingController::class, 'monthlySchedule'])->name('readings.schedule');
     Route::get('readings/data/ajax', [MeterReadingController::class, 'getReadingsData'])->name('readings.data');
     Route::get('readings/meter-details/ajax', [MeterReadingController::class, 'getMeterDetails'])->name('readings.meter-details');

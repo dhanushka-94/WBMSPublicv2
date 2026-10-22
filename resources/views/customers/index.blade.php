@@ -49,7 +49,7 @@
                         </div>
                         <div class="ml-4">
                             <p class="text-sm font-semibold text-gray-600 uppercase tracking-wider">Active</p>
-                            <p class="text-2xl font-bold text-gray-900">{{ $customers->where('status', 'active')->count() }}</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ $statusCounts['active'] ?? 0 }}</p>
                         </div>
                     </div>
                 </div>
@@ -65,7 +65,7 @@
                         </div>
                         <div class="ml-4">
                             <p class="text-sm font-semibold text-gray-600 uppercase tracking-wider">Suspended</p>
-                            <p class="text-2xl font-bold text-gray-900">{{ $customers->where('status', 'suspended')->count() }}</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ $statusCounts['suspended'] ?? 0 }}</p>
                         </div>
                     </div>
                 </div>
@@ -81,7 +81,7 @@
                         </div>
                         <div class="ml-4">
                             <p class="text-sm font-semibold text-gray-600 uppercase tracking-wider">Inactive</p>
-                            <p class="text-2xl font-bold text-gray-900">{{ $customers->where('status', 'inactive')->count() }}</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ $statusCounts['inactive'] ?? 0 }}</p>
                         </div>
                     </div>
                 </div>

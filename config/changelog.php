@@ -2,6 +2,16 @@
 
 return [
     [
+        'version' => '2.2.0',
+        'date' => '23 October 2026',
+        'title' => 'Initial meter readings',
+        'changes' => [
+            'Enter each meter’s opening dial on one Initial Readings page, linked from Bulk Meter Reading Entry.',
+            'Save only the rows you fill in. A blank row is left as it is, and no bill is created.',
+            'Count every active, suspended, and inactive customer on the customer list, not only the page on screen.',
+        ],
+    ],
+    [
         'version' => '2.1.0',
         'date' => '19 October 2026',
         'title' => 'Office billing, routes, and access',
