@@ -2,6 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
+    <meta name="robots" content="noindex, nofollow, noarchive">
     <title>Bill {{ $bill->bill_number }}</title>
     <style>
         body { font-family: "Noto Sans Tamil", Arial, sans-serif; color: #111; margin: 24px; }

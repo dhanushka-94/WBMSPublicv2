@@ -2,6 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
+    <meta name="robots" content="noindex, nofollow, noarchive">
     <title>Receipt {{ $payment->receipt_number }}</title>
     <style>
         body { font-family: Arial, sans-serif; width: 320px; margin: 16px auto; color: #111; }

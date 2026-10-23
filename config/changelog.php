@@ -2,6 +2,14 @@
 
 return [
     [
+        'version' => '2.5.1',
+        'date' => '23 October 2026',
+        'title' => 'Keep the system out of search',
+        'changes' => [
+            'Ask search engines not to index the billing system, including bills, receipts, and customer links.',
+        ],
+    ],
+    [
         'version' => '2.5.0',
         'date' => '23 October 2026',
         'title' => 'SMS templates, links, and logs',
