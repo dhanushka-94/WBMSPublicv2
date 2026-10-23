@@ -5,9 +5,11 @@ use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
 
-// Determine if the application is in maintenance mode...
-if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php')) {
-    require $maintenance;
+// A leftover maintenance file returns 503 before Laravel starts.
+// Remove it so a git pull can bring the site back without a terminal.
+$maintenance = __DIR__.'/../storage/framework/maintenance.php';
+if (file_exists($maintenance)) {
+    @unlink($maintenance);
 }
 
 // Register the Composer autoloader...

@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Auth\Events\Login;
@@ -27,6 +28,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->runPendingMigrations();
+
         // Register authentication event listeners for activity logging
         Event::listen(Login::class, LoginListener::class);
         Event::listen(Logout::class, LogoutListener::class);
@@ -44,5 +47,32 @@ class AppServiceProvider extends ServiceProvider
 
         // Helper functions are now available through Blade directives above
         // Global functions removed to prevent redeclaration issues
+    }
+
+    /**
+     * Apply new migrations on the first web request after a git pull.
+     * The live server has no terminal, so artisan cannot be run there.
+     */
+    private function runPendingMigrations(): void
+    {
+        if ($this->app->runningInConsole()) {
+            return;
+        }
+
+        $files = glob(database_path('migrations/*.php')) ?: [];
+        sort($files);
+        $latest = $files ? basename(end($files), '.php') : null;
+        $stamp = storage_path('framework/migration-stamp.txt');
+
+        if (!$latest || (is_file($stamp) && trim((string) file_get_contents($stamp)) === $latest)) {
+            return;
+        }
+
+        try {
+            Artisan::call('migrate', ['--force' => true]);
+            file_put_contents($stamp, $latest);
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 }
