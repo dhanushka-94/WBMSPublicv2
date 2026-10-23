@@ -29,6 +29,7 @@
             'consumption' => 'Consumption',
             'water' => 'Water charges',
             'fixed' => 'Fixed charge',
+            'damage' => 'Damage charges',
             'outstanding' => 'Outstanding',
             'total' => 'Total payable',
             'due' => 'Due date',
@@ -45,6 +46,7 @@
             'consumption' => 'நுகர்வு',
             'water' => 'நீர் கட்டணம்',
             'fixed' => 'நிலையான கட்டணம்',
+            'damage' => 'சேதக் கட்டணம்',
             'outstanding' => 'நிலுவை',
             'total' => 'செலுத்த வேண்டிய மொத்தம்',
             'due' => 'செலுத்த வேண்டிய தினம்',
@@ -72,6 +74,9 @@
         <tr><td>{{ $label['consumption'] }}</td><td class="right">{{ number_format($bill->consumption, 0) }}</td></tr>
         <tr><td>{{ $label['water'] }}</td><td class="right">LKR {{ number_format($bill->water_charges, 2) }}</td></tr>
         <tr><td>{{ $label['fixed'] }}</td><td class="right">LKR {{ number_format($bill->fixed_charges, 2) }}</td></tr>
+        @if($bill->damage_charges > 0)
+        <tr><td>{{ $label['damage'] }}</td><td class="right">LKR {{ number_format($bill->damage_charges, 2) }}</td></tr>
+        @endif
         <tr><td>{{ $label['outstanding'] }}</td><td class="right">LKR {{ number_format($bill->balance_amount, 2) }}</td></tr>
         <tr><td>{{ $label['total'] }}</td><td class="right">LKR {{ number_format($bill->total_amount, 2) }}</td></tr>
         <tr><td>{{ $label['due'] }}</td><td class="right">{{ $bill->due_date?->format('Y-m-d') }}</td></tr>

@@ -59,6 +59,20 @@ class AuthApiController extends Controller
 
             // Check if user has meter reader permissions
             if (!in_array($user->role, ['super_admin', 'admin', 'meter_reader', 'supervisor'])) {
+                ActivityLog::logActivity([
+                    'user_id' => $user->id,
+                    'user_name' => $user->name,
+                    'user_email' => $user->email,
+                    'user_role' => $user->role,
+                    'action' => 'mobile_login_denied',
+                    'description' => "Mobile app login denied for {$user->name}",
+                    'module' => 'mobile_app',
+                    'status' => 'failed',
+                    'properties' => [
+                        'device_name' => $request->device_name,
+                    ],
+                ]);
+
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized access. Meter reader permissions required.'

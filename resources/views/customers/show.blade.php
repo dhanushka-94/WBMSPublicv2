@@ -58,6 +58,36 @@
             @endif
         </div>
 
+        <div class="mb-8 bg-white border border-gray-200 rounded-lg overflow-hidden">
+            <div class="bg-emerald-600 px-6 py-4">
+                <h2 class="text-lg font-semibold text-white">Financial Summary</h2>
+            </div>
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 p-6">
+                <div class="rounded-lg bg-blue-50 p-4">
+                    <p class="text-xs font-medium uppercase text-blue-700">Total billed</p>
+                    <p class="mt-1 text-2xl font-bold text-blue-900">Rs. {{ number_format($financialSummary['billed'], 2) }}</p>
+                    <p class="text-xs text-blue-700">{{ $financialSummary['bills'] }} bills</p>
+                </div>
+                <div class="rounded-lg bg-green-50 p-4">
+                    <p class="text-xs font-medium uppercase text-green-700">Total paid</p>
+                    <p class="mt-1 text-2xl font-bold text-green-900">Rs. {{ number_format($financialSummary['paid'], 2) }}</p>
+                    @if($financialSummary['last_payment'])
+                        <p class="text-xs text-green-700">Last payment {{ $financialSummary['last_payment']->paid_on->format('M d, Y') }} · Rs. {{ number_format($financialSummary['last_payment']->amount, 2) }}</p>
+                    @else
+                        <p class="text-xs text-green-700">{{ $financialSummary['payments'] }} receipts</p>
+                    @endif
+                </div>
+                <div class="rounded-lg bg-amber-50 p-4">
+                    <p class="text-xs font-medium uppercase text-amber-700">Outstanding</p>
+                    <p class="mt-1 text-2xl font-bold text-amber-900">Rs. {{ number_format($financialSummary['outstanding'], 2) }}</p>
+                </div>
+                <div class="rounded-lg bg-red-50 p-4">
+                    <p class="text-xs font-medium uppercase text-red-700">Overdue</p>
+                    <p class="mt-1 text-2xl font-bold text-red-900">Rs. {{ number_format($financialSummary['overdue'], 2) }}</p>
+                </div>
+            </div>
+        </div>
+
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
             <!-- Left Column - Customer Info -->

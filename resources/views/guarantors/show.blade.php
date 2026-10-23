@@ -332,7 +332,6 @@
 
                         @if(!$guarantor->customers || $guarantor->customers->count() == 0)
                             <form method="POST" action="{{ route('guarantors.destroy', $guarantor) }}" 
-                                  onsubmit="return confirm('Are you sure you want to delete this guarantor? This action cannot be undone.')" 
                                   class="w-full">
                                 @csrf
                                 @method('DELETE')

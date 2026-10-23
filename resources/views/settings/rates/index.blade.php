@@ -172,7 +172,7 @@
                                         <button type="submit" 
                                                 class="text-red-600 hover:text-red-900 text-sm" 
                                                 title="Delete Rate"
-                                                onclick="return confirm('Are you sure you want to delete this rate? This action cannot be undone.')">
+>
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </form>

@@ -233,7 +233,7 @@
                                                     @csrf
                                                     @method('DELETE')
                                                     <button type="submit" class="text-red-600 hover:text-red-800 transition duration-200" 
-                                                            title="Delete Record" onclick="return confirm('Delete this SMS record?')">
+                                                            title="Delete Record">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
                                                 </form>
@@ -261,7 +261,7 @@
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="hidden bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition duration-200" 
-                                        id="bulk-delete-btn" onclick="return confirm('Delete selected SMS records?')">
+                                        id="bulk-delete-btn">
                                     <i class="fas fa-trash mr-2"></i>Delete Selected
                                 </button>
                             </form>

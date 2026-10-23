@@ -57,7 +57,7 @@
                                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('water_meter_id') border-red-500 @enderror">
                                 <option value="">Select Meter</option>
                                 @foreach($waterMeters as $meter)
-                                    <option value="{{ $meter->id }}" data-customer-id="{{ $meter->customer_id }}" {{ old('water_meter_id') == $meter->id ? 'selected' : '' }}>
+                                    <option value="{{ $meter->id }}" data-customer-id="{{ $meter->customer_id }}" data-previous-reading="{{ $meter->current_reading }}" {{ old('water_meter_id') == $meter->id ? 'selected' : '' }}>
                                         {{ $meter->meter_number }} - {{ $meter->customer->full_name }}
                                     </option>
                                 @endforeach
@@ -170,42 +170,52 @@
                         <i class="fas fa-calculator mr-2"></i>Additional Charges
                     </h3>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label for="service_charges" class="block text-sm font-medium text-gray-700 mb-2">
-                                Service Charges (Rs.)
-                            </label>
-                            <input type="number" name="service_charges" id="service_charges" value="{{ old('service_charges', 0) }}" 
-                                   step="0.01" min="0" 
+                            <label for="service_charges" class="block text-sm font-medium text-gray-700 mb-2">Service Charges (Rs.)</label>
+                            <input type="number" name="service_charges" id="service_charges" value="{{ old('service_charges', 0) }}"
+                                   step="0.01" min="0"
                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('service_charges') border-red-500 @enderror">
                             @error('service_charges')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
-
                         <div>
-                            <label for="taxes" class="block text-sm font-medium text-gray-700 mb-2">
-                                Taxes (Rs.)
-                            </label>
-                            <input type="number" name="taxes" id="taxes" value="{{ old('taxes', 0) }}" 
-                                   step="0.01" min="0" 
+                            <label for="damage_charges" class="block text-sm font-medium text-gray-700 mb-2">Damage Charges (Rs.)</label>
+                            <input type="number" name="damage_charges" id="damage_charges" value="{{ old('damage_charges', 0) }}"
+                                   step="0.01" min="0"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('damage_charges') border-red-500 @enderror">
+                            @error('damage_charges')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div>
+                            <label for="late_fees" class="block text-sm font-medium text-gray-700 mb-2">Late Fees (Rs.)</label>
+                            <input type="number" name="late_fees" id="late_fees" value="{{ old('late_fees', 0) }}"
+                                   step="0.01" min="0"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('late_fees') border-red-500 @enderror">
+                            @error('late_fees')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div>
+                            <label for="taxes" class="block text-sm font-medium text-gray-700 mb-2">Taxes (Rs.)</label>
+                            <input type="number" name="taxes" id="taxes" value="{{ old('taxes', 0) }}"
+                                   step="0.01" min="0"
                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('taxes') border-red-500 @enderror">
                             @error('taxes')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
-
                         <div>
-                            <label for="adjustments" class="block text-sm font-medium text-gray-700 mb-2">
-                                Adjustments (Rs.)
-                            </label>
-                            <input type="number" name="adjustments" id="adjustments" value="{{ old('adjustments', 0) }}" 
-                                   step="0.01" 
+                            <label for="adjustments" class="block text-sm font-medium text-gray-700 mb-2">Adjustments (Rs.)</label>
+                            <input type="number" name="adjustments" id="adjustments" value="{{ old('adjustments', 0) }}"
+                                   step="0.01"
                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('adjustments') border-red-500 @enderror">
                             @error('adjustments')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
-                            <p class="mt-1 text-sm text-gray-500">Use negative values for discounts</p>
+                            <p class="mt-1 text-sm text-gray-500">Use a negative amount for a discount</p>
                         </div>
                     </div>
                 </div>
@@ -216,31 +226,19 @@
                         <i class="fas fa-eye mr-2"></i>Bill Preview
                     </h3>
                     
-                    <div class="bg-gray-50 rounded-lg p-4">
-                        <div class="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                                <p class="text-gray-600">Water Charges:</p>
-                                <p class="font-medium" id="water_charges_preview">Rs. 0.00</p>
-                            </div>
-                            <div>
-                                <p class="text-gray-600">Fixed Charges:</p>
-                                <p class="font-medium" id="fixed_charges_preview">Rs. 0.00</p>
-                            </div>
-                            <div>
-                                <p class="text-gray-600">Service Charges:</p>
-                                <p class="font-medium" id="service_charges_preview">Rs. 0.00</p>
-                            </div>
-                            <div>
-                                <p class="text-gray-600">Taxes:</p>
-                                <p class="font-medium" id="taxes_preview">Rs. 0.00</p>
-                            </div>
-                            <div>
-                                <p class="text-gray-600">Adjustments:</p>
-                                <p class="font-medium" id="adjustments_preview">Rs. 0.00</p>
-                            </div>
-                            <div class="border-t pt-2">
-                                <p class="text-gray-600">Total Amount:</p>
-                                <p class="font-bold text-lg text-blue-600" id="total_amount_preview">Rs. 0.00</p>
+                    <div class="bg-gray-50 rounded-lg p-4 text-sm">
+                        <p class="mb-2 font-medium text-gray-700">Consumption: <span id="consumption_units_preview">0</span> units</p>
+                        <div id="charge_breakdown" class="mb-3 space-y-1 text-gray-700"></div>
+                        <div class="space-y-1 border-t border-gray-200 pt-3">
+                            <div class="flex justify-between"><span>Water charges</span><span id="water_charges_preview">Rs. 0.00</span></div>
+                            <div class="flex justify-between"><span>Fixed charge</span><span id="fixed_charges_preview">Rs. 0.00</span></div>
+                            <div class="flex justify-between"><span>Service charges</span><span id="service_charges_preview">Rs. 0.00</span></div>
+                            <div class="flex justify-between"><span>Damage charges</span><span id="damage_charges_preview">Rs. 0.00</span></div>
+                            <div class="flex justify-between"><span>Late fees</span><span id="late_fees_preview">Rs. 0.00</span></div>
+                            <div class="flex justify-between"><span>Taxes</span><span id="taxes_preview">Rs. 0.00</span></div>
+                            <div class="flex justify-between"><span>Adjustments</span><span id="adjustments_preview">Rs. 0.00</span></div>
+                            <div class="flex justify-between border-t border-gray-200 pt-2 text-base font-bold text-blue-700">
+                                <span>Total</span><span id="total_amount_preview">Rs. 0.00</span>
                             </div>
                         </div>
                     </div>
@@ -288,92 +286,122 @@ document.addEventListener('DOMContentLoaded', function() {
     const previousReadingInput = document.getElementById('previous_reading');
     const currentReadingInput = document.getElementById('current_reading');
     const consumptionInput = document.getElementById('consumption');
-    const serviceChargesInput = document.getElementById('service_charges');
-    const taxesInput = document.getElementById('taxes');
-    const adjustmentsInput = document.getElementById('adjustments');
+    const chargeInputs = ['service_charges', 'damage_charges', 'late_fees', 'taxes', 'adjustments']
+        .map(id => document.getElementById(id));
+    const token = document.querySelector('meta[name="csrf-token"]').content;
+    let quoted = { breakdown: [], water_charges: 0, fixed_charges: 0 };
+    let quoteRequest = 0;
 
-    // Filter meters based on selected customer
-    customerSelect.addEventListener('change', function() {
-        const customerId = this.value;
-        const meterOptions = meterSelect.querySelectorAll('option');
-        
-        meterOptions.forEach(option => {
-            if (option.value === '') {
-                option.style.display = 'block';
+    function money(value) {
+        return 'Rs. ' + (Number(value) || 0).toFixed(2);
+    }
+
+    function selectCustomerMeter() {
+        const customerId = customerSelect.value;
+        let match = null;
+        meterSelect.querySelectorAll('option').forEach(option => {
+            if (!option.value) {
+                option.hidden = false;
                 return;
             }
-            
-            const meterCustomerId = option.getAttribute('data-customer-id');
-            if (customerId === '' || meterCustomerId === customerId) {
-                option.style.display = 'block';
-            } else {
-                option.style.display = 'none';
+            const visible = !customerId || option.dataset.customerId === customerId;
+            option.hidden = !visible;
+            if (visible && !match) {
+                match = option;
             }
         });
-        
-        meterSelect.value = '';
-    });
+        meterSelect.value = customerId && match ? match.value : '';
+        fillPreviousReading();
+    }
 
-    // Calculate consumption
+    function fillPreviousReading() {
+        const option = meterSelect.selectedOptions[0];
+        previousReadingInput.value = option && option.value ? option.dataset.previousReading : '';
+        calculateConsumption();
+    }
+
     function calculateConsumption() {
-        const previousReading = parseFloat(previousReadingInput.value) || 0;
-        const currentReading = parseFloat(currentReadingInput.value) || 0;
-        const consumption = Math.max(0, currentReading - previousReading);
-        consumptionInput.value = consumption;
-        updateBillPreview();
-    }
-
-    // Update bill preview
-    function updateBillPreview() {
-        const consumption = parseFloat(consumptionInput.value) || 0;
-        const serviceCharges = parseFloat(serviceChargesInput.value) || 0;
-        const taxes = parseFloat(taxesInput.value) || 0;
-        const adjustments = parseFloat(adjustmentsInput.value) || 0;
-
-        // This is a simplified calculation - in reality, you'd need to fetch rates from server
-        let waterCharges = 0;
-        let fixedCharges = 0;
-
-        // Simplified Sri Lankan water billing calculation
-        if (consumption === 0) {
-            fixedCharges = 150;
-        } else {
-            // Apply tiered rates
-            if (consumption <= 5) {
-                waterCharges = 0;
-            } else if (consumption <= 10) {
-                waterCharges = (consumption - 5) * 12;
-            } else if (consumption <= 15) {
-                waterCharges = (5 * 12) + ((consumption - 10) * 18);
-            } else if (consumption <= 20) {
-                waterCharges = (5 * 12) + (5 * 18) + ((consumption - 15) * 25);
-            } else if (consumption <= 25) {
-                waterCharges = (5 * 12) + (5 * 18) + (5 * 25) + ((consumption - 20) * 35);
-            } else {
-                waterCharges = (5 * 12) + (5 * 18) + (5 * 25) + (5 * 35) + ((consumption - 25) * 40);
-            }
+        if (currentReadingInput.value === '') {
+            consumptionInput.value = '';
+            quoted = { breakdown: [], water_charges: 0, fixed_charges: 0 };
+            renderPreview();
+            return;
         }
-
-        const totalAmount = waterCharges + fixedCharges + serviceCharges + taxes + adjustments;
-
-        // Update preview
-        document.getElementById('water_charges_preview').textContent = 'Rs. ' + waterCharges.toFixed(2);
-        document.getElementById('fixed_charges_preview').textContent = 'Rs. ' + fixedCharges.toFixed(2);
-        document.getElementById('service_charges_preview').textContent = 'Rs. ' + serviceCharges.toFixed(2);
-        document.getElementById('taxes_preview').textContent = 'Rs. ' + taxes.toFixed(2);
-        document.getElementById('adjustments_preview').textContent = 'Rs. ' + adjustments.toFixed(2);
-        document.getElementById('total_amount_preview').textContent = 'Rs. ' + totalAmount.toFixed(2);
+        const previous = parseFloat(previousReadingInput.value) || 0;
+        const current = parseFloat(currentReadingInput.value) || 0;
+        consumptionInput.value = Math.max(0, current - previous);
+        refreshQuote();
     }
 
-    // Event listeners
+    function refreshQuote() {
+        const requestId = ++quoteRequest;
+        if (!customerSelect.value) {
+            quoted = { breakdown: [], water_charges: 0, fixed_charges: 0 };
+            renderPreview();
+            return;
+        }
+        const body = new FormData();
+        body.append('customer_id', customerSelect.value);
+        body.append('consumption', consumptionInput.value || 0);
+        body.append('bill_date', document.getElementById('bill_date').value);
+        fetch(@json(route('bills.quote')), {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': token, 'Accept': 'application/json' },
+            body
+        }).then(response => response.json()).then(data => {
+            if (requestId !== quoteRequest) return;
+            quoted = data;
+            renderPreview();
+        }).catch(() => {
+            if (requestId === quoteRequest) renderPreview();
+        });
+    }
+
+    function renderPreview() {
+        const units = consumptionInput.value === '' ? 0 : Number(consumptionInput.value);
+        document.getElementById('consumption_units_preview').textContent = units;
+        const lines = (quoted.breakdown || []).map(row => {
+            if (Number(row.fixed_charge) > 0) {
+                return row.tier_name + ': ' + money(row.fixed_charge);
+            }
+            if (Number(row.consumption) > 0) {
+                return row.consumption + ' units × Rs. ' + Number(row.rate_per_unit).toFixed(2) + ' = ' + money(row.charge);
+            }
+            return '';
+        }).filter(Boolean);
+        document.getElementById('charge_breakdown').innerHTML = lines.map(line => '<div>' + line + '</div>').join('');
+
+        const extras = {
+            service_charges: parseFloat(document.getElementById('service_charges').value) || 0,
+            damage_charges: parseFloat(document.getElementById('damage_charges').value) || 0,
+            late_fees: parseFloat(document.getElementById('late_fees').value) || 0,
+            taxes: parseFloat(document.getElementById('taxes').value) || 0,
+            adjustments: parseFloat(document.getElementById('adjustments').value) || 0,
+        };
+        const water = Number(quoted.water_charges) || 0;
+        const fixed = Number(quoted.fixed_charges) || 0;
+        document.getElementById('water_charges_preview').textContent = money(water);
+        document.getElementById('fixed_charges_preview').textContent = money(fixed);
+        document.getElementById('service_charges_preview').textContent = money(extras.service_charges);
+        document.getElementById('damage_charges_preview').textContent = money(extras.damage_charges);
+        document.getElementById('late_fees_preview').textContent = money(extras.late_fees);
+        document.getElementById('taxes_preview').textContent = money(extras.taxes);
+        document.getElementById('adjustments_preview').textContent = money(extras.adjustments);
+        document.getElementById('total_amount_preview').textContent = money(
+            water + fixed + extras.service_charges + extras.damage_charges + extras.late_fees + extras.taxes + extras.adjustments
+        );
+    }
+
+    customerSelect.addEventListener('change', selectCustomerMeter);
+    meterSelect.addEventListener('change', fillPreviousReading);
     previousReadingInput.addEventListener('input', calculateConsumption);
     currentReadingInput.addEventListener('input', calculateConsumption);
-    serviceChargesInput.addEventListener('input', updateBillPreview);
-    taxesInput.addEventListener('input', updateBillPreview);
-    adjustmentsInput.addEventListener('input', updateBillPreview);
+    document.getElementById('bill_date').addEventListener('change', calculateConsumption);
+    chargeInputs.forEach(input => input.addEventListener('input', renderPreview));
 
-    // Initial calculation
-    calculateConsumption();
+    if (customerSelect.value) {
+        selectCustomerMeter();
+    }
 });
 </script>
 @endsection 

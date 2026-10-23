@@ -189,13 +189,23 @@ class CustomerController extends Controller
         $outstandingBalance = $customer->getOutstandingBalance();
         $lastBill = $customer->getLastBill();
         $currentReading = $customer->getCurrentReading();
+        $financialSummary = [
+            'billed' => (float) $customer->bills()->sum('total_amount'),
+            'paid' => (float) $customer->bills()->sum('paid_amount'),
+            'outstanding' => (float) $outstandingBalance,
+            'overdue' => (float) $customer->bills()->where('status', 'overdue')->sum('balance_amount'),
+            'bills' => $customer->bills()->count(),
+            'payments' => $customer->payments()->count(),
+            'last_payment' => $customer->payments()->latest('paid_on')->first(),
+        ];
 
         return view('customers.show', compact(
             'customer', 
             'activeMeters', 
             'outstandingBalance', 
             'lastBill', 
-            'currentReading'
+            'currentReading',
+            'financialSummary'
         ));
     }
 

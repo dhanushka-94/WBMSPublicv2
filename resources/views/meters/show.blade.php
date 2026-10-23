@@ -19,7 +19,7 @@
                     <i class="fas fa-edit mr-2"></i>
                     Edit Meter
                 </a>
-                <form method="POST" action="{{ route('meters.destroy', $water_meter) }}" class="inline-block" onsubmit="return confirm('Are you sure you want to delete this meter? This action cannot be undone.')">
+                <form method="POST" action="{{ route('meters.destroy', $water_meter) }}" class="inline-block" >
                     @csrf
                     @method('DELETE')
                     <button type="submit" 
@@ -210,6 +210,19 @@
                                 <p class="mt-1 text-sm text-gray-900">{{ $water_meter->notes }}</p>
                             </div>
                             @endif
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                        <div class="bg-gradient-to-r from-indigo-500 to-blue-600 px-6 py-4">
+                            <h3 class="text-lg font-bold text-white">
+                                <i class="fas fa-chart-area mr-2"></i>Monthly Water Consumption
+                            </h3>
+                        </div>
+                        <div class="p-6">
+                            <div class="relative h-72">
+                                <canvas id="monthlyConsumptionChart"></canvas>
+                            </div>
                         </div>
                     </div>
 
@@ -610,6 +623,29 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+new Chart(document.getElementById('monthlyConsumptionChart'), {
+    type: 'bar',
+    data: {
+        labels: @json($chartLabels),
+        datasets: [{
+            label: 'Units',
+            data: @json($chartValues),
+            backgroundColor: 'rgba(37, 99, 235, 0.75)',
+            borderRadius: 6
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            y: { beginAtZero: true, title: { display: true, text: 'Units' } }
+        }
+    }
+});
+</script>
 <script>
 function showMaintenanceModal() {
     document.getElementById('maintenanceModal').classList.remove('hidden');

@@ -377,6 +377,12 @@
                 <td class="amount">Rs. {{ number_format($bill->service_charges, 2) }}</td>
             </tr>
             @endif
+            @if($bill->damage_charges > 0)
+            <tr>
+                <td class="label">Damage Charges</td>
+                <td class="amount">Rs. {{ number_format($bill->damage_charges, 2) }}</td>
+            </tr>
+            @endif
             @if($bill->taxes > 0)
             <tr>
                 <td class="label">Taxes</td>

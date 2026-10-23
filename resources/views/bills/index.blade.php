@@ -260,7 +260,7 @@
                                             <form action="{{ route('bills.destroy', $bill) }}" method="POST" class="inline">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="text-red-600 hover:text-red-900" title="Delete" onclick="return confirm('Are you sure?')">
+                                                <button type="submit" class="text-red-600 hover:text-red-900" title="Delete">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
                                             </form>

@@ -27,6 +27,7 @@ Thumbs.db
 
 # Logs
 /storage/logs/*.log
+/storage/logs/activity/
 
 # NPM
 node_modules/

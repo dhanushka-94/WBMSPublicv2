@@ -100,6 +100,24 @@ class BillController extends Controller
         return view('bills.create', compact('customers', 'waterMeters'));
     }
 
+    public function quote(Request $request)
+    {
+        $validated = $request->validate([
+            'customer_id' => 'required|exists:customers,id',
+            'consumption' => 'required|numeric|min:0',
+            'bill_date' => 'nullable|date',
+        ]);
+
+        $customer = Customer::findOrFail($validated['customer_id']);
+        $charges = Rate::calculateCharges(
+            $customer->billingCategory(),
+            (float) $validated['consumption'],
+            $validated['bill_date'] ?? null
+        );
+
+        return response()->json($charges);
+    }
+
     /**
      * Store a newly created bill in storage.
      */
@@ -115,6 +133,8 @@ class BillController extends Controller
             'previous_reading' => 'required|numeric|min:0',
             'current_reading' => 'required|numeric|min:0',
             'service_charges' => 'nullable|numeric|min:0',
+            'damage_charges' => 'nullable|numeric|min:0',
+            'late_fees' => 'nullable|numeric|min:0',
             'taxes' => 'nullable|numeric|min:0',
             'adjustments' => 'nullable|numeric',
             'notes' => 'nullable|string|max:1000'
@@ -145,6 +165,8 @@ class BillController extends Controller
                 'water_charges' => $charges['water_charges'],
                 'fixed_charges' => $charges['fixed_charges'],
                 'service_charges' => $request->service_charges ?? 0,
+                'damage_charges' => $request->damage_charges ?? 0,
+                'late_fees' => $request->late_fees ?? 0,
                 'taxes' => $request->taxes ?? 0,
                 'adjustments' => $request->adjustments ?? 0,
                 'rate_breakdown' => $charges['breakdown'],
@@ -185,8 +207,21 @@ class BillController extends Controller
         }
 
         $customers = Customer::active()->with('waterMeters')->orderBy('first_name')->get();
+        if ($bill->customer_id && !$customers->contains('id', $bill->customer_id)) {
+            $currentCustomer = Customer::with('waterMeters')->find($bill->customer_id);
+            if ($currentCustomer) {
+                $customers->prepend($currentCustomer);
+            }
+        }
+
         $waterMeters = WaterMeter::active()->with('customer')->orderBy('meter_number')->get();
-        
+        if ($bill->water_meter_id && !$waterMeters->contains('id', $bill->water_meter_id)) {
+            $currentMeter = WaterMeter::with('customer')->find($bill->water_meter_id);
+            if ($currentMeter) {
+                $waterMeters->prepend($currentMeter);
+            }
+        }
+
         return view('bills.edit', compact('bill', 'customers', 'waterMeters'));
     }
 
@@ -210,6 +245,8 @@ class BillController extends Controller
             'previous_reading' => 'required|numeric|min:0',
             'current_reading' => 'required|numeric|min:0',
             'service_charges' => 'nullable|numeric|min:0',
+            'damage_charges' => 'nullable|numeric|min:0',
+            'late_fees' => 'nullable|numeric|min:0',
             'taxes' => 'nullable|numeric|min:0',
             'adjustments' => 'nullable|numeric',
             'notes' => 'nullable|string|max:1000'
@@ -240,6 +277,8 @@ class BillController extends Controller
                 'water_charges' => $charges['water_charges'],
                 'fixed_charges' => $charges['fixed_charges'],
                 'service_charges' => $request->service_charges ?? 0,
+                'damage_charges' => $request->damage_charges ?? 0,
+                'late_fees' => $request->late_fees ?? 0,
                 'taxes' => $request->taxes ?? 0,
                 'adjustments' => $request->adjustments ?? 0,
                 'rate_breakdown' => $charges['breakdown'],

@@ -204,6 +204,21 @@ class WaterMeterController extends Controller
         $averageConsumption = $water_meter->getAverageMonthlyConsumption();
         $totalConsumption = $water_meter->getTotalConsumption();
         $readingHistory = $water_meter->getReadingHistory(12);
+        $consumptionByMonth = $water_meter->meterReadings()
+            ->where('reading_date', '>=', now()->subMonths(11)->startOfMonth())
+            ->orderBy('reading_date')
+            ->get(['reading_date', 'consumption'])
+            ->groupBy(fn ($reading) => $reading->reading_date->format('Y-m'));
+
+        $chartLabels = [];
+        $chartValues = [];
+        $month = now()->subMonths(11)->startOfMonth();
+        for ($i = 0; $i < 12; $i++) {
+            $key = $month->format('Y-m');
+            $chartLabels[] = $month->format('M Y');
+            $chartValues[] = round((float) ($consumptionByMonth->get($key)?->sum('consumption') ?? 0), 2);
+            $month->addMonth();
+        }
 
         return view('meters.show', compact(
             'water_meter',
@@ -211,7 +226,9 @@ class WaterMeterController extends Controller
             'monthlyConsumption',
             'averageConsumption',
             'totalConsumption',
-            'readingHistory'
+            'readingHistory',
+            'chartLabels',
+            'chartValues'
         ));
     }
 

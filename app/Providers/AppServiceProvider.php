@@ -12,6 +12,7 @@ use Illuminate\Auth\Events\Failed;
 use App\Listeners\LoginListener;
 use App\Listeners\LogoutListener;
 use App\Listeners\FailedLoginListener;
+use App\Models\ActivityLog;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -29,6 +30,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->runPendingMigrations();
+        ActivityLog::maintainArchive();
 
         // Register authentication event listeners for activity logging
         Event::listen(Login::class, LoginListener::class);

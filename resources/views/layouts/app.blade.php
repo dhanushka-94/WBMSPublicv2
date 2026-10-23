@@ -33,6 +33,9 @@
             <!-- Page Content -->
             <main class="flex-grow">
                 @yield('content')
+                @isset($slot)
+                    {{ $slot }}
+                @endisset
             </main>
 
             <!-- Footer with Developer Credits -->
@@ -61,5 +64,101 @@
                 </div>
             </footer>
         </div>
+
+        <div id="verify-action-modal" class="hidden fixed inset-0 items-center justify-center px-4" style="z-index: 100000; background: rgba(17, 24, 39, 0.55);" role="dialog" aria-modal="true" aria-labelledby="verify-action-title">
+            <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+                <h2 id="verify-action-title" class="text-lg font-semibold text-gray-900">Confirm this action?</h2>
+                <p id="verify-action-detail" class="mt-2 text-sm text-gray-600"></p>
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" id="verify-action-no" class="rounded-lg bg-gray-200 px-4 py-2 font-medium text-gray-800 hover:bg-gray-300">No</button>
+                    <button type="button" id="verify-action-yes" class="rounded-lg px-4 py-2 font-medium text-white">Yes</button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            (function () {
+                const modal = document.getElementById('verify-action-modal');
+                const title = document.getElementById('verify-action-title');
+                const detail = document.getElementById('verify-action-detail');
+                const yesButton = document.getElementById('verify-action-yes');
+                const noButton = document.getElementById('verify-action-no');
+                let pendingForm = null;
+
+                function closeModal() {
+                    pendingForm = null;
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                }
+
+                function openModal(form, kind) {
+                    pendingForm = form;
+                    const removing = kind === 'delete';
+                    title.textContent = removing ? 'Delete this record?' : 'Save this edit?';
+                    detail.textContent = removing
+                        ? 'Choose Yes to delete it, or No to leave it unchanged.'
+                        : 'Choose Yes to save these changes, or No to keep the current details.';
+                    yesButton.className = removing
+                        ? 'rounded-lg bg-red-600 px-4 py-2 font-medium text-white hover:bg-red-700'
+                        : 'rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700';
+                    modal.classList.remove('hidden');
+                    modal.classList.add('flex');
+                    noButton.focus();
+                }
+
+                document.addEventListener('submit', function (event) {
+                    const form = event.target;
+                    if (!(form instanceof HTMLFormElement)) {
+                        return;
+                    }
+                    if (form.dataset.verified === 'yes') {
+                        delete form.dataset.verified;
+                        return;
+                    }
+                    if (form.dataset.skipConfirm === 'yes') {
+                        return;
+                    }
+
+                    const methodInput = form.querySelector('input[name="_method"]');
+                    const spoof = (methodInput ? methodInput.value : '').toUpperCase();
+                    const action = (form.getAttribute('action') || '').toLowerCase();
+                    if (spoof === 'PATCH' && action.includes('resend')) {
+                        return;
+                    }
+                    if (spoof !== 'PUT' && spoof !== 'PATCH' && spoof !== 'DELETE') {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    event.stopPropagation();
+                    openModal(form, spoof === 'DELETE' ? 'delete' : 'edit');
+                }, true);
+
+                noButton.addEventListener('click', closeModal);
+                modal.addEventListener('click', function (event) {
+                    if (event.target === modal) {
+                        closeModal();
+                    }
+                });
+                document.addEventListener('keydown', function (event) {
+                    if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
+                        closeModal();
+                    }
+                });
+                yesButton.addEventListener('click', function () {
+                    const form = pendingForm;
+                    closeModal();
+                    if (!form) {
+                        return;
+                    }
+                    form.dataset.verified = 'yes';
+                    if (typeof form.requestSubmit === 'function') {
+                        form.requestSubmit();
+                    } else {
+                        form.submit();
+                    }
+                });
+            })();
+        </script>
     </body>
 </html>

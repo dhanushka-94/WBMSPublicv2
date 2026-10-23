@@ -365,7 +365,6 @@
                                         @method('DELETE')
                                             <button type="submit" 
                                                     class="bg-red-100 hover:bg-red-200 text-red-600 hover:text-red-800 p-2 rounded-lg transition-all duration-200 transform hover:scale-105"
-                                                    onclick="return confirm('Are you sure you want to delete this division?')"
                                                     title="Delete Division">
                                             <i class="fas fa-trash"></i>
                                         </button>
@@ -502,7 +501,6 @@
                                         @method('DELETE')
                                             <button type="submit" 
                                                     class="bg-red-100 hover:bg-red-200 text-red-600 hover:text-red-800 p-2 rounded-lg transition-all duration-200 transform hover:scale-105"
-                                                    onclick="return confirm('Are you sure you want to delete this customer type?')"
                                                     title="Delete Customer Type">
                                             <i class="fas fa-trash"></i>
                                         </button>

@@ -37,6 +37,14 @@
     </div>
 
     <div class="mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="mb-6 rounded-xl border border-purple-100 bg-white px-5 py-4 text-sm text-gray-700">
+            This list keeps the last 90 days. Every action is also saved in a monthly text file.
+            @forelse($archiveMonths as $month)
+                <a href="{{ route('activity-logs.month', $month) }}" class="ml-2 font-medium text-purple-700 underline">{{ $month }}</a>
+            @empty
+                <span class="ml-2 text-gray-500">The first file is created when the next action is recorded.</span>
+            @endforelse
+        </div>
         <!-- Statistics Cards -->
         <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
             <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
@@ -232,7 +240,7 @@
                 <table class="w-full">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & time</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
@@ -246,7 +254,7 @@
                         @forelse($activities as $activity)
                             <tr class="hover:bg-gray-50">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    <div class="font-medium">{{ $activity->created_at->format('M d, h:i A') }}</div>
+                                    <div class="font-medium">{{ $activity->formatted_created_at }}</div>
                                     <div class="text-xs text-gray-500">{{ $activity->time_ago }}</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">

@@ -92,6 +92,7 @@ class ActivityLogController extends Controller
 
         // Get statistics for the current filter
         $stats = $this->getFilteredStats($request);
+        $archiveMonths = ActivityLog::archiveMonths();
 
         // Log this view activity
         $this->logActivity('view', 'Viewed activity logs dashboard');
@@ -101,8 +102,24 @@ class ActivityLogController extends Controller
             'users',
             'actions',
             'modules',
-            'stats'
+            'stats',
+            'archiveMonths'
         ));
+    }
+
+    /**
+     * Download one month's activity text file.
+     */
+    public function downloadMonth(string $month)
+    {
+        $path = ActivityLog::monthlyArchivePath($month);
+        if (!$path || !is_file($path)) {
+            abort(404);
+        }
+
+        return response()->download($path, 'activity-'.$month.'.txt', [
+            'Content-Type' => 'text/plain; charset=UTF-8',
+        ]);
     }
 
     /**
@@ -157,13 +174,54 @@ class ActivityLogController extends Controller
      */
     public function userActivity(Request $request, User $user): View
     {
-        $days = $request->input('days', 30);
-        $activities = ActivityLog::getUserActivity($user->id, $days);
+        $query = ActivityLog::where('user_id', $user->id);
 
-        // Log this view activity
+        if ($request->filled('action')) {
+            $query->where('action', $request->action);
+        }
+        if ($request->filled('module')) {
+            $query->where('module', $request->module);
+        }
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($inner) use ($search) {
+                $inner->where('description', 'like', "%{$search}%")
+                    ->orWhere('ip_address', 'like', "%{$search}%");
+            });
+        }
+
+        match ($request->input('date_range')) {
+            'today' => $query->whereDate('created_at', today()),
+            'yesterday' => $query->whereDate('created_at', today()->subDay()),
+            'week' => $query->where('created_at', '>=', now()->startOfWeek()),
+            'month' => $query->where('created_at', '>=', now()->startOfMonth()),
+            default => null,
+        };
+
+        $activities = $query->orderByDesc('created_at')->paginate(25)->withQueryString();
+        $forUser = ActivityLog::where('user_id', $user->id);
+        $stats = [
+            'today' => (clone $forUser)->whereDate('created_at', today())->count(),
+            'week' => (clone $forUser)->where('created_at', '>=', now()->startOfWeek())->count(),
+        ];
+        $lastLoginAt = (clone $forUser)->where('action', 'login')->latest('created_at')->value('created_at');
+        $lastLogin = $lastLoginAt ? Carbon::parse($lastLoginAt)->diffForHumans() : 'Never';
+        $availableActions = (clone $forUser)->distinct()->orderBy('action')->pluck('action');
+        $availableModules = (clone $forUser)->distinct()->orderBy('module')->pluck('module');
+
         $this->logActivity('view', "Viewed activity logs for user: {$user->name}");
 
-        return view('activity-logs.user', compact('user', 'activities', 'days'));
+        return view('activity-logs.user', compact(
+            'user',
+            'activities',
+            'stats',
+            'lastLogin',
+            'availableActions',
+            'availableModules'
+        ));
     }
 
     /**

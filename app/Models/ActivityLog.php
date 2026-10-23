@@ -6,12 +6,22 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 
 class ActivityLog extends Model
 {
     use HasFactory;
+
+    public const DATABASE_RETENTION_DAYS = 90;
+
+    protected static function booted(): void
+    {
+        static::created(function (ActivityLog $log) {
+            $log->appendToMonthlyFile();
+        });
+    }
 
     protected $fillable = [
         'user_id',
@@ -132,6 +142,11 @@ class ActivityLog extends Model
         $user = auth()->user();
         $request = request();
 
+        $sessionId = null;
+        if ($request && $request->hasSession()) {
+            $sessionId = $request->session()->getId();
+        }
+
         $defaultData = [
             'user_id' => $user?->id,
             'user_name' => $user?->name,
@@ -139,9 +154,9 @@ class ActivityLog extends Model
             'user_role' => $user?->role ?? 'guest',
             'ip_address' => $request?->ip(),
             'user_agent' => $request?->userAgent(),
-            'session_id' => session()->getId(),
+            'session_id' => $sessionId,
             'method' => $request?->method(),
-            'url' => $request?->fullUrl(),
+            'url' => $request ? substr($request->fullUrl(), 0, 255) : null,
             'route_name' => $request?->route()?->getName(),
             'status' => 'success',
             'module' => 'system' // Default module
@@ -152,6 +167,10 @@ class ActivityLog extends Model
         // Ensure module is never null or empty
         if (empty($mergedData['module'])) {
             $mergedData['module'] = 'system';
+        }
+
+        if ($request) {
+            $request->attributes->set('activity_logged', true);
         }
 
         return self::create($mergedData);
@@ -201,6 +220,141 @@ class ActivityLog extends Model
             'old_values' => $oldValues,
             'new_values' => $newValues
         ]);
+    }
+
+    /**
+     * Copy rows that existed before monthly files started, then drop database rows older than 90 days.
+     * Runs at most once a day. The text files are kept.
+     */
+    public static function maintainArchive(): void
+    {
+        $dir = storage_path('logs/activity');
+        $marker = $dir.DIRECTORY_SEPARATOR.'.backfilled';
+        $stamp = storage_path('framework/activity-prune-stamp.txt');
+        $today = now()->toDateString();
+        $needsBackfill = !is_file($marker);
+        $needsPrune = !is_file($stamp) || trim((string) file_get_contents($stamp)) !== $today;
+
+        if (!$needsBackfill && !$needsPrune) {
+            return;
+        }
+
+        if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) {
+            return;
+        }
+
+        if (!Schema::hasTable('activity_logs')) {
+            return;
+        }
+
+        $lock = fopen($dir.DIRECTORY_SEPARATOR.'.lock', 'c');
+        if ($lock === false || !flock($lock, LOCK_EX)) {
+            if (is_resource($lock)) {
+                fclose($lock);
+            }
+            return;
+        }
+
+        try {
+            if (!is_file($marker)) {
+                $progress = $dir.DIRECTORY_SEPARATOR.'.backfill-id';
+                $lastId = is_file($progress) ? (int) trim((string) file_get_contents($progress)) : 0;
+
+                self::where('id', '>', $lastId)->orderBy('id')->chunkById(200, function ($logs) use ($progress) {
+                    foreach ($logs as $log) {
+                        $log->appendToMonthlyFile();
+                        file_put_contents($progress, (string) $log->id);
+                    }
+                });
+
+                file_put_contents($marker, now()->toIso8601String());
+            }
+
+            $today = now()->toDateString();
+            if (!is_file($stamp) || trim((string) file_get_contents($stamp)) !== $today) {
+                self::where('created_at', '<', now()->subDays(self::DATABASE_RETENTION_DAYS))->delete();
+                file_put_contents($stamp, $today);
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        } finally {
+            flock($lock, LOCK_UN);
+            fclose($lock);
+        }
+    }
+
+    public function appendToMonthlyFile(): void
+    {
+        try {
+            $at = $this->created_at ?? now();
+            $dir = storage_path('logs/activity');
+            if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) {
+                return;
+            }
+
+            $path = $dir.DIRECTORY_SEPARATOR.$at->format('Y-m').'.txt';
+            $line = implode(' | ', [
+                $at->format('Y-m-d H:i:s'),
+                $this->archiveText($this->user_name),
+                $this->archiveText($this->user_email),
+                $this->archiveText($this->action),
+                $this->archiveText($this->status),
+                $this->archiveText($this->description),
+            ]).PHP_EOL;
+
+            $handle = fopen($path, 'ab');
+            if ($handle === false) {
+                return;
+            }
+
+            try {
+                if (!flock($handle, LOCK_EX)) {
+                    return;
+                }
+                clearstatcache(true, $path);
+                if (!is_file($path) || filesize($path) === 0) {
+                    fwrite($handle, '# AquaBill activity log '.$at->format('Y-m').PHP_EOL);
+                    fwrite($handle, '# date time | user | email | action | status | description'.PHP_EOL);
+                }
+                fwrite($handle, $line);
+                fflush($handle);
+                flock($handle, LOCK_UN);
+            } finally {
+                fclose($handle);
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
+    }
+
+    public static function archiveMonths(): array
+    {
+        $months = [];
+        foreach (glob(storage_path('logs/activity/*.txt')) ?: [] as $file) {
+            $name = basename($file, '.txt');
+            if (preg_match('/^\d{4}-\d{2}$/', $name)) {
+                $months[] = $name;
+            }
+        }
+        rsort($months);
+
+        return $months;
+    }
+
+    public static function monthlyArchivePath(string $month): ?string
+    {
+        if (!preg_match('/^\d{4}-\d{2}$/', $month)) {
+            return null;
+        }
+
+        return storage_path('logs/activity/'.$month.'.txt');
+    }
+
+    private function archiveText(?string $value): string
+    {
+        $value = preg_replace('/\s+/', ' ', trim((string) $value)) ?? '';
+
+        return $value === '' ? '-' : $value;
     }
 
     // Attribute accessors

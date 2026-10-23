@@ -13,6 +13,12 @@ return [
             'Save the Google Maps API key from System Settings. The meter map uses that key.',
             'Describe the office features, the tariff, and the current version on the About page.',
             'Add a Super Admin level for settings, SMS settings, system on/off, the mobile API, and deleting an administrator. Admin keeps the rest of the office.',
+            'Show the profile forms, open New Bill, add a monthly consumption chart on each meter, and add a financial summary on each customer.',
+            'On New Bill, select the customer’s meter and previous reading, then show the unit breakdown, damage charge, and total.',
+            'Record every mobile API action for each user, with the date and time.',
+            'Keep activity logs in the database for 90 days and save each month as a text file.',
+            'Ask Yes or No before saving an edit or deleting a record.',
+            'Open Edit Bill with the bill’s current readings, charges, and total.',
         ],
     ],
     [

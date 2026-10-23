@@ -281,7 +281,7 @@
                                            title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <form method="POST" action="{{ route('meters.destroy', $meter) }}" class="inline-block" onsubmit="return confirm('Are you sure you want to delete meter {{ $meter->meter_number }}? This action cannot be undone.')">
+                                        <form method="POST" action="{{ route('meters.destroy', $meter) }}" class="inline-block" >
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" 

@@ -229,7 +229,7 @@
                         @method('DELETE')
                         <button type="submit" 
                                 class="w-full bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors flex items-center justify-center"
-                                onclick="return confirm('Are you sure you want to delete this rate? This action cannot be undone.')">
+>
                             <i class="fas fa-trash mr-2"></i>Delete Rate
                         </button>
                     </form>

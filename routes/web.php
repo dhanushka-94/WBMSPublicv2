@@ -78,7 +78,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     
     // View-only bill routes (always accessible) 
     Route::get('/bills', [BillController::class, 'index'])->name('bills.index');
-    Route::get('/bills/{bill}', [BillController::class, 'show'])->name('bills.show');
+    Route::get('/bills/{bill}', [BillController::class, 'show'])->whereNumber('bill')->name('bills.show');
     Route::get('bills/{bill}/print', [BillController::class, 'print'])->name('bills.print');
     Route::get('payments/{payment}/receipt', [PaymentController::class, 'print'])->name('payments.receipt');
     Route::get('bills/data/ajax', [BillController::class, 'getBillsData'])->name('bills.data');
@@ -151,6 +151,7 @@ Route::middleware(['auth', 'verified', 'system.check'])->group(function () {
     
     // Bill Management (create/edit/delete - RESTRICTED)
     Route::get('/bills/create', [BillController::class, 'create'])->name('bills.create');
+    Route::post('/bills/quote', [BillController::class, 'quote'])->name('bills.quote');
     Route::post('/bills', [BillController::class, 'store'])->name('bills.store');
     Route::get('/bills/{bill}/edit', [BillController::class, 'edit'])->name('bills.edit');
     Route::put('/bills/{bill}', [BillController::class, 'update'])->name('bills.update');
@@ -161,10 +162,10 @@ Route::middleware(['auth', 'verified', 'system.check'])->group(function () {
     Route::post('bills/calculate-late-fees', [BillController::class, 'calculateLateFees'])->name('bills.late-fees');
     
     // Meter Reading Management (RESTRICTED)
+    Route::get('meter-readings/edit', [MeterReadingController::class, 'editFallback'])->name('readings.edit.fallback');
     Route::resource('meter-readings', MeterReadingController::class)
         ->names('readings')
         ->parameters(['meter-readings' => 'reading']);
-    Route::get('meter-readings/edit', [MeterReadingController::class, 'editFallback'])->name('readings.edit.fallback');
     Route::post('readings/{reading}/verify', [MeterReadingController::class, 'verify'])->name('readings.verify');
     Route::get('readings/bulk-entry', [MeterReadingController::class, 'bulkEntry'])->name('readings.bulk');
     Route::post('readings/bulk-store', [MeterReadingController::class, 'bulkStore'])->name('readings.bulk.store');
@@ -176,7 +177,12 @@ Route::middleware(['auth', 'verified', 'system.check'])->group(function () {
     Route::get('readings/search-meters/ajax', [MeterReadingController::class, 'searchMeters'])->name('readings.search-meters');
     
     // SMS Notifications (RESTRICTED)
-    Route::resource('sms-notifications', SmsNotificationController::class)->names('sms');
+    Route::get('sms-notifications/create', function () {
+        return redirect()->route('sms.bulk');
+    })->name('sms.create');
+    Route::resource('sms-notifications', SmsNotificationController::class)
+        ->names('sms')
+        ->except(['create', 'edit']);
     Route::get('sms/statistics', [SmsNotificationController::class, 'statistics'])->name('sms.statistics');
     Route::post('sms/export', [SmsNotificationController::class, 'export']);
     Route::post('sms/bulk-delete', [SmsNotificationController::class, 'bulkDelete'])->name('sms.bulk-delete');
@@ -205,6 +211,9 @@ Route::middleware(['auth', 'verified', 'system.check'])->group(function () {
     // Activity Logs (RESTRICTED)
     Route::get('activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
     Route::get('activity-logs/export', [ActivityLogController::class, 'export'])->name('activity-logs.export');
+    Route::get('activity-logs/month/{month}', [ActivityLogController::class, 'downloadMonth'])
+        ->where('month', '\d{4}-\d{2}')
+        ->name('activity-logs.month');
     Route::get('activity-logs/user/{user}', [ActivityLogController::class, 'userActivity'])->name('activity-logs.user');
     Route::get('activity-logs/{activity}', [ActivityLogController::class, 'show'])->name('activity-logs.show');
 

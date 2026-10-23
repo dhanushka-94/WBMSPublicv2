@@ -199,7 +199,6 @@
 
                         @if($user->id !== auth()->id() && (auth()->user()->isSuperAdmin() || !in_array($user->role, ['admin', 'super_admin'], true)))
                             <form method="POST" action="{{ route('users.destroy', $user) }}" 
-                                  onsubmit="return confirm('Are you sure you want to delete this user? This action cannot be undone.')" 
                                   class="inline">
                                 @csrf
                                 @method('DELETE')

@@ -32,8 +32,15 @@ class ActivityLogger
     protected function logActivity(Request $request, Response $response, float $startTime): void
     {
         try {
-            // Skip if user is not authenticated (for public routes)
-            if (!Auth::check()) {
+            $user = Auth::user() ?? Auth::guard('sanctum')->user();
+
+            // Public routes, including the health check, have no signed-in user.
+            // Login and failed login are recorded by the API controller itself.
+            if (!$user) {
+                return;
+            }
+
+            if ($request->is('api/*') && $request->attributes->get('activity_logged')) {
                 return;
             }
 
@@ -42,14 +49,19 @@ class ActivityLogger
                 return;
             }
 
-            $user = Auth::user();
             $endTime = microtime(true);
             $duration = round(($endTime - $startTime) * 1000); // Convert to milliseconds
 
-            // Determine action based on HTTP method and route
-            $action = $this->determineAction($request, $response);
-            $module = $this->determineModule($request);
-            $description = $this->generateDescription($request, $action, $module);
+            if ($request->is('api/*')) {
+                $apiActivity = $this->describeApiRequest($request, $user);
+                $action = $apiActivity['action'];
+                $module = $apiActivity['module'];
+                $description = $apiActivity['description'];
+            } else {
+                $action = $this->determineAction($request, $response);
+                $module = $this->determineModule($request);
+                $description = $this->generateDescription($request, $action, $module);
+            }
 
             // Get subject information if available
             $subjectInfo = $this->extractSubjectInfo($request);
@@ -66,12 +78,12 @@ class ActivityLogger
                 'description' => $description,
                 'module' => $module ?: 'system', // Ensure module is never null
                 'method' => $request->method(),
-                'url' => $request->fullUrl(),
+                'url' => substr($request->fullUrl(), 0, 255),
                 'route_name' => $request->route()?->getName(),
                 'properties' => $this->getRequestProperties($request),
                 'ip_address' => $request->ip(),
                 'user_agent' => $request->userAgent(),
-                'session_id' => session()->getId(),
+                'session_id' => $request->hasSession() ? $request->session()->getId() : null,
                 'status' => $response->getStatusCode() >= 400 ? 'failed' : 'success',
                 'error_message' => $response->getStatusCode() >= 400 ? 'HTTP ' . $response->getStatusCode() : null,
                 'duration_ms' => $duration
@@ -143,6 +155,68 @@ class ActivityLogger
         }
 
         return false;
+    }
+
+    /**
+     * Name an API call so the office log shows who did what, and when.
+     */
+    protected function describeApiRequest(Request $request, $user): array
+    {
+        $path = preg_replace('#^api/v1/#', '', $request->path());
+        $method = $request->method();
+        $patterns = [
+            ['POST', '#^logout$#', 'logout', 'signed out of the mobile app', 'mobile_app'],
+            ['POST', '#^refresh$#', 'token_refresh', 'refreshed the mobile login token', 'mobile_app'],
+            ['GET', '#^check-token$#', 'token_check', 'checked the mobile login token', 'mobile_app'],
+            ['GET', '#^profile$#', 'view', 'viewed their profile from the mobile app', 'mobile_app'],
+            ['PUT', '#^profile$#', 'update', 'updated their profile from the mobile app', 'mobile_app'],
+            ['PATCH', '#^profile$#', 'update', 'updated their profile from the mobile app', 'mobile_app'],
+            ['GET', '#^meter-reading/route/today$#', 'view', "viewed today's reading route", 'readings'],
+            ['GET', '#^meter-reading/customers/search$#', 'search', 'searched customers from the mobile app', 'customers'],
+            ['GET', '#^meter-reading/customers/\d+$#', 'view', 'viewed a customer from the mobile app', 'customers'],
+            ['GET', '#^meter-reading/customers/\d+/history$#', 'view', 'viewed meter history from the mobile app', 'readings'],
+            ['GET', '#^meter-reading/rates$#', 'view', 'viewed water rates from the mobile app', 'billing'],
+            ['POST', '#^meter-reading/quote$#', 'quote', 'calculated a bill quote from the mobile app', 'billing'],
+            ['POST', '#^meter-reading/submit$#', 'create', 'submitted a meter reading from the mobile app', 'readings'],
+            ['POST', '#^meter-reading/bills$#', 'create', 'submitted a bill from the mobile app', 'billing'],
+            ['POST', '#^meter-reading/bulk-sync$#', 'sync', 'synced meter readings from the mobile app', 'readings'],
+            ['POST', '#^meter-reading/qr-code/generate$#', 'create', 'generated a meter QR code from the mobile app', 'meters'],
+            ['POST', '#^meter-reading/qr-code/scan$#', 'scan', 'scanned a meter QR code', 'meters'],
+            ['GET', '#^meter-reading/qr-code/download/\d+$#', 'download', 'downloaded a meter QR code', 'meters'],
+            ['POST', '#^meter-reading/qr-code/batch-generate$#', 'create', 'generated meter QR codes from the mobile app', 'meters'],
+            ['GET', '#^meter-reading/readings/recent$#', 'view', 'viewed recent meter readings', 'readings'],
+            ['GET', '#^meter-reading/stats$#', 'view', 'viewed mobile reading statistics', 'readings'],
+            ['GET', '#^payments/customer/\d+/bills$#', 'view', "viewed a customer's bills for collection", 'payments'],
+            ['POST', '#^payments/record$#', 'payment', 'recorded a payment from the mobile app', 'payments'],
+            ['GET', '#^payments/customer/\d+/history$#', 'view', 'viewed payment history from the mobile app', 'payments'],
+            ['GET', '#^payments/customers/search$#', 'search', 'searched customers for payment collection', 'payments'],
+            ['GET', '#^sync/pending$#', 'view', 'checked pending mobile sync items', 'mobile_app'],
+            ['POST', '#^sync/force$#', 'sync', 'forced a mobile sync', 'mobile_app'],
+            ['GET', '#^utils/areas$#', 'view', 'viewed areas from the mobile app', 'mobile_app'],
+            ['GET', '#^utils/routes$#', 'view', 'viewed routes from the mobile app', 'mobile_app'],
+            ['GET', '#^utils/system-info$#', 'view', 'viewed system information from the mobile app', 'mobile_app'],
+        ];
+
+        foreach ($patterns as [$verb, $regex, $action, $text, $module]) {
+            if ($method === $verb && preg_match($regex, $path)) {
+                return [
+                    'action' => $action,
+                    'module' => $module,
+                    'description' => "{$user->name} {$text}",
+                ];
+            }
+        }
+
+        return [
+            'action' => match ($method) {
+                'POST' => 'create',
+                'PUT', 'PATCH' => 'update',
+                'DELETE' => 'delete',
+                default => 'view',
+            },
+            'module' => 'mobile_app',
+            'description' => "{$user->name} used {$method} /api/v1/{$path}",
+        ];
     }
 
     /**
@@ -363,11 +437,19 @@ class ActivityLogger
     {
         $properties = [];
 
+        if ($request->is('api/*')) {
+            $properties['source'] = 'api';
+        }
+
         // Add relevant request data (excluding sensitive information)
         if ($request->isMethod('POST') || $request->isMethod('PUT') || $request->isMethod('PATCH')) {
             $data = $request->except([
                 'password',
                 'password_confirmation',
+                'current_password',
+                'new_password',
+                'new_password_confirmation',
+                'token',
                 '_token',
                 '_method'
             ]);

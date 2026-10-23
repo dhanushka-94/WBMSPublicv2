@@ -7,7 +7,7 @@
         <div class="mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-4">
-                    <img class="h-16 w-16 rounded-full border-4 border-white shadow-lg" src="{{ $user->profile_photo_url }}" alt="{{ $user->name }}">
+                    <div class="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-indigo-500 text-2xl font-bold text-white shadow-lg">{{ strtoupper(substr($user->name, 0, 1)) }}</div>
                     <div>
                         <h1 class="text-3xl font-bold text-white">{{ $user->name }}'s Activity</h1>
                         <p class="text-indigo-100 mt-1">{{ $user->email }} • {{ ucfirst($user->role ?? 'User') }}</p>

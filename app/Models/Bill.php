@@ -29,6 +29,7 @@ class Bill extends Model
         'water_charges',
         'fixed_charges',
         'service_charges',
+        'damage_charges',
         'late_fees',
         'taxes',
         'adjustments',
@@ -53,6 +54,7 @@ class Bill extends Model
         'water_charges' => 'decimal:2',
         'fixed_charges' => 'decimal:2',
         'service_charges' => 'decimal:2',
+        'damage_charges' => 'decimal:2',
         'late_fees' => 'decimal:2',
         'taxes' => 'decimal:2',
         'adjustments' => 'decimal:2',
@@ -207,11 +209,12 @@ class Bill extends Model
 
     public function calculateTotalAmount(): void
     {
-        $this->total_amount = $this->water_charges + 
-                             $this->fixed_charges + 
-                             $this->service_charges + 
-                             $this->late_fees + 
-                             $this->taxes + 
+        $this->total_amount = $this->water_charges +
+                             $this->fixed_charges +
+                             $this->service_charges +
+                             $this->damage_charges +
+                             $this->late_fees +
+                             $this->taxes +
                              $this->adjustments;
     }
 

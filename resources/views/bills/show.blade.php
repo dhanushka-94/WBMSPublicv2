@@ -239,6 +239,12 @@
                                     <span class="font-medium">@lkr($bill->service_charges)</span>
                                 </div>
                             @endif
+                            @if($bill->damage_charges > 0)
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Damage Charges</span>
+                                    <span class="font-medium">@lkr($bill->damage_charges)</span>
+                                </div>
+                            @endif
                             @if($bill->taxes > 0)
                                 <div class="flex justify-between">
                                     <span class="text-gray-600">Taxes</span>
@@ -315,7 +321,7 @@
                                 <form action="{{ route('bills.destroy', $bill) }}" method="POST" class="w-full">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="w-full bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition duration-200" onclick="return confirm('Are you sure you want to delete this bill?')">
+                                    <button type="submit" class="w-full bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition duration-200">
                                         <i class="fas fa-trash mr-2"></i>Delete Bill
                                     </button>
                                 </form>
