@@ -123,6 +123,10 @@
 
             <!-- Search and Filter Section -->
             <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
+                @php
+                    $meterFilters = ['search', 'status', 'meter_type', 'maintenance_due', 'division_id', 'customer_type_id', 'assignment', 'location', 'installed_from', 'installed_to', 'reading'];
+                    $meterAdvanced = request()->hasAny(['division_id', 'customer_type_id', 'assignment', 'location', 'installed_from', 'installed_to', 'reading']);
+                @endphp
                 <form method="GET" action="{{ route('meters.index') }}" class="space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <!-- Search -->
@@ -175,6 +179,63 @@
                             </select>
                         </div>
                     </div>
+
+                    <details class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3" @if($meterAdvanced) open @endif>
+                        <summary class="cursor-pointer text-sm font-semibold text-purple-700">More filters</summary>
+                        <div class="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div class="space-y-2">
+                                <label class="block text-sm font-semibold text-gray-700">Division</label>
+                                <select name="division_id" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none">
+                                    <option value="">All divisions</option>
+                                    @foreach($divisions as $division)
+                                        <option value="{{ $division->id }}" @selected((string) request('division_id') === (string) $division->id)>{{ $division->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="block text-sm font-semibold text-gray-700">Customer type</label>
+                                <select name="customer_type_id" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none">
+                                    <option value="">All types</option>
+                                    @foreach($customerTypes as $type)
+                                        <option value="{{ $type->id }}" @selected((string) request('customer_type_id') === (string) $type->id)>{{ $type->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="block text-sm font-semibold text-gray-700">Assignment</label>
+                                <select name="assignment" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none">
+                                    <option value="">Any</option>
+                                    <option value="assigned" @selected(request('assignment') === 'assigned')>Assigned to a customer</option>
+                                    <option value="unassigned" @selected(request('assignment') === 'unassigned')>Not assigned</option>
+                                </select>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="block text-sm font-semibold text-gray-700">Map location</label>
+                                <select name="location" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none">
+                                    <option value="">Any</option>
+                                    <option value="mapped" @selected(request('location') === 'mapped')>Has a map location</option>
+                                    <option value="unmapped" @selected(request('location') === 'unmapped')>No map location</option>
+                                </select>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="block text-sm font-semibold text-gray-700">Installed from</label>
+                                <input type="date" name="installed_from" value="{{ request('installed_from') }}" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="block text-sm font-semibold text-gray-700">Installed to</label>
+                                <input type="date" name="installed_to" value="{{ request('installed_to') }}" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none">
+                            </div>
+                            <div class="space-y-2 md:col-span-2">
+                                <label class="block text-sm font-semibold text-gray-700">Reading</label>
+                                <select name="reading" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none">
+                                    <option value="">Any</option>
+                                    <option value="this_month" @selected(request('reading') === 'this_month')>Read this month</option>
+                                    <option value="missed" @selected(request('reading') === 'missed')>Not read this month</option>
+                                    <option value="zero" @selected(request('reading') === 'zero')>Dial still at 0</option>
+                                </select>
+                            </div>
+                        </div>
+                    </details>
 
                     <div class="flex space-x-4">
                         <button type="submit" 
@@ -327,7 +388,16 @@
                         <i class="fas fa-tachometer-alt text-6xl"></i>
                     </div>
                     <h3 class="mt-4 text-lg font-medium text-gray-900">No water meters found</h3>
-                    <p class="mt-2 text-gray-500">Get started by adding your first water meter.</p>
+                    <p class="mt-2 text-gray-500">
+                        @if(request()->hasAny($meterFilters))
+                            No meters match these filters.
+                        @else
+                            Get started by adding your first water meter.
+                        @endif
+                    </p>
+                    @if(request()->hasAny($meterFilters))
+                        <a href="{{ route('meters.index') }}" class="mt-4 inline-flex items-center text-purple-700 font-semibold">Clear filters</a>
+                    @endif
                     <div class="mt-6">
                         <a href="{{ route('meters.create') }}" 
                            class="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">

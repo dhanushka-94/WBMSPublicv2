@@ -2,6 +2,15 @@
 
 return [
     [
+        'version' => '2.6.2',
+        'date' => '25 October 2026',
+        'title' => 'Filters on the customer and meter lists',
+        'changes' => [
+            'Filter customers by division, connection dates, meter, phone, wallet, and unpaid bills. Search also matches the meter number, NIC, EPF number, and address.',
+            'Filter water meters by division, customer type, assignment, map location, installation dates, and whether the meter was read this month.',
+        ],
+    ],
+    [
         'version' => '2.6.1',
         'date' => '25 October 2026',
         'title' => 'Year charts on the dashboard and customer page',

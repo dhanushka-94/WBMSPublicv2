@@ -97,61 +97,130 @@
                 </h3>
             </div>
             <div class="p-6">
-                <form method="GET" action="{{ route('customers.index') }}" class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <div class="space-y-2">
-                        <label class="block text-sm font-semibold text-gray-700">Search</label>
-                        <div class="relative">
-                            <input type="text" 
-                                   name="search" 
-                                   value="{{ request('search') }}" 
-                                   placeholder="Name, account number, email..."
-                                   class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:outline-none transition-colors">
-                            <div class="absolute inset-y-0 right-0 flex items-center pr-3">
-                                <i class="fas fa-search text-gray-400"></i>
+                @php
+                    $customerFilters = ['search', 'status', 'customer_type_id', 'division_id', 'connected_from', 'connected_to', 'meter', 'phone', 'wallet', 'balance'];
+                    $customerAdvanced = request()->hasAny(['connected_from', 'connected_to', 'meter', 'phone', 'wallet', 'balance']);
+                @endphp
+                <form method="GET" action="{{ route('customers.index') }}" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div class="space-y-2">
+                            <label class="block text-sm font-semibold text-gray-700">Search</label>
+                            <div class="relative">
+                                <input type="text"
+                                       name="search"
+                                       value="{{ request('search') }}"
+                                       placeholder="Name, account, meter, NIC, phone..."
+                                       class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:outline-none transition-colors">
+                                <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+                                    <i class="fas fa-search text-gray-400"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="block text-sm font-semibold text-gray-700">Status</label>
+                            <div class="relative">
+                                <select name="status" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:outline-none transition-colors appearance-none">
+                                    <option value="">All Statuses</option>
+                                    <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
+                                    <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
+                                    <option value="suspended" {{ request('status') === 'suspended' ? 'selected' : '' }}>Suspended</option>
+                                    <option value="disconnected" {{ request('status') === 'disconnected' ? 'selected' : '' }}>Disconnected</option>
+                                </select>
+                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                    <i class="fas fa-chevron-down text-gray-400"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="block text-sm font-semibold text-gray-700">Customer Type</label>
+                            <div class="relative">
+                                <select name="customer_type_id" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:outline-none transition-colors appearance-none">
+                                    <option value="">All Types</option>
+                                    @foreach($customerTypes ?? [] as $type)
+                                        <option value="{{ $type->id }}" {{ request('customer_type_id') == $type->id ? 'selected' : '' }}>
+                                            {{ $type->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                    <i class="fas fa-chevron-down text-gray-400"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="block text-sm font-semibold text-gray-700">Division</label>
+                            <div class="relative">
+                                <select name="division_id" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:outline-none transition-colors appearance-none">
+                                    <option value="">All Divisions</option>
+                                    @foreach($divisions ?? [] as $division)
+                                        <option value="{{ $division->id }}" {{ (string) request('division_id') === (string) $division->id ? 'selected' : '' }}>
+                                            {{ $division->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                    <i class="fas fa-chevron-down text-gray-400"></i>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="space-y-2">
-                        <label class="block text-sm font-semibold text-gray-700">Status</label>
-                        <div class="relative">
-                            <select name="status" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:outline-none transition-colors appearance-none">
-                                <option value="">All Statuses</option>
-                                <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>🟢 Active</option>
-                                <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>🔴 Inactive</option>
-                                <option value="suspended" {{ request('status') === 'suspended' ? 'selected' : '' }}>🟡 Suspended</option>
-                                <option value="disconnected" {{ request('status') === 'disconnected' ? 'selected' : '' }}>Disconnected</option>
-                            </select>
-                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                <i class="fas fa-chevron-down text-gray-400"></i>
+
+                    <details class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3" @if($customerAdvanced) open @endif>
+                        <summary class="cursor-pointer text-sm font-semibold text-indigo-700">More filters</summary>
+                        <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="space-y-2">
+                                <label class="block text-sm font-semibold text-gray-700">Connected from</label>
+                                <input type="date" name="connected_from" value="{{ request('connected_from') }}" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:outline-none">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="block text-sm font-semibold text-gray-700">Connected to</label>
+                                <input type="date" name="connected_to" value="{{ request('connected_to') }}" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:outline-none">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="block text-sm font-semibold text-gray-700">Meter</label>
+                                <select name="meter" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:outline-none">
+                                    <option value="">Any</option>
+                                    <option value="assigned" @selected(request('meter') === 'assigned')>Has a meter</option>
+                                    <option value="unassigned" @selected(request('meter') === 'unassigned')>No meter</option>
+                                </select>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="block text-sm font-semibold text-gray-700">Phone</label>
+                                <select name="phone" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:outline-none">
+                                    <option value="">Any</option>
+                                    <option value="has" @selected(request('phone') === 'has')>Has a phone number</option>
+                                    <option value="missing" @selected(request('phone') === 'missing')>Missing a phone number</option>
+                                </select>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="block text-sm font-semibold text-gray-700">Wallet</label>
+                                <select name="wallet" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:outline-none">
+                                    <option value="">Any</option>
+                                    <option value="credit" @selected(request('wallet') === 'credit')>Has wallet credit</option>
+                                    <option value="zero" @selected(request('wallet') === 'zero')>No wallet credit</option>
+                                </select>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="block text-sm font-semibold text-gray-700">Bills</label>
+                                <select name="balance" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:outline-none">
+                                    <option value="">Any</option>
+                                    <option value="due" @selected(request('balance') === 'due')>Amount still due</option>
+                                    <option value="clear" @selected(request('balance') === 'clear')>Nothing due</option>
+                                </select>
                             </div>
                         </div>
-                    </div>
-                    
-                    <div class="space-y-2">
-                        <label class="block text-sm font-semibold text-gray-700">Customer Type</label>
-                        <div class="relative">
-                            <select name="customer_type_id" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:outline-none transition-colors appearance-none">
-                                <option value="">All Types</option>
-                                @foreach($customerTypes ?? [] as $type)
-                                    <option value="{{ $type->id }}" {{ request('customer_type_id') == $type->id ? 'selected' : '' }}>
-                                        {{ $type->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                <i class="fas fa-chevron-down text-gray-400"></i>
-                            </div>
-                        </div>
-                    </div>
-                    
+                    </details>
+
                     <div class="flex items-end space-x-3">
-                        <button type="submit" 
-                                class="flex-1 px-4 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center">
+                        <button type="submit"
+                                class="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold rounded-lg transition-all duration-200 shadow-lg flex items-center justify-center">
                             <i class="fas fa-search mr-2"></i>
                             Search
                         </button>
-                        <a href="{{ route('customers.index') }}" 
+                        <a href="{{ route('customers.index') }}"
                            class="px-4 py-3 bg-gray-500 hover:bg-gray-600 text-white font-semibold rounded-lg transition-colors flex items-center justify-center">
                             <i class="fas fa-times mr-2"></i>
                             Clear
@@ -294,14 +363,14 @@
                         </div>
                         <h3 class="text-xl font-bold text-gray-900 mb-2">No customers found</h3>
                         <p class="text-gray-600 mb-8 max-w-sm mx-auto">
-                            @if(request()->hasAny(['search', 'status', 'customer_type_id']))
+                            @if(request()->hasAny($customerFilters))
                                 No customers match your search criteria. Try adjusting your filters.
                             @else
                                 Get started by adding your first customer to the water billing system.
                             @endif
                         </p>
                         <div class="space-x-4">
-                            @if(request()->hasAny(['search', 'status', 'customer_type_id']))
+                            @if(request()->hasAny($customerFilters))
                                 <a href="{{ route('customers.index') }}" 
                                    class="inline-flex items-center px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white font-semibold rounded-lg transition-colors">
                                     <i class="fas fa-times mr-2"></i>

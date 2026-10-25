@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\WaterMeter;
 use App\Models\Customer;
+use App\Models\CustomerType;
+use App\Models\Division;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -21,41 +23,88 @@ class WaterMeterController extends Controller
     {
         $query = WaterMeter::query();
 
-        // Search functionality
         if ($request->filled('search')) {
-            $search = $request->input('search');
+            $search = trim((string) $request->input('search'));
             $query->where(function ($q) use ($search) {
                 $q->where('meter_number', 'like', "%{$search}%")
                   ->orWhere('meter_brand', 'like', "%{$search}%")
                   ->orWhere('meter_model', 'like', "%{$search}%")
+                  ->orWhere('location_notes', 'like', "%{$search}%")
                   ->orWhereHas('customer', function ($customerQuery) use ($search) {
                       $customerQuery->where('first_name', 'like', "%{$search}%")
                                    ->orWhere('last_name', 'like', "%{$search}%")
-                                   ->orWhere('account_number', 'like', "%{$search}%");
+                                   ->orWhere('account_number', 'like', "%{$search}%")
+                                   ->orWhere('phone', 'like', "%{$search}%");
                   });
             });
         }
 
-        // Filter by status
         if ($request->filled('status')) {
             $query->where('status', $request->input('status'));
         }
 
-        // Filter by meter type
         if ($request->filled('meter_type')) {
             $query->where('meter_type', $request->input('meter_type'));
         }
 
-        // Filter by maintenance due
         if ($request->filled('maintenance_due')) {
             $query->dueForMaintenance();
+        }
+
+        if ($request->filled('division_id') || $request->filled('customer_type_id')) {
+            $query->whereHas('customer', function ($customer) use ($request) {
+                if ($request->filled('division_id')) {
+                    $customer->where('division_id', $request->input('division_id'));
+                }
+                if ($request->filled('customer_type_id')) {
+                    $customer->where('customer_type_id', $request->input('customer_type_id'));
+                }
+            });
+        }
+
+        if ($request->input('assignment') === 'assigned') {
+            $query->whereNotNull('customer_id');
+        } elseif ($request->input('assignment') === 'unassigned') {
+            $query->whereNull('customer_id');
+        }
+
+        if ($request->input('location') === 'mapped') {
+            $query->whereNotNull('latitude')->whereNotNull('longitude');
+        } elseif ($request->input('location') === 'unmapped') {
+            $query->where(function ($q) {
+                $q->whereNull('latitude')->orWhereNull('longitude');
+            });
+        }
+
+        if ($from = $this->filterDate($request->input('installed_from'))) {
+            $query->whereDate('installation_date', '>=', $from);
+        }
+
+        if ($to = $this->filterDate($request->input('installed_to'))) {
+            $query->whereDate('installation_date', '<=', $to);
+        }
+
+        $monthStart = Carbon::now()->startOfMonth()->toDateString();
+        $monthEnd = Carbon::now()->endOfMonth()->toDateString();
+
+        if ($request->input('reading') === 'this_month') {
+            $query->whereHas('meterReadings', function ($reading) use ($monthStart, $monthEnd) {
+                $reading->whereBetween('reading_date', [$monthStart, $monthEnd]);
+            });
+        } elseif ($request->input('reading') === 'missed') {
+            $query->whereDoesntHave('meterReadings', function ($reading) use ($monthStart, $monthEnd) {
+                $reading->whereBetween('reading_date', [$monthStart, $monthEnd]);
+            });
+        } elseif ($request->input('reading') === 'zero') {
+            $query->where('current_reading', '<=', 0);
         }
 
         $meters = $query->with(['customer', 'meterReadings' => function ($q) {
             $q->latest('reading_date')->limit(1);
         }])
         ->orderBy('created_at', 'desc')
-        ->paginate(25);
+        ->paginate(25)
+        ->withQueryString();
 
         // Statistics
         $totalMeters = WaterMeter::count();
@@ -64,14 +113,24 @@ class WaterMeterController extends Controller
         $faultyMeters = WaterMeter::where('status', 'faulty')->count();
         $maintenanceDue = WaterMeter::dueForMaintenance()->count();
 
+        $divisions = Division::active()->orderBy('name')->get();
+        $customerTypes = CustomerType::active()->orderBy('name')->get();
+
         return view('meters.index', compact(
-            'meters', 
-            'totalMeters', 
-            'activeMeters', 
-            'inactiveMeters', 
-            'faultyMeters', 
-            'maintenanceDue'
+            'meters',
+            'totalMeters',
+            'activeMeters',
+            'inactiveMeters',
+            'faultyMeters',
+            'maintenanceDue',
+            'divisions',
+            'customerTypes'
         ));
+    }
+
+    private function filterDate(mixed $value): ?string
+    {
+        return is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) ? $value : null;
     }
 
     /**

@@ -30,26 +30,85 @@ class CustomerController extends Controller
     {
         $query = Customer::query();
 
-        // Search functionality
         if ($request->filled('search')) {
-            $search = $request->input('search');
+            $search = trim((string) $request->input('search'));
             $query->where(function ($q) use ($search) {
                 $q->where('account_number', 'like', "%{$search}%")
+                  ->orWhere('reference_number', 'like', "%{$search}%")
                   ->orWhere('first_name', 'like', "%{$search}%")
                   ->orWhere('last_name', 'like', "%{$search}%")
                   ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%");
+                  ->orWhere('phone', 'like', "%{$search}%")
+                  ->orWhere('phone_two', 'like', "%{$search}%")
+                  ->orWhere('nic', 'like', "%{$search}%")
+                  ->orWhere('epf_number', 'like', "%{$search}%")
+                  ->orWhere('meter_number', 'like', "%{$search}%")
+                  ->orWhere('address', 'like', "%{$search}%")
+                  ->orWhere('city', 'like', "%{$search}%")
+                  ->orWhereHas('waterMeters', function ($meter) use ($search) {
+                      $meter->where('meter_number', 'like', "%{$search}%");
+                  });
             });
         }
 
-        // Filter by status
         if ($request->filled('status')) {
             $query->where('status', $request->input('status'));
         }
 
-        // Filter by customer type
         if ($request->filled('customer_type_id')) {
             $query->where('customer_type_id', $request->input('customer_type_id'));
+        }
+
+        if ($request->filled('division_id')) {
+            $query->where('division_id', $request->input('division_id'));
+        }
+
+        if ($from = $this->filterDate($request->input('connected_from'))) {
+            $query->whereDate('connection_date', '>=', $from);
+        }
+
+        if ($to = $this->filterDate($request->input('connected_to'))) {
+            $query->whereDate('connection_date', '<=', $to);
+        }
+
+        if ($request->input('meter') === 'assigned') {
+            $query->whereHas('waterMeters');
+        } elseif ($request->input('meter') === 'unassigned') {
+            $query->whereDoesntHave('waterMeters');
+        }
+
+        if ($request->input('phone') === 'has') {
+            $query->where(function ($q) {
+                $q->where(function ($phone) {
+                    $phone->whereNotNull('phone')->where('phone', '!=', '');
+                })->orWhere(function ($phone) {
+                    $phone->whereNotNull('phone_two')->where('phone_two', '!=', '');
+                });
+            });
+        } elseif ($request->input('phone') === 'missing') {
+            $query->where(function ($q) {
+                $q->whereNull('phone')->orWhere('phone', '');
+            })->where(function ($q) {
+                $q->whereNull('phone_two')->orWhere('phone_two', '');
+            });
+        }
+
+        if ($request->input('wallet') === 'credit') {
+            $query->where('wallet_balance', '>', 0);
+        } elseif ($request->input('wallet') === 'zero') {
+            $query->where(function ($q) {
+                $q->whereNull('wallet_balance')->orWhere('wallet_balance', '<=', 0);
+            });
+        }
+
+        if ($request->input('balance') === 'due') {
+            $query->whereHas('bills', function ($bill) {
+                $bill->where('balance_amount', '>', 0)->whereNotIn('status', ['paid', 'cancelled']);
+            });
+        } elseif ($request->input('balance') === 'clear') {
+            $query->whereDoesntHave('bills', function ($bill) {
+                $bill->where('balance_amount', '>', 0)->whereNotIn('status', ['paid', 'cancelled']);
+            });
         }
 
         $statusCounts = (clone $query)
@@ -57,13 +116,20 @@ class CustomerController extends Controller
             ->groupBy('status')
             ->pluck('aggregate', 'status');
 
-        $customers = $query->with(['waterMeters', 'customerType'])
+        $customers = $query->with(['waterMeters', 'customerType', 'division'])
             ->orderBy('created_at', 'desc')
-            ->paginate(25);
+            ->paginate(25)
+            ->withQueryString();
 
         $customerTypes = CustomerType::active()->orderBy('name')->get();
+        $divisions = Division::active()->orderBy('name')->get();
 
-        return view('customers.index', compact('customers', 'customerTypes', 'statusCounts'));
+        return view('customers.index', compact('customers', 'customerTypes', 'divisions', 'statusCounts'));
+    }
+
+    private function filterDate(mixed $value): ?string
+    {
+        return is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) ? $value : null;
     }
 
     /**
