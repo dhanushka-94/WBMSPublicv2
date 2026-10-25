@@ -2,6 +2,16 @@
 
 return [
     [
+        'version' => '2.6.1',
+        'date' => '25 October 2026',
+        'title' => 'Year charts on the dashboard and customer page',
+        'changes' => [
+            'The dashboard charts January through December for draft, billed, and collected amounts, and for units and readings.',
+            'Each customer page shows the same charts for that customer only.',
+            'The mobile app version is no longer shown in the footer or on the About page.',
+        ],
+    ],
+    [
         'version' => '2.6.0',
         'date' => '25 October 2026',
         'title' => 'Wallet payments and reader controls',

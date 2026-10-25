@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\WaterMeter;
 use App\Models\MeterReading;
 use App\Models\Bill;
+use App\Models\Payment;
 use App\Models\Rate;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -69,34 +70,8 @@ class DashboardController extends Controller
             ->limit(5)
             ->get();
 
-        // Monthly consumption trend (last 6 months)
-        $consumptionTrend = [];
-        for ($i = 5; $i >= 0; $i--) {
-            $month = Carbon::now()->subMonths($i);
-            $consumption = MeterReading::whereMonth('reading_date', $month->month)
-                ->whereYear('reading_date', $month->year)
-                ->sum('consumption');
-            
-            $consumptionTrend[] = [
-                'month' => $month->format('M Y'),
-                'consumption' => $consumption
-            ];
-        }
-
-        // Revenue trend (last 6 months)
-        $revenueTrend = [];
-        for ($i = 5; $i >= 0; $i--) {
-            $month = Carbon::now()->subMonths($i);
-            $revenue = Bill::paid()
-                ->whereMonth('bill_date', $month->month)
-                ->whereYear('bill_date', $month->year)
-                ->sum('total_amount');
-            
-            $revenueTrend[] = [
-                'month' => $month->format('M Y'),
-                'revenue' => $revenue
-            ];
-        }
+        $chartYear = Carbon::now()->year;
+        $yearChart = $this->currentYearMonths($chartYear);
 
         // Alerts and notifications
         $alerts = [
@@ -137,8 +112,8 @@ class DashboardController extends Controller
             'recentCustomers',
             'recentReadings',
             'recentBills',
-            'consumptionTrend',
-            'revenueTrend',
+            'chartYear',
+            'yearChart',
             'alerts',
             'billingCountdown'
         ));
@@ -273,6 +248,68 @@ class DashboardController extends Controller
             'overdueCount',
             'overdueByPeriod'
         ));
+    }
+
+    /**
+     * Billed, collected, draft, and usage figures for each month of a year.
+     */
+    private function currentYearMonths(int $year): array
+    {
+        $start = Carbon::create($year, 1, 1)->startOfDay();
+        $end = Carbon::create($year, 12, 31)->endOfDay();
+        $months = [];
+
+        for ($month = 1; $month <= 12; $month++) {
+            $months[$month] = [
+                'label' => Carbon::create($year, $month, 1)->format('M'),
+                'billed' => 0.0,
+                'collected' => 0.0,
+                'draft' => 0.0,
+                'units' => 0.0,
+                'readings' => 0,
+                'bills' => 0,
+            ];
+        }
+
+        $billRows = Bill::query()
+            ->whereBetween('bill_date', [$start->toDateString(), $end->toDateString()])
+            ->where('status', '!=', 'cancelled')
+            ->selectRaw('MONTH(bill_date) as month_number')
+            ->selectRaw("SUM(CASE WHEN status = 'draft' THEN total_amount ELSE 0 END) as draft_amount")
+            ->selectRaw("SUM(CASE WHEN status = 'draft' THEN 0 ELSE total_amount END) as billed_amount")
+            ->selectRaw("SUM(CASE WHEN status = 'draft' THEN 0 ELSE 1 END) as bill_count")
+            ->groupByRaw('MONTH(bill_date)')
+            ->get();
+
+        foreach ($billRows as $row) {
+            $month = (int) $row->month_number;
+            $months[$month]['draft'] = round((float) $row->draft_amount, 2);
+            $months[$month]['billed'] = round((float) $row->billed_amount, 2);
+            $months[$month]['bills'] = (int) $row->bill_count;
+        }
+
+        $paymentRows = Payment::query()
+            ->whereBetween('paid_on', [$start->toDateString(), $end->toDateString()])
+            ->selectRaw('MONTH(paid_on) as month_number, SUM(amount) as collected')
+            ->groupByRaw('MONTH(paid_on)')
+            ->get();
+
+        foreach ($paymentRows as $row) {
+            $months[(int) $row->month_number]['collected'] = round((float) $row->collected, 2);
+        }
+
+        $readingRows = MeterReading::query()
+            ->whereBetween('reading_date', [$start, $end])
+            ->selectRaw('MONTH(reading_date) as month_number, SUM(consumption) as units, COUNT(*) as readings')
+            ->groupByRaw('MONTH(reading_date)')
+            ->get();
+
+        foreach ($readingRows as $row) {
+            $months[(int) $row->month_number]['units'] = round((float) $row->units, 2);
+            $months[(int) $row->month_number]['readings'] = (int) $row->readings;
+        }
+
+        return array_values($months);
     }
 
     /**

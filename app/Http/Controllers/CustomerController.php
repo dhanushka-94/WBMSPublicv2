@@ -9,6 +9,7 @@ use App\Models\CustomerType;
 use App\Models\Guarantor;
 use App\Models\WaterMeter;
 use App\Models\Bill;
+use App\Models\MeterReading;
 use App\Traits\LogsActivity;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
@@ -17,6 +18,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
 class CustomerController extends Controller
 {
@@ -198,6 +200,8 @@ class CustomerController extends Controller
             'payments' => $customer->payments()->count(),
             'last_payment' => $customer->payments()->latest('paid_on')->first(),
         ];
+        $chartYear = Carbon::now()->year;
+        $yearChart = $this->currentYearMonths($customer, $chartYear);
 
         return view('customers.show', compact(
             'customer', 
@@ -205,8 +209,73 @@ class CustomerController extends Controller
             'outstandingBalance', 
             'lastBill', 
             'currentReading',
-            'financialSummary'
+            'financialSummary',
+            'chartYear',
+            'yearChart'
         ));
+    }
+
+    /**
+     * This customer's billed, collected, draft, and usage figures for each month of a year.
+     */
+    private function currentYearMonths(Customer $customer, int $year): array
+    {
+        $start = Carbon::create($year, 1, 1)->startOfDay();
+        $end = Carbon::create($year, 12, 31)->endOfDay();
+        $months = [];
+
+        for ($month = 1; $month <= 12; $month++) {
+            $months[$month] = [
+                'label' => Carbon::create($year, $month, 1)->format('M'),
+                'billed' => 0.0,
+                'collected' => 0.0,
+                'draft' => 0.0,
+                'units' => 0.0,
+                'readings' => 0,
+                'bills' => 0,
+            ];
+        }
+
+        $billRows = $customer->bills()
+            ->whereBetween('bill_date', [$start->toDateString(), $end->toDateString()])
+            ->where('status', '!=', 'cancelled')
+            ->selectRaw('MONTH(bill_date) as month_number')
+            ->selectRaw("SUM(CASE WHEN status = 'draft' THEN total_amount ELSE 0 END) as draft_amount")
+            ->selectRaw("SUM(CASE WHEN status = 'draft' THEN 0 ELSE total_amount END) as billed_amount")
+            ->selectRaw("SUM(CASE WHEN status = 'draft' THEN 0 ELSE 1 END) as bill_count")
+            ->groupByRaw('MONTH(bill_date)')
+            ->get();
+
+        foreach ($billRows as $row) {
+            $month = (int) $row->month_number;
+            $months[$month]['draft'] = round((float) $row->draft_amount, 2);
+            $months[$month]['billed'] = round((float) $row->billed_amount, 2);
+            $months[$month]['bills'] = (int) $row->bill_count;
+        }
+
+        $paymentRows = $customer->payments()
+            ->whereBetween('paid_on', [$start->toDateString(), $end->toDateString()])
+            ->selectRaw('MONTH(paid_on) as month_number, SUM(amount) as collected')
+            ->groupByRaw('MONTH(paid_on)')
+            ->get();
+
+        foreach ($paymentRows as $row) {
+            $months[(int) $row->month_number]['collected'] = round((float) $row->collected, 2);
+        }
+
+        $readingRows = MeterReading::query()
+            ->whereIn('water_meter_id', $customer->waterMeters()->select('id'))
+            ->whereBetween('reading_date', [$start, $end])
+            ->selectRaw('MONTH(reading_date) as month_number, SUM(consumption) as units, COUNT(*) as readings')
+            ->groupByRaw('MONTH(reading_date)')
+            ->get();
+
+        foreach ($readingRows as $row) {
+            $months[(int) $row->month_number]['units'] = round((float) $row->units, 2);
+            $months[(int) $row->month_number]['readings'] = (int) $row->readings;
+        }
+
+        return array_values($months);
     }
 
     /**

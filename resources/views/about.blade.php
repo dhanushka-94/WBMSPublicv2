@@ -18,12 +18,9 @@
                     <p class="text-lg font-medium mb-2">
                         Powered by Software as a System by <span class="font-bold">olexto Digital Solutions (Pvt) Ltd</span>
                     </p>
-                    <div class="flex flex-col sm:flex-row gap-2 text-sm opacity-90">
+                    <div class="text-sm opacity-90">
                         <span class="bg-white/20 px-3 py-1 rounded-full">
                             <i class="fas fa-desktop mr-1"></i>System Version {{ config('changelog.0.version') }}
-                        </span>
-                        <span class="bg-white/20 px-3 py-1 rounded-full">
-                            <i class="fas fa-mobile-alt mr-1"></i>Mobile App Version 2.0.0v
                         </span>
                     </div>
                 </div>
@@ -215,7 +212,7 @@
                     <div class="w-24 h-1 bg-gradient-to-r from-purple-500 to-pink-500 mx-auto"></div>
                 </div>
                 
-                <div class="grid md:grid-cols-2 gap-8">
+                <div class="max-w-xl mx-auto">
                     <!-- Web System Version -->
                     <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6">
                         <div class="text-center">
@@ -231,25 +228,6 @@
                                 <p><strong>Technology:</strong> Laravel + Tailwind CSS</p>
                                 <p><strong>Current release:</strong> {{ config('changelog.0.date') }}</p>
                                 <p><strong>Currency and time:</strong> LKR, Asia/Colombo</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Mobile App Version -->
-                    <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-6">
-                        <div class="text-center">
-                            <div class="bg-green-500 text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <i class="fas fa-mobile-alt text-2xl"></i>
-                            </div>
-                            <h3 class="text-2xl font-bold text-green-800 mb-2">Mobile App</h3>
-                            <div class="bg-green-500 text-white px-4 py-2 rounded-full inline-block mb-4">
-                                <span class="text-lg font-bold">Version 2.0.0v</span>
-                            </div>
-                            <div class="text-sm text-green-700 space-y-2">
-                                <p><strong>Platforms:</strong> iOS & Android</p>
-                                <p><strong>Technology:</strong> React Native</p>
-                                <p><strong>Release Date:</strong> {{ date('F Y') }}</p>
-                                <p><strong>Compatibility:</strong> iOS 12+ / Android 8+</p>
                             </div>
                         </div>
                     </div>

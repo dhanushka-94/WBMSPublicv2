@@ -109,6 +109,36 @@
             </div>
         </div>
 
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
+            <div class="bg-white overflow-hidden shadow-sm rounded-xl border border-emerald-100">
+                <div class="bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-4">
+                    <h3 class="text-lg font-bold text-white">
+                        <i class="fas fa-chart-bar mr-2"></i>{{ $chartYear }} bills by month
+                    </h3>
+                    <p class="text-emerald-100 text-sm mt-1">Draft, billed, and collected amounts</p>
+                </div>
+                <div class="p-6">
+                    <div class="relative h-80">
+                        <canvas id="customerYearMoneyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white overflow-hidden shadow-sm rounded-xl border border-cyan-100">
+                <div class="bg-gradient-to-r from-cyan-500 to-blue-600 px-6 py-4">
+                    <h3 class="text-lg font-bold text-white">
+                        <i class="fas fa-chart-line mr-2"></i>{{ $chartYear }} water use by month
+                    </h3>
+                    <p class="text-cyan-100 text-sm mt-1">Units consumed and readings taken</p>
+                </div>
+                <div class="p-6">
+                    <div class="relative h-80">
+                        <canvas id="customerYearUsageChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
             <!-- Left Column - Customer Info -->
@@ -487,4 +517,68 @@
         </div>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const months = @json($yearChart);
+    const labels = months.map(month => month.label);
+    const money = (value) => 'Rs. ' + Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    new Chart(document.getElementById('customerYearMoneyChart'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                { label: 'Draft', data: months.map(month => month.draft), backgroundColor: '#F59E0B' },
+                { label: 'Billed', data: months.map(month => month.billed), backgroundColor: '#10B981' },
+                { label: 'Collected', data: months.map(month => month.collected), backgroundColor: '#3B82F6' }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true } },
+            plugins: {
+                legend: { position: 'top' },
+                tooltip: { callbacks: { label: (item) => item.dataset.label + ': ' + money(item.parsed.y) } }
+            }
+        }
+    });
+
+    new Chart(document.getElementById('customerYearUsageChart'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    type: 'line',
+                    label: 'Units',
+                    data: months.map(month => month.units),
+                    borderColor: '#0891B2',
+                    backgroundColor: 'rgba(8, 145, 178, 0.15)',
+                    tension: 0.3,
+                    fill: true,
+                    yAxisID: 'units'
+                },
+                {
+                    label: 'Readings',
+                    data: months.map(month => month.readings),
+                    backgroundColor: '#6366F1',
+                    yAxisID: 'readings'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                units: { type: 'linear', position: 'left', beginAtZero: true, title: { display: true, text: 'Units' } },
+                readings: { type: 'linear', position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, title: { display: true, text: 'Readings' } }
+            },
+            plugins: { legend: { position: 'top' } }
+        }
+    });
+});
+</script>
 @endsection 
