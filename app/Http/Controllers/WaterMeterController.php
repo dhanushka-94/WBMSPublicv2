@@ -55,7 +55,7 @@ class WaterMeterController extends Controller
             $q->latest('reading_date')->limit(1);
         }])
         ->orderBy('created_at', 'desc')
-        ->paginate(15);
+        ->paginate(25);
 
         // Statistics
         $totalMeters = WaterMeter::count();
@@ -203,7 +203,14 @@ class WaterMeterController extends Controller
         $monthlyConsumption = $water_meter->getMonthlyConsumption();
         $averageConsumption = $water_meter->getAverageMonthlyConsumption();
         $totalConsumption = $water_meter->getTotalConsumption();
-        $readingHistory = $water_meter->getReadingHistory(12);
+        $readingHistory = $water_meter->meterReadings()
+            ->latest('reading_date')
+            ->paginate(25, ['*'], 'readings_page')
+            ->withQueryString();
+        $meterBills = $water_meter->bills()
+            ->latest('bill_date')
+            ->paginate(25, ['*'], 'bills_page')
+            ->withQueryString();
         $consumptionByMonth = $water_meter->meterReadings()
             ->where('reading_date', '>=', now()->subMonths(11)->startOfMonth())
             ->orderBy('reading_date')
@@ -228,7 +235,8 @@ class WaterMeterController extends Controller
             'totalConsumption',
             'readingHistory',
             'chartLabels',
-            'chartValues'
+            'chartValues',
+            'meterBills'
         ));
     }
 
@@ -330,12 +338,14 @@ class WaterMeterController extends Controller
     public function destroy(WaterMeter $water_meter): RedirectResponse
     {
         // Check if meter has readings or bills
-        if ($water_meter->meterReadings()->exists()) {
-            return back()->with('error', 'Cannot delete meter with existing readings.');
-        }
+        if (!auth()->user()?->isSuperAdmin()) {
+            if ($water_meter->meterReadings()->exists()) {
+                return back()->with('error', 'Cannot delete meter with existing readings.');
+            }
 
-        if ($water_meter->bills()->exists()) {
-            return back()->with('error', 'Cannot delete meter with existing bills.');
+            if ($water_meter->bills()->exists()) {
+                return back()->with('error', 'Cannot delete meter with existing bills.');
+            }
         }
 
         $water_meter->delete();

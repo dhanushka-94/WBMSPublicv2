@@ -70,6 +70,32 @@ class SystemConfiguration extends Model
         };
     }
 
+    public static function oneReadingPerMonth(): bool
+    {
+        $config = Cache::remember('system_config_one_reading_per_month', 3600, function () {
+            return static::where('key', 'one_reading_per_month')->first();
+        });
+
+        if (!$config) {
+            return false;
+        }
+
+        return filter_var($config->value, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    public static function mobileAppMaintenance(): bool
+    {
+        $config = Cache::remember('system_config_mobile_app_maintenance', 3600, function () {
+            return static::where('key', 'mobile_app_maintenance')->first();
+        });
+
+        if (!$config) {
+            return false;
+        }
+
+        return filter_var($config->value, FILTER_VALIDATE_BOOLEAN);
+    }
+
     /**
      * Get default billing day for new customers
      */

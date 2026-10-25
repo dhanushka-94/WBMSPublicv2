@@ -294,7 +294,7 @@
                     </div>
                     <div class="info-group">
                         <div class="info-label">Customer Type:</div>
-                        <div class="info-value">{{ $bill->customer->customerType->name ?? 'Residential' }}</div>
+                        <div class="info-value">{{ $bill->customer->customerType->name ?? '—' }}</div>
                     </div>
                 </div>
                 <div style="width: 48%;">

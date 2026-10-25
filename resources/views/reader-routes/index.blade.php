@@ -64,6 +64,7 @@
                 @endforelse
             </tbody>
         </table>
+        <div class="px-6 py-4">{{ $readers->links() }}</div>
     </div>
 </div>
 @endsection

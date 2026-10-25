@@ -350,7 +350,8 @@ class AuthApiController extends Controller
                 'timezone' => config('app.timezone'),
                 'datetime_format' => 'Y-m-d h:i:s A',
                 'currency' => 'LKR', // Sri Lankan Rupees
-            ]
+            ],
+            'mobile_app_maintenance' => \App\Models\SystemConfiguration::mobileAppMaintenance(),
         ];
     }
 
@@ -372,6 +373,7 @@ class AuthApiController extends Controller
                     'abilities' => $token->abilities,
                     'last_used_at' => $token->last_used_at,
                     'expires_at' => $token->expires_at,
+                    'mobile_app_maintenance' => \App\Models\SystemConfiguration::mobileAppMaintenance(),
                 ]
             ]);
 

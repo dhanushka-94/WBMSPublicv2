@@ -99,7 +99,7 @@
                                 <div class="space-y-2 ml-4">
                                     <div class="flex justify-between">
                                         <span class="text-sm text-gray-600">Name:</span>
-                                        <span class="text-sm font-medium text-gray-900">{{ $sms_notification->customer->full_name }}</span>
+                                        <a href="{{ route('customers.show', $sms_notification->customer) }}" class="text-sm font-medium text-blue-700 hover:text-blue-900">{{ $sms_notification->customer->full_name }}</a>
                                     </div>
                                     <div class="flex justify-between">
                                         <span class="text-sm text-gray-600">Account:</span>
@@ -136,7 +136,7 @@
                                 <div class="space-y-2 ml-4">
                                     <div class="flex justify-between">
                                         <span class="text-sm text-gray-600">Bill ID:</span>
-                                        <span class="text-sm font-medium text-gray-900">{{ $sms_notification->bill->id }}</span>
+                                        <a href="{{ route('bills.show', $sms_notification->bill) }}" class="text-sm font-medium text-blue-700 hover:text-blue-900">{{ $sms_notification->bill->bill_number }}</a>
                                     </div>
                                     <div class="flex justify-between">
                                         <span class="text-sm text-gray-600">Amount:</span>

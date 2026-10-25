@@ -197,7 +197,11 @@
                                                 @endif
                                             </div>
                                             <div class="ml-4">
-                                                <div class="text-sm font-medium text-gray-900">{{ $reading->waterMeter && $reading->waterMeter->customer ? $reading->waterMeter->customer->full_name : 'Unknown Customer' }}</div>
+                                                @if($reading->waterMeter && $reading->waterMeter->customer)
+                                                    <a href="{{ route('customers.show', $reading->waterMeter->customer) }}" class="text-sm font-medium text-blue-700 hover:text-blue-900">{{ $reading->waterMeter->customer->full_name }}</a>
+                                                @else
+                                                    <div class="text-sm font-medium text-gray-900">Unknown Customer</div>
+                                                @endif
                                                 <div class="text-sm text-gray-500">{{ $reading->waterMeter && $reading->waterMeter->customer ? $reading->waterMeter->customer->account_number : 'No Account' }}</div>
                                             </div>
                                         </div>
@@ -227,7 +231,7 @@
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="text-sm text-gray-900 capitalize">{{ $reading->waterMeter && $reading->waterMeter->customer ? $reading->waterMeter->customer->customer_type : 'N/A' }}</span>
+                                        <span class="text-sm text-gray-900">{{ $reading->waterMeter && $reading->waterMeter->customer ? ($reading->waterMeter->customer->customerType->name ?? '—') : 'N/A' }}</span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         @if($reading->status === 'pending')

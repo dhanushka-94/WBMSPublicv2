@@ -17,7 +17,7 @@ class RateController extends Controller
     {
         $rates = Rate::orderBy('customer_type')
             ->orderBy('tier_from')
-            ->paginate(100);
+            ->paginate(25);
 
         $customerTypes = CustomerType::pluck('name', 'name');
 

@@ -41,7 +41,7 @@
                     <div class="ml-5 w-0 flex-1">
                         <dl>
                             <dt class="text-sm font-medium text-gray-500 truncate">Total Meters</dt>
-                            <dd class="text-2xl font-semibold text-gray-900">{{ $readMeters->count() + $unreadMeters->count() }}</dd>
+                            <dd class="text-2xl font-semibold text-gray-900">{{ $completedTotal + $pendingTotal }}</dd>
                         </dl>
                     </div>
                 </div>
@@ -57,7 +57,7 @@
                     <div class="ml-5 w-0 flex-1">
                         <dl>
                             <dt class="text-sm font-medium text-gray-500 truncate">Readings Completed</dt>
-                            <dd class="text-2xl font-semibold text-gray-900">{{ $readMeters->count() }}</dd>
+                            <dd class="text-2xl font-semibold text-gray-900">{{ $completedTotal }}</dd>
                         </dl>
                     </div>
                 </div>
@@ -73,7 +73,7 @@
                     <div class="ml-5 w-0 flex-1">
                         <dl>
                             <dt class="text-sm font-medium text-gray-500 truncate">Pending Readings</dt>
-                            <dd class="text-2xl font-semibold text-gray-900">{{ $unreadMeters->count() }}</dd>
+                            <dd class="text-2xl font-semibold text-gray-900">{{ $pendingTotal }}</dd>
                         </dl>
                     </div>
                 </div>
@@ -90,7 +90,7 @@
                         <dl>
                             <dt class="text-sm font-medium text-gray-500 truncate">Completion Rate</dt>
                             <dd class="text-2xl font-semibold text-gray-900">
-                                {{ ($readMeters->count() + $unreadMeters->count()) > 0 ? round(($readMeters->count() / ($readMeters->count() + $unreadMeters->count())) * 100, 1) : 0 }}%
+                                {{ ($completedTotal + $pendingTotal) > 0 ? round(($completedTotal / ($completedTotal + $pendingTotal)) * 100, 1) : 0 }}%
                             </dd>
                         </dl>
                     </div>
@@ -103,21 +103,21 @@
             <div class="border-b border-gray-200">
                 <nav class="-mb-px flex space-x-8 px-6" aria-label="Tabs">
                     <button class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm active" data-tab="pending">
-                        <i class="fas fa-clock mr-2"></i>Pending Readings ({{ $unreadMeters->count() }})
+                        <i class="fas fa-clock mr-2"></i>Pending Readings ({{ $pendingTotal }})
                     </button>
                     <button class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="completed">
-                        <i class="fas fa-check-circle mr-2"></i>Completed Readings ({{ $readMeters->count() }})
+                        <i class="fas fa-check-circle mr-2"></i>Completed Readings ({{ $completedTotal }})
                     </button>
                 </nav>
             </div>
 
             <!-- Pending Readings Tab -->
             <div id="pending-tab" class="tab-content p-6">
-                @if($unreadMeters->count() > 0)
+                @if($pendingTotal > 0)
                     <div class="mb-4 flex items-center justify-between">
                         <h3 class="text-lg font-semibold text-gray-900">
                             <i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>
-                            Meters Requiring Readings ({{ $unreadMeters->count() }})
+                            Meters Requiring Readings ({{ $pendingTotal }})
                         </h3>
                         <div class="flex space-x-2">
                             <input type="text" id="pendingSearch" placeholder="Search meters..." class="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -164,7 +164,13 @@
                                                     @endif
                                                     </div>
                                                     <div class="ml-4">
-                                                    <div class="text-sm font-medium text-gray-900">{{ $meter->customer ? $meter->customer->full_name : 'Unassigned Customer' }}</div>
+                                                    <div class="text-sm font-medium text-gray-900">
+                                                        @if($meter->customer)
+                                                            <a href="{{ route('customers.show', $meter->customer) }}" class="text-blue-700 hover:text-blue-900">{{ $meter->customer->full_name }}</a>
+                                                        @else
+                                                            Unassigned Customer
+                                                        @endif
+                                                    </div>
                                                     <div class="text-sm text-gray-500">{{ $meter->customer ? $meter->customer->account_number : 'No Account' }}</div>
                                                 </div>
                                             </div>
@@ -213,6 +219,7 @@
                                 @endforeach
                             </tbody>
                         </table>
+                        <div class="px-6 py-4">{{ $unreadMeters->links() }}</div>
                     </div>
                 @else
                     <div class="text-center py-12">
@@ -229,11 +236,11 @@
 
             <!-- Completed Readings Tab -->
             <div id="completed-tab" class="tab-content p-6 hidden">
-                @if($readMeters->count() > 0)
+                @if($completedTotal > 0)
                     <div class="mb-4 flex items-center justify-between">
                         <h3 class="text-lg font-semibold text-gray-900">
                             <i class="fas fa-check-circle text-green-500 mr-2"></i>
-                            Completed Readings ({{ $readMeters->count() }})
+                            Completed Readings ({{ $completedTotal }})
                         </h3>
                         <input type="text" id="completedSearch" placeholder="Search meters..." class="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
@@ -273,7 +280,7 @@
                                                         </div>
                                                     </div>
                                                     <div class="ml-4">
-                                                        <div class="text-sm font-medium text-gray-900">{{ $meter->customer->full_name }}</div>
+                                                        <a href="{{ route('customers.show', $meter->customer) }}" class="text-sm font-medium text-blue-700 hover:text-blue-900">{{ $meter->customer->full_name }}</a>
                                                         <div class="text-sm text-gray-500">{{ $meter->customer->account_number }}</div>
                                                     </div>
                                                 </div>
@@ -359,6 +366,7 @@
                                 @endforeach
                             </tbody>
                         </table>
+                        <div class="px-6 py-4">{{ $readMeters->links() }}</div>
                     </div>
                 @else
                     <div class="text-center py-12">

@@ -223,7 +223,11 @@
                                 </td>
                                 <td class="px-6 py-4">
                                     <div>
-                                        <p class="font-semibold text-gray-900">{{ $meter->customer ? $meter->customer->full_name : 'Unassigned Customer' }}</p>
+                                        @if($meter->customer)
+                                            <a href="{{ route('customers.show', $meter->customer) }}" class="font-semibold text-blue-700 hover:text-blue-900">{{ $meter->customer->full_name }}</a>
+                                        @else
+                                            <p class="font-semibold text-gray-900">Unassigned Customer</p>
+                                        @endif
                                         <p class="text-sm text-gray-500">{{ $meter->customer ? $meter->customer->account_number : 'No Account' }}</p>
                                     </div>
                                 </td>

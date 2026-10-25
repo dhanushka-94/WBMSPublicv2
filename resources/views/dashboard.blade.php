@@ -295,7 +295,7 @@
                                                 <i class="fas fa-user text-blue-600"></i>
                                             </div>
                                             <div class="ml-3">
-                                                <p class="font-semibold text-gray-900">{{ $customer->full_name ?? 'Unknown Customer' }}</p>
+                                                <a href="{{ route('customers.show', $customer) }}" class="font-semibold text-gray-900 hover:text-blue-700">{{ $customer->full_name ?? 'Unknown Customer' }}</a>
                                                 <p class="text-sm text-gray-500">{{ $customer->account_number ?? 'No Account' }}</p>
                                             </div>
                                         </div>
@@ -340,8 +340,12 @@
                                 @foreach($recentBills as $bill)
                                     <div class="flex justify-between items-center py-3 border-b border-gray-100 last:border-b-0">
                                         <div>
-                                            <p class="font-semibold text-gray-900">{{ $bill->bill_number }}</p>
-                                            <p class="text-sm text-gray-500">{{ $bill->customer->full_name ?? 'Unknown Customer' }}</p>
+                                            <a href="{{ route('bills.show', $bill) }}" class="font-semibold text-gray-900 hover:text-blue-700">{{ $bill->bill_number }}</a>
+                                            @if($bill->customer)
+                                                <a href="{{ route('customers.show', $bill->customer) }}" class="block text-sm text-gray-500 hover:text-blue-700">{{ $bill->customer->full_name }}</a>
+                                            @else
+                                                <p class="text-sm text-gray-500">Unknown Customer</p>
+                                            @endif
                                         </div>
                                         <div class="text-right">
                                             <p class="font-bold text-gray-900">@rupees($bill->total_amount)</p>

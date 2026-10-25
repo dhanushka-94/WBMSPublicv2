@@ -57,7 +57,7 @@ class CustomerController extends Controller
 
         $customers = $query->with(['waterMeters', 'customerType'])
             ->orderBy('created_at', 'desc')
-            ->paginate(15);
+            ->paginate(25);
 
         $customerTypes = CustomerType::active()->orderBy('name')->get();
 
@@ -300,12 +300,14 @@ class CustomerController extends Controller
     public function destroy(Customer $customer): RedirectResponse
     {
         // Check if customer has active meters or unpaid bills
-        if ($customer->waterMeters()->active()->exists()) {
-            return back()->with('error', 'Cannot delete customer with active water meters.');
-        }
+        if (!auth()->user()?->isSuperAdmin()) {
+            if ($customer->waterMeters()->active()->exists()) {
+                return back()->with('error', 'Cannot delete customer with active water meters.');
+            }
 
-        if ($customer->getOutstandingBalance() > 0) {
-            return back()->with('error', 'Cannot delete customer with outstanding bills.');
+            if ($customer->getOutstandingBalance() > 0) {
+                return back()->with('error', 'Cannot delete customer with outstanding bills.');
+            }
         }
 
         // Log the customer deletion activity before deletion
@@ -395,7 +397,7 @@ class CustomerController extends Controller
         $bills = $customer->bills()
             ->with(['waterMeter', 'meterReading'])
             ->orderBy('bill_date', 'desc')
-            ->paginate(15);
+            ->paginate(25);
 
         $totalOutstanding = $customer->getOutstandingBalance();
         

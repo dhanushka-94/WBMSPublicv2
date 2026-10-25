@@ -237,7 +237,11 @@
                                         </div>
                                         <div class="ml-4">
                                             <div class="text-sm font-medium text-gray-900">
-                                                {{ $reading->waterMeter->customer ? $reading->waterMeter->customer->full_name : 'Unassigned Customer' }}
+                                                @if($reading->waterMeter->customer)
+                                                    <a href="{{ route('customers.show', $reading->waterMeter->customer) }}" class="text-blue-700 hover:text-blue-900">{{ $reading->waterMeter->customer->full_name }}</a>
+                                                @else
+                                                    Unassigned Customer
+                                                @endif
                                             </div>
                                             <div class="text-sm text-gray-500">{{ $reading->waterMeter->meter_number }}</div>
                                         </div>
@@ -287,7 +291,7 @@
                                                 </button>
                                             </form>
                                         @endif
-                                        @if($reading && $reading->id && $reading->status !== 'billed')
+                                        @if($reading && $reading->id && ($reading->status !== 'billed' || auth()->user()->isSuperAdmin()))
                                             <form action="{{ route('readings.destroy', $reading) }}" method="POST" class="inline">
                                                 @csrf
                                                 @method('DELETE')

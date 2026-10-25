@@ -141,7 +141,7 @@
                                             <img class="mx-auto h-24 w-24 rounded-full object-cover" 
                                                  src="{{ $water_meter->customer->profile_photo_url }}" 
                                                  alt="{{ $water_meter->customer->full_name }}">
-                                        <p class="mt-1 text-lg font-semibold text-gray-900">{{ $water_meter->customer->full_name }}</p>
+                                        <a href="{{ route('customers.show', $water_meter->customer) }}" class="mt-1 block text-lg font-semibold text-blue-700 hover:text-blue-900">{{ $water_meter->customer->full_name }}</a>
                                         <p class="text-sm text-gray-500">{{ $water_meter->customer->account_number }}</p>
                                         </div>
                                     @else
@@ -271,6 +271,7 @@
                                 </tbody>
                             </table>
                         </div>
+                        <div class="px-6 py-4">{{ $readingHistory->links() }}</div>
                         @else
                         <div class="text-center py-8">
                             <div class="mx-auto h-12 w-12 text-gray-400">
@@ -289,7 +290,7 @@
                             </h3>
                         </div>
                         
-                        @if($water_meter->bills->count() > 0)
+                        @if($meterBills->count() > 0)
                         <div class="overflow-x-auto">
                             <table class="w-full">
                                 <thead class="bg-gray-50">
@@ -301,7 +302,7 @@
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-200">
-                                    @foreach($water_meter->bills as $bill)
+                                    @foreach($meterBills as $bill)
                                     <tr class="hover:bg-gray-50">
                                         <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ $bill->bill_number }}</td>
                                         <td class="px-6 py-4 text-sm text-gray-900">{{ $bill->bill_date ? $bill->bill_date->format('M d, Y') : 'No date' }}</td>
@@ -318,6 +319,7 @@
                                 </tbody>
                             </table>
                         </div>
+                        <div class="px-6 py-4">{{ $meterBills->links() }}</div>
                         @else
                         <div class="text-center py-8">
                             <div class="mx-auto h-12 w-12 text-gray-400">

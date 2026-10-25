@@ -13,12 +13,15 @@
                     <p class="text-blue-100 mt-2">Generate, manage, and track water bills for customers</p>
                 </div>
                 <div class="flex space-x-3">
+                    <a href="{{ route('payments.collect') }}" class="bg-emerald-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-600 transition duration-200">
+                        <i class="fas fa-hand-holding-usd mr-2"></i>Take Payment
+                    </a>
                     <a href="{{ route('bills.create') }}" class="bg-white text-blue-600 px-4 py-2 rounded-lg font-medium hover:bg-blue-50 transition duration-200">
                         <i class="fas fa-plus mr-2"></i>New Bill
                     </a>
                     <form action="{{ route('bills.generate') }}" method="POST" class="inline">
                         @csrf
-                        <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-600 transition duration-200" onclick="return confirm('Generate bills for all customers?')">
+                        <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-600 transition duration-200" onclick="return confirm('Generate this month\'s bills only for meters that have a reading this month?')">
                             <i class="fas fa-magic mr-2"></i>Generate Bills
                         </button>
                     </form>
@@ -192,7 +195,7 @@
                             <tr class="hover:bg-gray-50">
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div>
-                                        <div class="text-sm font-medium text-gray-900">{{ $bill->bill_number }}</div>
+                                        <a href="{{ route('bills.show', $bill) }}" class="text-sm font-medium text-blue-700 hover:text-blue-900">{{ $bill->bill_number }}</a>
                                         <div class="text-sm text-gray-500">{{ $bill->bill_date->format('M d, Y') }}</div>
                                         <div class="text-sm text-gray-500">Due: {{ $bill->due_date->format('M d, Y') }}</div>
                                     </div>
@@ -205,7 +208,11 @@
                                                  alt="{{ $bill->customer->full_name }}">
                                         </div>
                                         <div class="ml-4">
-                                            <div class="text-sm font-medium text-gray-900">{{ $bill->customer ? $bill->customer->full_name : 'Unknown Customer' }}</div>
+                                            @if($bill->customer)
+                                                <a href="{{ route('customers.show', $bill->customer) }}" class="text-sm font-medium text-blue-700 hover:text-blue-900">{{ $bill->customer->full_name }}</a>
+                                            @else
+                                                <div class="text-sm font-medium text-gray-900">Unknown Customer</div>
+                                            @endif
                                             <div class="text-sm text-gray-500">{{ $bill->customer ? $bill->customer->account_number : 'No Account' }}</div>
                                         </div>
                                     </div>
@@ -256,7 +263,7 @@
                                         <a href="{{ route('bills.print', $bill) }}" class="text-green-600 hover:text-green-900" title="Print" target="_blank">
                                             <i class="fas fa-print"></i>
                                         </a>
-                                        @if($bill->status !== 'paid')
+                                        @if($bill->status !== 'paid' || auth()->user()->isSuperAdmin())
                                             <form action="{{ route('bills.destroy', $bill) }}" method="POST" class="inline">
                                                 @csrf
                                                 @method('DELETE')

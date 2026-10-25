@@ -17,6 +17,16 @@
                         <i class="fas fa-edit mr-2"></i>
                         Edit Customer
                     </a>
+                    @if(auth()->user()->isSuperAdmin())
+                        <form method="POST" action="{{ route('customers.destroy', $customer) }}">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700">
+                                <i class="fas fa-trash mr-2"></i>
+                                Delete Customer
+                            </button>
+                        </form>
+                    @endif
                     <a href="{{ route('customers.index') }}" 
                        class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                         <i class="fas fa-arrow-left mr-2"></i>
@@ -29,6 +39,12 @@
         @if(session('success'))
             <div class="mb-8 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg">
                 {{ session('success') }}
+            </div>
+        @endif
+
+        @if(session('error'))
+            <div class="mb-8 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+                {{ session('error') }}
             </div>
         @endif
 
@@ -62,7 +78,7 @@
             <div class="bg-emerald-600 px-6 py-4">
                 <h2 class="text-lg font-semibold text-white">Financial Summary</h2>
             </div>
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 p-6">
+            <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 p-6">
                 <div class="rounded-lg bg-blue-50 p-4">
                     <p class="text-xs font-medium uppercase text-blue-700">Total billed</p>
                     <p class="mt-1 text-2xl font-bold text-blue-900">Rs. {{ number_format($financialSummary['billed'], 2) }}</p>
@@ -84,6 +100,11 @@
                 <div class="rounded-lg bg-red-50 p-4">
                     <p class="text-xs font-medium uppercase text-red-700">Overdue</p>
                     <p class="mt-1 text-2xl font-bold text-red-900">Rs. {{ number_format($financialSummary['overdue'], 2) }}</p>
+                </div>
+                <div class="rounded-lg bg-teal-50 p-4">
+                    <p class="text-xs font-medium uppercase text-teal-700">Wallet</p>
+                    <p class="mt-1 text-2xl font-bold text-teal-900">Rs. {{ number_format($customer->wallet_balance, 2) }}</p>
+                    <a href="{{ route('payments.collect', ['customer' => $customer->id]) }}" class="text-xs font-medium text-teal-700 hover:text-teal-900">Take payment</a>
                 </div>
             </div>
         </div>
@@ -392,7 +413,7 @@
                             @foreach($customer->bills->take(5) as $bill)
                             <div class="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:border-orange-300 transition-colors">
                                 <div>
-                                    <p class="font-medium text-gray-900">{{ $bill->bill_number }}</p>
+                                    <a href="{{ route('bills.show', $bill) }}" class="font-medium text-blue-700 hover:text-blue-900">{{ $bill->bill_number }}</a>
                                     <p class="text-sm text-gray-500">{{ $bill->bill_date->format('M d, Y') }}</p>
                                 </div>
                                 <div class="text-right">

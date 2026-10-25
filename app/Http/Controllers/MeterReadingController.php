@@ -6,7 +6,9 @@ use App\Models\Bill;
 use App\Models\MeterReading;
 use App\Models\WaterMeter;
 use App\Models\Customer;
+use App\Models\Division;
 use App\Models\Rate;
+use App\Support\TablePage;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -67,7 +69,7 @@ class MeterReadingController extends Controller
             $query->where('reader_name', 'like', "%{$request->reader_name}%");
         }
 
-        $readings = $query->latest('reading_date')->paginate(15);
+        $readings = $query->latest('reading_date')->paginate(25);
 
         // Statistics
         $totalReadings = MeterReading::count();
@@ -143,6 +145,11 @@ class MeterReadingController extends Controller
                 return back()->withErrors([
                     'reading_date' => 'A reading already exists for this meter on this date.'
                 ])->withInput();
+            }
+
+            $monthlyLimit = MeterReading::monthlyLimitMessage((int) $request->water_meter_id, $request->reading_date);
+            if ($monthlyLimit) {
+                return back()->withErrors(['reading_date' => $monthlyLimit])->withInput();
             }
 
             // Create the reading
@@ -248,6 +255,12 @@ class MeterReadingController extends Controller
                 ])->withInput();
             }
 
+            $monthlyLimit = MeterReading::monthlyLimitMessage((int) $request->water_meter_id, $request->reading_date, $reading->id);
+            if ($monthlyLimit) {
+                DB::rollBack();
+                return back()->withErrors(['reading_date' => $monthlyLimit])->withInput();
+            }
+
             // Update the reading
             $reading->update([
                 'water_meter_id' => $request->water_meter_id,
@@ -275,7 +288,7 @@ class MeterReadingController extends Controller
      */
     public function destroy(MeterReading $reading): RedirectResponse
     {
-        if ($reading->status === 'billed') {
+        if ($reading->status === 'billed' && !auth()->user()?->isSuperAdmin()) {
             return redirect()->route('readings.index')
                 ->with('error', 'Cannot delete billed readings.');
         }
@@ -317,7 +330,7 @@ class MeterReadingController extends Controller
                 $query->latest('reading_date')->limit(1);
             }])
             ->orderBy('meter_number')
-            ->get();
+            ->paginate(25);
 
         return view('readings.bulk', compact('waterMeters'));
     }
@@ -368,6 +381,12 @@ class MeterReadingController extends Controller
                         continue;
                     }
 
+                    $monthlyLimit = MeterReading::monthlyLimitMessage((int) $readingData['water_meter_id'], $readingData['reading_date']);
+                    if ($monthlyLimit) {
+                        $errors[] = "Row " . ($index + 1) . ": {$monthlyLimit}";
+                        continue;
+                    }
+
                     // Create the reading
                     MeterReading::create([
                         'water_meter_id' => $readingData['water_meter_id'],
@@ -405,32 +424,37 @@ class MeterReadingController extends Controller
     /**
      * One-time sheet for typing each meter's opening dial.
      */
-    public function initialEntry(): View
+    public function initialEntry(Request $request): View
     {
-        $waterMeters = WaterMeter::query()
+        $meters = WaterMeter::query()
             ->with([
                 'customer.division',
                 'bills' => function ($query) {
                     $query->where('notes', 'Opening balance');
                 },
             ])
-            ->get()
-            ->sortBy(function (WaterMeter $meter) {
-                $division = $meter->customer?->division?->name ?? '';
-                $account = $meter->customer?->account_number ?? '';
+            ->when($request->filled('division'), fn ($query) => $query->whereHas('customer', fn ($customers) => $customers->where('division_id', $request->integer('division'))))
+            ->when($request->input('zero') === 'zero', fn ($query) => $query->where('initial_reading', 0))
+            ->when($request->input('zero') === 'set', fn ($query) => $query->where('initial_reading', '>', 0))
+            ->when($request->filled('q'), function ($query) use ($request) {
+                $like = '%'.$request->input('q').'%';
+                $query->where(function ($rows) use ($like) {
+                    $rows->where('meter_number', 'like', $like)
+                        ->orWhereHas('customer', function ($customers) use ($like) {
+                            $customers->where('account_number', 'like', $like)
+                                ->orWhere('first_name', 'like', $like)
+                                ->orWhere('last_name', 'like', $like)
+                                ->orWhere('reference_number', 'like', $like);
+                        });
+                });
+            });
 
-                return $division . '|' . $account . '|' . $meter->meter_number;
-            })
-            ->values();
+        $meterTotal = (clone $meters)->count();
+        $zeroTotal = (clone $meters)->where('initial_reading', 0)->count();
+        $waterMeters = $meters->orderBy('meter_number')->paginate(25)->withQueryString();
+        $divisions = Division::query()->orderBy('name')->get(['id', 'name']);
 
-        $divisions = $waterMeters
-            ->map(fn (WaterMeter $meter) => $meter->customer?->division)
-            ->filter()
-            ->unique('id')
-            ->sortBy('name')
-            ->values();
-
-        return view('readings.initial', compact('waterMeters', 'divisions'));
+        return view('readings.initial', compact('waterMeters', 'divisions', 'meterTotal', 'zeroTotal'));
     }
 
     /**
@@ -652,7 +676,7 @@ class MeterReadingController extends Controller
                                'meter_number' => $meter->meter_number,
                                'customer_name' => $customerName,
                                'account_number' => $accountNumber,
-                               'display_text' => "📊 {$meter->meter_number} | 👤 {$customerName} | 🏠 {$accountNumber}",
+                               'display_text' => "?? {$meter->meter_number} | ?? {$customerName} | ?? {$accountNumber}",
                                'previous_reading' => $lastReading ? $lastReading->current_reading : $meter->initial_reading,
                                'last_reading_date' => $lastReading ? $lastReading->reading_date->format('Y-m-d') : null
                            ];
@@ -695,7 +719,12 @@ class MeterReadingController extends Controller
             return $meter->meterReadings->count() === 0;
         });
 
-        return view('readings.schedule', compact('readMeters', 'unreadMeters', 'currentMonth', 'currentYear'));
+        $pendingTotal = $unreadMeters->count();
+        $completedTotal = $readMeters->count();
+        $unreadMeters = TablePage::collection($unreadMeters->values(), 'pending_page');
+        $readMeters = TablePage::collection($readMeters->values(), 'completed_page');
+
+        return view('readings.schedule', compact('readMeters', 'unreadMeters', 'currentMonth', 'currentYear', 'pendingTotal', 'completedTotal'));
     }
 
     /**

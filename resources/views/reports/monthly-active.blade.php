@@ -138,7 +138,7 @@
             <!-- Monthly Data Table -->
             <div class="p-6">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">Detailed Monthly Data</h2>
-                @if($monthlyData->count() > 0)
+                @if($monthlyData->total() > 0)
                     <div class="overflow-x-auto">
                         <table class="w-full">
                             <thead class="bg-gray-50 border-b border-gray-200">
@@ -155,7 +155,7 @@
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
-                                @foreach($monthlyData->reverse() as $data)
+                                @foreach($monthlyData as $data)
                                     <tr class="hover:bg-gray-50 transition duration-200">
                                         <td class="px-4 py-4 text-sm font-medium text-gray-900">
                                             {{ $data['month_year'] }}
@@ -212,6 +212,7 @@
                             </tbody>
                         </table>
                     </div>
+                    <div class="px-4 py-4">{{ $monthlyData->links() }}</div>
                 @else
                     <div class="text-center py-12">
                         <i class="fas fa-chart-line text-6xl text-gray-300 mb-4"></i>
@@ -274,7 +275,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Monthly Trend Chart
-    const monthlyData = @json($monthlyData->values());
+    const monthlyData = @json($chartMonths);
     const labels = monthlyData.map(data => data.month_year);
     const activeCustomers = monthlyData.map(data => data.active_customers);
     const activeMeters = monthlyData.map(data => data.active_meters);

@@ -149,6 +149,27 @@ class MeterReading extends Model
         return $this->save();
     }
 
+    public static function monthlyLimitMessage(int $waterMeterId, $readingDate, ?int $exceptId = null): ?string
+    {
+        if (!SystemConfiguration::oneReadingPerMonth()) {
+            return null;
+        }
+
+        $date = \Carbon\Carbon::parse($readingDate);
+        $exists = static::query()
+            ->where('water_meter_id', $waterMeterId)
+            ->whereYear('reading_date', $date->year)
+            ->whereMonth('reading_date', $date->month)
+            ->when($exceptId, fn ($query) => $query->where('id', '!=', $exceptId))
+            ->exists();
+
+        if (!$exists) {
+            return null;
+        }
+
+        return 'This meter already has a reading for '.$date->format('F Y').'. Only one reading is allowed each month.';
+    }
+
     public function markAsBilled(): bool
     {
         $this->status = 'billed';

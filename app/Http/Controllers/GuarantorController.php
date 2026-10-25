@@ -36,7 +36,7 @@ class GuarantorController extends Controller
 
         $guarantors = $query->with(['customers'])
             ->orderBy('created_at', 'desc')
-            ->paginate(15);
+            ->paginate(25);
 
         return view('guarantors.index', compact('guarantors'));
     }
@@ -75,8 +75,16 @@ class GuarantorController extends Controller
      */
     public function show(Guarantor $guarantor): View
     {
-        $guarantor->load(['customers']);
-        return view('guarantors.show', compact('guarantor'));
+        $backed = $guarantor->customers();
+        $customerTotal = (clone $backed)->count();
+        $statusCounts = [
+            'active' => (clone $backed)->where('status', 'active')->count(),
+            'suspended' => (clone $backed)->where('status', 'suspended')->count(),
+            'inactive' => (clone $backed)->where('status', 'inactive')->count(),
+        ];
+        $customers = $backed->orderBy('account_number')->paginate(25)->withQueryString();
+
+        return view('guarantors.show', compact('guarantor', 'customers', 'customerTotal', 'statusCounts'));
     }
 
     /**
@@ -120,7 +128,7 @@ class GuarantorController extends Controller
     public function destroy(Guarantor $guarantor): RedirectResponse
     {
         // Check if guarantor has active customers
-        if ($guarantor->customers()->exists()) {
+        if ($guarantor->customers()->exists() && !auth()->user()?->isSuperAdmin()) {
             return back()->with('error', 'Cannot delete guarantor with associated customers.');
         }
 

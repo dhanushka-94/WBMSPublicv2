@@ -8,6 +8,7 @@ use App\Models\MeterReading;
 use App\Models\Bill;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Support\TablePage;
 use Carbon\Carbon;
 
 class MonthlyActiveReportController extends Controller
@@ -36,12 +37,15 @@ class MonthlyActiveReportController extends Controller
         
         // Get summary statistics
         $summaryStats = $this->getSummaryStatistics($monthlyData);
+        $chartMonths = $monthlyData->values();
+        $monthlyData = TablePage::collection($monthlyData->reverse()->values());
 
         return view('reports.monthly-active', compact(
-            'monthlyData', 
-            'currentMonth', 
-            'summaryStats', 
-            'startDate', 
+            'monthlyData',
+            'chartMonths',
+            'currentMonth',
+            'summaryStats',
+            'startDate',
             'endDate',
             'ratePerConnection'
         ));
@@ -99,6 +103,8 @@ class MonthlyActiveReportController extends Controller
         $totalMonthlyCharges = $customersWithCharges->sum('monthly_charge');
         $totalDisconnectionCharges = $customersWithCharges->sum('disconnection_charge');
         $grandTotal = $customersWithCharges->sum('total_charge');
+        $totalInactiveMonths = $customersWithCharges->sum('inactive_months');
+        $customersWithCharges = TablePage::collection($customersWithCharges);
 
         return view('reports.monthly-active-details', compact(
             'customersWithCharges',
@@ -109,6 +115,7 @@ class MonthlyActiveReportController extends Controller
             'totalMonthlyCharges', 
             'totalDisconnectionCharges',
             'grandTotal',
+            'totalInactiveMonths',
             'ratePerConnection'
         ));
     }

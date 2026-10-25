@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\MeterReading;
 use App\Models\Payment;
 use App\Models\WaterMeter;
+use App\Support\TablePage;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -48,56 +49,56 @@ class OfficeReportController extends Controller
 
     private function customerRegister(): array
     {
-        $rows = Customer::with('division')->orderBy('account_number')->limit(500)->get()->map(fn ($customer) => [
+        $rows = Customer::with(['division', 'customerType'])->orderBy('account_number')->paginate(25)->withQueryString()->through(fn ($customer) => [
             $customer->account_number,
-            $customer->full_name,
+            $this->customerLink($customer),
             $customer->division?->name,
             $customer->meter_number,
-            $customer->customer_type,
+            $customer->customerType?->name,
             ucfirst($customer->status),
-        ])->all();
+        ]);
 
         return ['title' => 'Customer Register', 'columns' => ['Account', 'Name', 'Division', 'Meter', 'Type', 'Status'], 'rows' => $rows];
     }
 
     private function contacts(): array
     {
-        $rows = Customer::orderBy('account_number')->limit(500)->get()->map(fn ($customer) => [
+        $rows = Customer::orderBy('account_number')->paginate(25)->withQueryString()->through(fn ($customer) => [
             $customer->account_number,
-            $customer->full_name,
+            $this->customerLink($customer),
             $customer->phone,
             $customer->phone_two,
             $customer->address,
-        ])->all();
+        ]);
 
         return ['title' => 'Contact List', 'columns' => ['Account', 'Name', 'Phone', 'Second phone', 'Address'], 'rows' => $rows];
     }
 
     private function newConnections(Carbon $start, Carbon $end): array
     {
-        $rows = Customer::whereBetween('connection_date', [$start, $end])->orderBy('connection_date')->get()->map(fn ($customer) => [
+        $rows = Customer::whereBetween('connection_date', [$start, $end])->orderBy('connection_date')->paginate(25)->withQueryString()->through(fn ($customer) => [
             $customer->connection_date?->format('Y-m-d'),
             $customer->account_number,
-            $customer->full_name,
+            $this->customerLink($customer),
             $customer->meter_number,
-        ])->all();
+        ]);
 
         return ['title' => 'New Connections', 'columns' => ['Connected', 'Account', 'Name', 'Meter'], 'rows' => $rows];
     }
 
     private function disconnected(): array
     {
-        $rows = Customer::with('connectionEvents')->where('status', 'disconnected')->orderBy('account_number')->get()->map(function ($customer) {
+        $rows = Customer::with('connectionEvents')->where('status', 'disconnected')->orderBy('account_number')->paginate(25)->withQueryString()->through(function ($customer) {
             $event = $customer->connectionEvents->firstWhere('action', 'disconnected');
 
             return [
                 $customer->account_number,
-                $customer->full_name,
+                $this->customerLink($customer),
                 $event?->event_date?->format('Y-m-d'),
                 $event?->reason,
                 'LKR '.number_format($customer->getOutstandingBalance(), 2),
             ];
-        })->all();
+        });
 
         return ['title' => 'Disconnected Customers', 'columns' => ['Account', 'Name', 'Disconnected', 'Reason', 'Outstanding'], 'rows' => $rows];
     }
@@ -105,7 +106,7 @@ class OfficeReportController extends Controller
     private function usageAlerts(): array
     {
         $rows = [];
-        $customers = Customer::with(['waterMeters.meterReadings' => fn ($query) => $query->orderByDesc('reading_date')->limit(4)])->limit(400)->get();
+        $customers = Customer::with(['waterMeters.meterReadings' => fn ($query) => $query->orderByDesc('reading_date')->limit(4)])->orderBy('account_number')->get();
 
         foreach ($customers as $customer) {
             foreach ($customer->waterMeters as $meter) {
@@ -124,24 +125,24 @@ class OfficeReportController extends Controller
                     $reason = 'Possible leak or fault';
                 }
                 if ($reason) {
-                    $rows[] = [$customer->account_number, $customer->full_name, $meter->meter_number, $latest->consumption, $reason];
+                    $rows[] = [$customer->account_number, $this->customerLink($customer), $meter->meter_number, $latest->consumption, $reason];
                 }
             }
         }
 
-        return ['title' => 'Usage Alerts', 'columns' => ['Account', 'Name', 'Meter', 'Latest units', 'Alert'], 'rows' => $rows, 'notes' => 'A sudden high reading is more than double the average of the previous readings.'];
+        return ['title' => 'Usage Alerts', 'columns' => ['Account', 'Name', 'Meter', 'Latest units', 'Alert'], 'rows' => TablePage::collection(collect($rows)), 'notes' => 'A sudden high reading is more than double the average of the previous readings.'];
     }
 
     private function meterFaults(): array
     {
         $rows = WaterMeter::with('customer')->whereIn('status', ['faulty', 'replaced'])->orWhereHas('meterReadings', function ($query) {
             $query->whereIn('meter_condition', ['damaged', 'needs_repair', 'leaking']);
-        })->limit(300)->get()->map(fn ($meter) => [
+        })->orderBy('meter_number')->paginate(25)->withQueryString()->through(fn ($meter) => [
             $meter->meter_number,
-            $meter->customer?->full_name,
+            $this->customerLink($meter->customer),
             $meter->status,
             $meter->meterReadings()->latest('reading_date')->value('meter_condition'),
-        ])->all();
+        ]);
 
         return ['title' => 'Meter Faults', 'columns' => ['Meter', 'Customer', 'Meter status', 'Latest condition'], 'rows' => $rows];
     }
@@ -166,14 +167,14 @@ class OfficeReportController extends Controller
 
     private function dailyCollection(string $date): array
     {
-        $rows = Payment::with(['customer', 'bill', 'receiver'])->whereDate('paid_on', $date)->orderBy('id')->get()->map(fn ($payment) => [
+        $rows = Payment::with(['customer', 'bill', 'receiver'])->whereDate('paid_on', $date)->orderBy('id')->paginate(25)->withQueryString()->through(fn ($payment) => [
             $payment->receipt_number,
-            $payment->customer?->full_name,
-            $payment->bill?->bill_number,
+            $this->customerLink($payment->customer),
+            $this->billLink($payment->bill),
             'LKR '.number_format($payment->amount, 2),
             str_replace('_', ' ', $payment->payment_method),
             $payment->receiver?->name,
-        ])->all();
+        ]);
 
         return ['title' => 'Daily Collection', 'columns' => ['Receipt', 'Customer', 'Bill', 'Amount', 'Method', 'Received by'], 'rows' => $rows];
     }
@@ -227,5 +228,29 @@ class OfficeReportController extends Controller
         }
 
         return ['title' => 'Outstanding Age Analysis', 'columns' => ['Age from due date', 'Balance'], 'rows' => $rows];
+    }
+
+    private function customerLink(?Customer $customer): array|string
+    {
+        if (!$customer) {
+            return '—';
+        }
+
+        return [
+            'text' => $customer->full_name,
+            'url' => route('customers.show', $customer),
+        ];
+    }
+
+    private function billLink(?Bill $bill): array|string
+    {
+        if (!$bill) {
+            return '—';
+        }
+
+        return [
+            'text' => $bill->bill_number,
+            'url' => route('bills.show', $bill),
+        ];
     }
 }

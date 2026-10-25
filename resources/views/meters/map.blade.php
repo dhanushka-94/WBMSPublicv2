@@ -72,7 +72,11 @@
                                             </div>
                                             <div class="ml-3">
                                                 <p class="text-sm font-medium text-gray-900">{{ $meter->meter_number }}</p>
-                                                <p class="text-xs text-gray-500">{{ $meter->customer ? $meter->customer->full_name : 'Unassigned Customer' }}</p>
+                                                @if($meter->customer)
+                                                    <a href="{{ route('customers.show', $meter->customer) }}" class="text-xs text-blue-700 hover:text-blue-900">{{ $meter->customer->full_name }}</a>
+                                                @else
+                                                    <p class="text-xs text-gray-500">Unassigned Customer</p>
+                                                @endif
                                         </div>
                                         </div>
                                     </div>

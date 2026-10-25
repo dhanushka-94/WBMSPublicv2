@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\WaterMeter;
 use App\Models\MeterReading;
 use App\Models\Rate;
+use App\Services\BillPaymentService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -62,7 +63,7 @@ class BillController extends Controller
             $query->where('total_amount', '<=', $request->amount_to);
         }
 
-        $bills = $query->latest('bill_date')->paginate(15);
+        $bills = $query->latest('bill_date')->paginate(25);
 
         // Statistics
         $totalBills = Bill::count();
@@ -302,7 +303,7 @@ class BillController extends Controller
      */
     public function destroy(Bill $bill): RedirectResponse
     {
-        if ($bill->status === 'paid') {
+        if ($bill->status === 'paid' && !auth()->user()?->isSuperAdmin()) {
             return redirect()->route('bills.index')
                 ->with('error', 'Cannot delete paid bills.');
         }
@@ -332,7 +333,7 @@ class BillController extends Controller
             $billingPeriodTo = $billDate->copy()->endOfMonth();
 
             $generatedCount = 0;
-            $errors = [];
+            $skippedCount = 0;
 
             // Get all active customers with their active water meters
             $customers = Customer::active()
@@ -354,21 +355,23 @@ class BillController extends Controller
                         continue; // Skip if bill already exists
                     }
 
-                    // Get latest meter reading
+                    // Only a reading taken in this billing month can produce a bill.
                     $latestReading = $meter->meterReadings()
-                        ->where('reading_date', '<=', $billDate)
+                        ->whereBetween('reading_date', [$billingPeriodFrom, $billingPeriodTo])
                         ->latest('reading_date')
+                        ->latest('id')
                         ->first();
 
                     if (!$latestReading) {
-                        $errors[] = "No meter reading found for customer {$customer->full_name} (Meter: {$meter->meter_number})";
+                        $skippedCount++;
                         continue;
                     }
 
-                    // Get previous reading
+                    // Units since the last dial before this month.
                     $previousReading = $meter->meterReadings()
-                        ->where('reading_date', '<', $latestReading->reading_date)
+                        ->where('reading_date', '<', $billingPeriodFrom)
                         ->latest('reading_date')
+                        ->latest('id')
                         ->first();
 
                     $prevReading = $previousReading ? $previousReading->current_reading : $meter->initial_reading;
@@ -404,9 +407,9 @@ class BillController extends Controller
 
             DB::commit();
 
-            $message = "Generated {$generatedCount} bills successfully.";
-            if (!empty($errors)) {
-                $message .= " Errors: " . implode('; ', $errors);
+            $message = "Generated {$generatedCount} bills for {$billDate->format('F Y')}.";
+            if ($skippedCount > 0) {
+                $message .= " {$skippedCount} meters had no reading this month and were not billed.";
             }
 
             return redirect()->route('bills.index')
@@ -438,44 +441,51 @@ class BillController extends Controller
     /**
      * Record payment for a bill.
      */
-    public function recordPayment(Request $request, Bill $bill): RedirectResponse
+    public function recordPayment(Request $request, Bill $bill, BillPaymentService $payments): RedirectResponse
     {
         $request->validate([
-            'amount' => 'required|numeric|min:0.01|max:' . $bill->balance_amount,
+            'amount' => 'nullable|numeric|min:0',
+            'use_wallet' => 'nullable|boolean',
             'payment_method' => 'required|string|in:cash,bank_transfer,cheque,card',
             'payment_date' => 'required|date',
             'reference' => 'nullable|string|max:255',
-            'notes' => 'nullable|string|max:500'
+            'notes' => 'nullable|string|max:500',
         ]);
 
         try {
-            DB::beginTransaction();
+            $result = $payments->collect(
+                $bill->customer,
+                [$bill->id],
+                (float) $request->input('amount', 0),
+                $request->boolean('use_wallet'),
+                $request->payment_method,
+                $request->payment_date,
+                $request->reference,
+                $request->notes,
+                $request->user()?->id
+            );
+        } catch (\InvalidArgumentException $exception) {
+            return redirect()->route('bills.show', $bill)->with('error', $exception->getMessage());
+        } catch (\Exception $exception) {
+            \Log::error('Error recording payment: '.$exception->getMessage());
 
-            $success = $bill->recordPayment($request->amount, $request->payment_method, [
-                'paid_on' => $request->payment_date,
-                'reference' => $request->reference,
-                'notes' => $request->notes,
-                'received_by' => $request->user()->id,
-            ]);
-            
-            if ($success) {
-                // Log payment details (you might want to create a separate payments table)
-                Log::info("Payment recorded for bill {$bill->bill_number}: Amount: {$request->amount}, Method: {$request->payment_method}");
-                
-                DB::commit();
-                return redirect()->route('bills.show', $bill)
-                    ->with('success', 'Payment recorded successfully.');
-            } else {
-                DB::rollBack();
-                return redirect()->route('bills.show', $bill)
-                    ->with('error', 'Invalid payment amount.');
-            }
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error recording payment: ' . $e->getMessage());
             return redirect()->route('bills.show', $bill)
                 ->with('error', 'Failed to record payment. Please try again.');
         }
+
+        $parts = [];
+        $applied = collect($result['applied'])->sum('amount');
+        if ($applied > 0) {
+            $parts[] = 'Rs. '.number_format($applied, 2).' recorded on '.$bill->bill_number;
+        }
+        if ($result['wallet_added'] > 0) {
+            $parts[] = 'Rs. '.number_format($result['wallet_added'], 2).' added to the customer wallet';
+        }
+        if ($result['wallet_used'] > 0) {
+            $parts[] = 'Rs. '.number_format($result['wallet_used'], 2).' used from the wallet';
+        }
+
+        return redirect()->route('bills.show', $bill)->with('success', implode('. ', $parts).'.');
     }
 
     /**

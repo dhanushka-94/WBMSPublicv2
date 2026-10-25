@@ -223,8 +223,6 @@ class SampleDataSeeder extends Seeder
                 'next_billing_date' => '2026-11-20',
                 'auto_billing_enabled' => $person[3] === 'active',
             ]);
-            $customer->customer_type = $person[4];
-            $customer->save();
             $this->units[$customer->id] = (int) $person[6];
             $rows[] = $customer;
         }
@@ -341,7 +339,7 @@ class SampleDataSeeder extends Seeder
             foreach ($plans as $index => $plan) {
                 $customer = $customers[$index];
                 $units = $this->units[$customer->id];
-                $charges = Rate::calculateCharges($customer->customer_type, $units, $plan[5]);
+                $charges = Rate::calculateCharges($customer->billingCategory(), $units, $plan[5]);
                 $water = $charges['water_charges'];
                 $fixed = $charges['fixed_charges'];
                 $service = $plan[1];

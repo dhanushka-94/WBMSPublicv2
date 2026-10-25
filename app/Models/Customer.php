@@ -37,6 +37,7 @@ class Customer extends Model
         'guarantor_id',
         'connection_date',
         'deposit_amount',
+        'wallet_balance',
         'notes',
         'billing_day',
         'next_billing_date',
@@ -47,6 +48,7 @@ class Customer extends Model
         'connection_date' => 'date',
         'next_billing_date' => 'date',
         'deposit_amount' => 'decimal:2',
+        'wallet_balance' => 'decimal:2',
         'auto_billing_enabled' => 'boolean'
     ];
 
@@ -65,11 +67,24 @@ class Customer extends Model
     {
         $name = $this->customerType?->name;
 
-        if (is_string($name) && $name !== '') {
-            return $name;
-        }
+        return is_string($name) ? $name : '';
+    }
 
-        return $this->customer_type ?: 'residential';
+    /**
+     * Cash still to collect after this customer's wallet credit.
+     * The wallet balance itself is unchanged until a payment is recorded.
+     */
+    public function payableAfterWallet(float $unpaid): array
+    {
+        $unpaid = round(max(0, $unpaid), 2);
+        $wallet = round(max(0, (float) $this->wallet_balance), 2);
+        $applied = round(min($wallet, $unpaid), 2);
+
+        return [
+            'wallet_balance' => $wallet,
+            'wallet_applied' => $applied,
+            'amount_due' => round($unpaid - $applied, 2),
+        ];
     }
 
     public function guarantor(): BelongsTo
@@ -105,6 +120,11 @@ class Customer extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
+    }
+
+    public function walletEntries(): HasMany
+    {
+        return $this->hasMany(WalletEntry::class);
     }
 
     // Accessors
@@ -204,7 +224,9 @@ class Customer extends Model
     // Additional Scopes
     public function scopeByType($query, $type)
     {
-        return $query->where('customer_type', $type);
+        return $query->whereHas('customerType', function ($types) use ($type) {
+            $types->where('name', $type);
+        });
     }
 
     // Helper methods
@@ -389,6 +411,10 @@ class Customer extends Model
 
         // Prevent deletion of customers with active meters
         static::deleting(function ($customer) {
+            if (auth()->user()?->isSuperAdmin()) {
+                return;
+            }
+
             $activeMeters = $customer->waterMeters()->count();
             if ($activeMeters > 0) {
                 throw new \Exception("Cannot delete customer with {$activeMeters} water meters. Please reassign or delete meters first.");

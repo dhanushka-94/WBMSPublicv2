@@ -200,7 +200,7 @@
                                     </span>
                                 </td>
                                 <td class="px-4 py-4 text-center text-sm font-medium text-gray-700">
-                                    {{ $customersWithCharges->sum('inactive_months') }} months
+                                    {{ number_format($totalInactiveMonths) }} months
                                 </td>
                                 <td class="px-4 py-4">
                                     <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-red-200 text-red-900">
@@ -217,6 +217,7 @@
                         </tfoot>
                     </table>
                 </div>
+                <div class="px-4 py-4">{{ $customersWithCharges->links() }}</div>
             @else
                 <div class="p-8 text-center">
                     <i class="fas fa-users-slash text-4xl text-gray-400 mb-4"></i>

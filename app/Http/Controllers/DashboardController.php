@@ -152,10 +152,10 @@ class DashboardController extends Controller
         $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
         $endDate = $request->input('end_date', Carbon::now()->endOfMonth()->format('Y-m-d'));
 
-        $consumptionData = MeterReading::with(['waterMeter.customer'])
+        $consumptionData = MeterReading::with(['waterMeter.customer.customerType'])
             ->whereBetween('reading_date', [$startDate, $endDate])
             ->orderBy('reading_date', 'desc')
-            ->paginate(15);
+            ->paginate(25);
 
         $totalConsumption = MeterReading::whereBetween('reading_date', [$startDate, $endDate])
             ->sum('consumption');
@@ -167,10 +167,11 @@ class DashboardController extends Controller
         $consumptionByType = DB::table('meter_readings')
             ->join('water_meters', 'meter_readings.water_meter_id', '=', 'water_meters.id')
             ->join('customers', 'water_meters.customer_id', '=', 'customers.id')
+            ->join('customer_types', 'customers.customer_type_id', '=', 'customer_types.id')
             ->whereBetween('meter_readings.reading_date', [$startDate, $endDate])
-            ->groupBy('customers.customer_type')
+            ->groupBy('customer_types.id', 'customer_types.name')
             ->select(
-                'customers.customer_type',
+                'customer_types.name as customer_type',
                 DB::raw('SUM(meter_readings.consumption) as total_consumption'),
                 DB::raw('AVG(meter_readings.consumption) as avg_consumption'),
                 DB::raw('COUNT(meter_readings.id) as reading_count')
@@ -195,10 +196,10 @@ class DashboardController extends Controller
         $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
         $endDate = $request->input('end_date', Carbon::now()->endOfMonth()->format('Y-m-d'));
 
-        $bills = Bill::with(['customer'])
+        $bills = Bill::with(['customer.customerType'])
             ->whereBetween('bill_date', [$startDate, $endDate])
             ->orderBy('bill_date', 'desc')
-            ->paginate(15);
+            ->paginate(25);
 
         $totalRevenue = Bill::whereBetween('bill_date', [$startDate, $endDate])
             ->sum('total_amount');
@@ -214,10 +215,11 @@ class DashboardController extends Controller
         // Revenue by customer type
         $revenueByType = DB::table('bills')
             ->join('customers', 'bills.customer_id', '=', 'customers.id')
+            ->join('customer_types', 'customers.customer_type_id', '=', 'customer_types.id')
             ->whereBetween('bills.bill_date', [$startDate, $endDate])
-            ->groupBy('customers.customer_type')
+            ->groupBy('customer_types.id', 'customer_types.name')
             ->select(
-                'customers.customer_type',
+                'customer_types.name as customer_type',
                 DB::raw('SUM(bills.total_amount) as total_revenue'),
                 DB::raw('SUM(bills.paid_amount) as paid_revenue'),
                 DB::raw('SUM(bills.balance_amount) as outstanding_revenue'),
@@ -244,7 +246,7 @@ class DashboardController extends Controller
         $overdueBills = Bill::overdue()
             ->with(['customer', 'waterMeter'])
             ->orderBy('due_date', 'asc')
-            ->paginate(15);
+            ->paginate(25);
 
         $totalOverdueAmount = Bill::overdue()->sum('balance_amount');
         $overdueCount = Bill::overdue()->count();

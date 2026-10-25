@@ -19,7 +19,7 @@ class ReaderRouteController extends Controller
             ->with(['routeDivisions:id,name'])
             ->withCount(['routeDivisions', 'routeCustomers'])
             ->orderBy('name')
-            ->get();
+            ->paginate(25);
 
         return view('reader-routes.index', compact('readers'));
     }

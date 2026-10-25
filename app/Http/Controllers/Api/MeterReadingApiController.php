@@ -32,7 +32,7 @@ class MeterReadingApiController extends Controller
 
             $divisionNames = $user->routeDivisions()->orderBy('divisions.name')->pluck('divisions.name');
             $customers = $user->assignedRouteCustomers()
-                ->with(['waterMeters'])
+                ->with(['waterMeters', 'customerType'])
                 ->orderBy('account_number')
                 ->get()
                 ->map(function ($customer) use ($divisionNames) {
@@ -45,7 +45,8 @@ class MeterReadingApiController extends Controller
                         'name' => $customer->full_name,
                         'address' => $customer->full_address,
                         'phone' => $customer->phone,
-                        'customer_type' => $customer->customer_type,
+                        'customer_type' => $customer->billingCategory(),
+                        'wallet_balance' => round((float) $customer->wallet_balance, 2),
                         'area' => null,
                         'route' => $divisionNames->join(', ') ?: null,
                         'meter' => $waterMeter ? [
@@ -172,6 +173,14 @@ class MeterReadingApiController extends Controller
                 ], 400);
             }
 
+            $monthlyLimit = MeterReading::monthlyLimitMessage($meter->id, $request->reading_date);
+            if ($monthlyLimit) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $monthlyLimit,
+                ], 422);
+            }
+
             DB::beginTransaction();
 
             // Handle photo upload
@@ -240,6 +249,7 @@ class MeterReadingApiController extends Controller
                     'name' => $customer->full_name,
                     'connection_number' => $customer->account_number,
                     'address' => $customer->full_address,
+                    'wallet_balance' => round((float) $customer->wallet_balance, 2),
                 ],
                 'meter' => [
                     'meter_number' => $meter->meter_number,
@@ -371,6 +381,7 @@ class MeterReadingApiController extends Controller
     {
         try {
             $customer = Customer::with([
+                'customerType',
                 'waterMeters' => function($query) {
                     $query->where('status', 'active')->first();
                 }, 
@@ -397,7 +408,8 @@ class MeterReadingApiController extends Controller
                     'address' => $customer->full_address,
                     'phone' => $customer->phone,
                     'email' => $customer->email,
-                    'customer_type' => $customer->customer_type,
+                    'customer_type' => $customer->billingCategory(),
+                    'wallet_balance' => round((float) $customer->wallet_balance, 2),
                     'area' => null, // Area not implemented yet
                     'route' => null, // Route not implemented yet
                     'status' => $customer->status,
@@ -458,7 +470,7 @@ class MeterReadingApiController extends Controller
                 ], 400);
             }
 
-            $customers = Customer::with('waterMeters')
+            $customers = Customer::with(['waterMeters', 'customerType'])
                 ->where(function($q) use ($query) {
                     $q->where('first_name', 'LIKE', "%{$query}%")
                       ->orWhere('last_name', 'LIKE', "%{$query}%")
@@ -477,7 +489,8 @@ class MeterReadingApiController extends Controller
                         'name' => $customer->full_name,
                         'address' => $customer->full_address,
                         'phone' => $customer->phone,
-                        'customer_type' => $customer->customer_type,
+                        'customer_type' => $customer->billingCategory(),
+                        'wallet_balance' => round((float) $customer->wallet_balance, 2),
                         'area' => null, // Area not implemented yet
                         'meter_number' => $waterMeter?->meter_number,
                         'current_reading' => $waterMeter?->current_reading,
@@ -697,7 +710,7 @@ class MeterReadingApiController extends Controller
             'total' => round((float) $bill->total_amount, 2),
             'balance' => round((float) $bill->balance_amount, 2),
             'breakdown' => $bill->rate_breakdown ?? [],
-        ];
+        ] + $this->walletShare($bill->customer, (float) $bill->balance_amount);
     }
 
     /**
@@ -740,6 +753,7 @@ class MeterReadingApiController extends Controller
                     'zero_consumption' => 'water_charges is 0. other_charges is the fixed_charge on the slab where tier_from and tier_to are both 0.',
                     'positive_consumption' => 'Always add that same fixed_charge as other_charges. Also walk the other slabs in tier_from order. A bounded slab covers units from tier_from through tier_to, inclusive. A null tier_to takes every remaining unit. water_charges is units times rate_per_unit.',
                     'total' => 'water_charges + other_charges. The fixed charge is included on every bill.',
+                    'wallet' => 'Do not change water_charges or the fixed charge. wallet_balance is on the customer. wallet_applied is the smaller of that balance and the unpaid amount. amount_due is the unpaid amount minus wallet_applied. The wallet is not reduced until a payment is recorded.',
                 ],
                 'tariffs' => $tariffs,
             ],
@@ -811,8 +825,23 @@ class MeterReadingApiController extends Controller
                 'previous_reading' => $previous === null ? null : round((float) $previous, 2),
                 'current_reading' => $current === null ? null : round((float) $current, 2),
                 'consumption' => round($consumption, 2),
-            ], $charges),
+            ], $charges, $this->walletShare($customer, (float) $charges['total'])),
         ]);
+    }
+
+    private function walletShare(?Customer $customer, float $unpaid): array
+    {
+        if (!$customer) {
+            $unpaid = round(max(0, $unpaid), 2);
+
+            return [
+                'wallet_balance' => 0.0,
+                'wallet_applied' => 0.0,
+                'amount_due' => $unpaid,
+            ];
+        }
+
+        return $customer->payableAfterWallet($unpaid);
     }
 
     private function chargeSummary(?string $customerType, float $consumption, $date = null): array
@@ -853,9 +882,12 @@ class MeterReadingApiController extends Controller
      */
     private function generateReceiptData($customer, $meter, $reading, ?Bill $bill = null): array
     {
-        $charges = $bill
-            ? $this->billPayload($bill)
-            : $this->chargeSummary($customer->billingCategory(), (float) $reading->consumption, $reading->reading_date);
+        if ($bill) {
+            $charges = $this->billPayload($bill);
+        } else {
+            $charges = $this->chargeSummary($customer->billingCategory(), (float) $reading->consumption, $reading->reading_date);
+            $charges = array_merge($charges, $customer->payableAfterWallet((float) $charges['total']));
+        }
 
         return [
             'receipt_number' => 'MR-' . str_pad($reading->id, 6, '0', STR_PAD_LEFT),
@@ -866,6 +898,7 @@ class MeterReadingApiController extends Controller
                 'connection_number' => $customer->account_number,
                 'address' => $customer->full_address,
                 'phone' => $customer->phone,
+                'wallet_balance' => $charges['wallet_balance'] ?? round((float) $customer->wallet_balance, 2),
             ],
             'meter' => [
                 'meter_number' => $meter->meter_number,
@@ -887,6 +920,9 @@ class MeterReadingApiController extends Controller
                 'adjustments' => $charges['adjustments'] ?? 0,
                 'other_charges' => $charges['other_charges'],
                 'total' => $charges['total'],
+                'wallet_balance' => $charges['wallet_balance'] ?? 0,
+                'wallet_applied' => $charges['wallet_applied'] ?? 0,
+                'amount_due' => $charges['amount_due'] ?? $charges['total'],
             ],
             'reader' => [
                 'name' => $reading->reader_name,

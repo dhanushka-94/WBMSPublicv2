@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthApiController;
 use App\Http\Controllers\Api\MeterReadingApiController;
 use App\Http\Controllers\Api\PaymentApiController;
+use App\Models\SystemConfiguration;
 
 /*
 |--------------------------------------------------------------------------
@@ -28,7 +29,8 @@ Route::prefix('v1')->group(function () {
             'status' => 'ok',
             'version' => '1.0.0',
             'timestamp' => now()->toISOString(),
-            'server' => 'AquaBill by olexto API'
+            'server' => 'AquaBill by olexto API',
+            'mobile_app_maintenance' => SystemConfiguration::mobileAppMaintenance(),
         ]);
     });
     
@@ -38,6 +40,7 @@ Route::prefix('v1')->group(function () {
             'app_name' => 'AquaBill Mobile',
             'version' => '1.0.0',
             'api_version' => 'v1',
+            'mobile_app_maintenance' => SystemConfiguration::mobileAppMaintenance(),
             'features' => [
                 'offline_mode' => true,
                 'photo_capture' => true,
@@ -66,7 +69,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
     Route::put('/profile', [AuthApiController::class, 'updateProfile']);
     
     // Meter reading routes
-    Route::prefix('meter-reading')->group(function () {
+    Route::prefix('meter-reading')->middleware('mobile.maintenance')->group(function () {
         // Daily route and customer management
         Route::get('/route/today', [MeterReadingApiController::class, 'getTodaysRoute']);
         Route::get('/customers/search', [MeterReadingApiController::class, 'searchCustomers']);
@@ -183,7 +186,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
     });
     
     // Payment routes
-    Route::prefix('payments')->group(function () {
+    Route::prefix('payments')->middleware('mobile.maintenance')->group(function () {
         // Get customer bills for payment
         Route::get('/customer/{customer_id}/bills', [PaymentApiController::class, 'getCustomerBills']);
         
@@ -266,6 +269,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
                     'app_version' => '1.0.0',
                     'api_version' => 'v1',
                     'maintenance_mode' => app()->isDownForMaintenance(),
+                    'mobile_app_maintenance' => SystemConfiguration::mobileAppMaintenance(),
                 ]
             ]);
         });

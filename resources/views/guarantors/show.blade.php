@@ -209,11 +209,11 @@
                 </div>
 
                 <div class="p-8">
-                    @if($guarantor->customers && $guarantor->customers->count() > 0)
+                    @if($customerTotal > 0)
                         <div class="mb-6">
                             <div class="flex items-center justify-between">
                                 <h3 class="text-lg font-semibold text-gray-900">
-                                    {{ $guarantor->customers->count() }} Customer{{ $guarantor->customers->count() > 1 ? 's' : '' }} Backed
+                                    {{ $customerTotal }} Customer{{ $customerTotal === 1 ? '' : 's' }} Backed
                                 </h3>
                                 <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium">
                                     Active Guarantorship
@@ -222,7 +222,7 @@
                         </div>
 
                         <div class="space-y-4">
-                            @foreach($guarantor->customers as $customer)
+                            @foreach($customers as $customer)
                                 <div class="border border-gray-200 rounded-lg p-6 hover:border-purple-300 transition-colors">
                                     <div class="flex items-center justify-between">
                                         <div class="flex items-center space-x-4">
@@ -230,7 +230,7 @@
                                                 {{ substr($customer->first_name, 0, 1) }}{{ substr($customer->last_name, 0, 1) }}
                                             </div>
                                             <div>
-                                                <h4 class="text-lg font-semibold text-gray-900">{{ $customer->full_name }}</h4>
+                                                <h4 class="text-lg font-semibold text-gray-900"><a href="{{ route('customers.show', $customer) }}" class="hover:text-blue-700">{{ $customer->full_name }}</a></h4>
                                                 <div class="flex items-center space-x-4 text-sm text-gray-600">
                                                     <span>
                                                         <i class="fas fa-hashtag mr-1"></i>
@@ -240,9 +240,9 @@
                                                         <i class="fas fa-phone mr-1"></i>
                                                         {{ $customer->phone }}
                                                     </span>
-                                                    @if($customer->customer_type)
+                                                    @if($customer->customerType)
                                                         <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                                            {{ $customer->customer_type->name }}
+                                                            {{ $customer->customerType->name }}
                                                         </span>
                                                     @endif
                                                 </div>
@@ -272,6 +272,7 @@
                                 </div>
                             @endforeach
                         </div>
+                        <div class="mt-6">{{ $customers->links() }}</div>
                     @else
                         <div class="text-center py-12">
                             <i class="fas fa-users text-6xl text-gray-300 mb-4"></i>
@@ -330,7 +331,7 @@
                             </a>
                         @endif
 
-                        @if(!$guarantor->customers || $guarantor->customers->count() == 0)
+                        @if($customerTotal === 0)
                             <form method="POST" action="{{ route('guarantors.destroy', $guarantor) }}" 
                                   class="w-full">
                                 @csrf
@@ -359,28 +360,28 @@
                 <div class="p-6">
                     <div class="space-y-6">
                         <div class="text-center">
-                            <div class="text-3xl font-bold text-gray-900">{{ $guarantor->customers ? $guarantor->customers->count() : 0 }}</div>
+                            <div class="text-3xl font-bold text-gray-900">{{ $customerTotal }}</div>
                             <div class="text-sm text-gray-600">Customers Backed</div>
                         </div>
 
-                        @if($guarantor->customers && $guarantor->customers->count() > 0)
+                        @if($customerTotal > 0)
                             <div class="space-y-3">
                                 <div class="flex justify-between items-center">
                                     <span class="text-sm text-gray-600">Active Customers</span>
                                     <span class="text-sm font-semibold text-green-600">
-                                        {{ $guarantor->customers->where('status', 'active')->count() }}
+                                        {{ $statusCounts['active'] }}
                                     </span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-sm text-gray-600">Suspended Customers</span>
                                     <span class="text-sm font-semibold text-yellow-600">
-                                        {{ $guarantor->customers->where('status', 'suspended')->count() }}
+                                        {{ $statusCounts['suspended'] }}
                                     </span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-sm text-gray-600">Inactive Customers</span>
                                     <span class="text-sm font-semibold text-red-600">
-                                        {{ $guarantor->customers->where('status', 'inactive')->count() }}
+                                        {{ $statusCounts['inactive'] }}
                                     </span>
                                 </div>
                             </div>

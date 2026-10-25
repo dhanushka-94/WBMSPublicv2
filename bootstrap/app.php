@@ -26,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Register custom middleware aliases
         $middleware->alias([
             'system.check' => \App\Http\Middleware\CheckSystemStatus::class,
+            'mobile.maintenance' => \App\Http\Middleware\EnsureMobileAppIsAvailable::class,
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
         ]);
     })

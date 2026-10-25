@@ -25,7 +25,7 @@
                 <div class="flex items-center mt-3 space-x-4">
                     <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-white/20 text-white backdrop-blur-sm">
                         <i class="fas fa-database mr-1"></i>
-                        {{ $divisions->count() + $customerTypes->count() }} Total Records
+                        {{ $divisions->total() + $customerTypes->total() }} Total Records
                     </span>
                     <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-white/20 text-white backdrop-blur-sm">
                         <i class="fas fa-shield-alt mr-1"></i>
@@ -35,11 +35,11 @@
             </div>
             <div class="flex space-x-3">
                 <div class="bg-white/20 backdrop-blur-sm rounded-lg p-4 text-center">
-                    <div class="text-2xl font-bold text-white">{{ $divisions->count() }}</div>
+                    <div class="text-2xl font-bold text-white">{{ $divisions->total() }}</div>
                     <div class="text-xs text-blue-100">Divisions</div>
                 </div>
                 <div class="bg-white/20 backdrop-blur-sm rounded-lg p-4 text-center">
-                    <div class="text-2xl font-bold text-white">{{ $customerTypes->count() }}</div>
+                    <div class="text-2xl font-bold text-white">{{ $customerTypes->total() }}</div>
                     <div class="text-xs text-blue-100">Types</div>
                 </div>
             </div>
@@ -79,6 +79,46 @@
                 Save key
             </button>
         </form>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
+        <h2 class="text-lg font-semibold text-gray-900">Reader app maintenance</h2>
+        <p class="mt-1 text-sm text-gray-600">Turn this on to put the meter reader mobile app in maintenance. The office website stays open. The phone receives <span class="font-medium">mobile_app_maintenance</span> from the API and reading and payment calls are refused until you turn this off.</p>
+        <form method="POST" action="{{ route('settings.mobile-maintenance') }}" class="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            @csrf
+            @method('PUT')
+            <input type="hidden" name="mobile_app_maintenance" value="0">
+            <label class="inline-flex items-center gap-3 text-sm font-medium text-gray-800">
+                <input type="checkbox" name="mobile_app_maintenance" value="1" class="rounded border-gray-300 text-blue-600" {{ $mobileAppMaintenance ? 'checked' : '' }}>
+                Maintenance mode for the reader app
+            </label>
+            <button type="submit" class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-2 font-medium text-white hover:bg-blue-700">
+                Save maintenance
+            </button>
+        </form>
+        <p class="mt-3 text-sm {{ $mobileAppMaintenance ? 'text-amber-700' : 'text-gray-600' }}">
+            {{ $mobileAppMaintenance ? 'On: the reader app is in maintenance.' : 'Off: the reader app can sign in and submit readings.' }}
+        </p>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
+        <h2 class="text-lg font-semibold text-gray-900">Meter readings per month</h2>
+        <p class="mt-1 text-sm text-gray-600">Turn this on to allow one reading for each meter in a month. Turn it off to allow several readings in the same month. A second reading on the same day is still blocked.</p>
+        <form method="POST" action="{{ route('settings.reading-limit') }}" class="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            @csrf
+            @method('PUT')
+            <input type="hidden" name="one_reading_per_month" value="0">
+            <label class="inline-flex items-center gap-3 text-sm font-medium text-gray-800">
+                <input type="checkbox" name="one_reading_per_month" value="1" class="rounded border-gray-300 text-blue-600" {{ $oneReadingPerMonth ? 'checked' : '' }}>
+                One reading per meter each month
+            </label>
+            <button type="submit" class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-2 font-medium text-white hover:bg-blue-700">
+                Save reading rule
+            </button>
+        </form>
+        <p class="mt-3 text-sm {{ $oneReadingPerMonth ? 'text-amber-700' : 'text-gray-600' }}">
+            {{ $oneReadingPerMonth ? 'On: the office form and the phone reject a second reading in the same month.' : 'Off: a meter can be read again later in the same month.' }}
+        </p>
     </div>
 
     <!-- Quick Access Cards -->
@@ -190,7 +230,7 @@
                 </div>
                 <div class="mt-3 flex items-center text-sm text-gray-500">
                     <i class="fas fa-building mr-1"></i>
-                    <span>{{ $divisions->count() }} divisions</span>
+                    <span>{{ $divisions->total() }} divisions</span>
                 </div>
             </div>
         </div>
@@ -217,7 +257,7 @@
                 </div>
                 <div class="mt-3 flex items-center text-sm text-gray-500">
                     <i class="fas fa-users mr-1"></i>
-                    <span>{{ $customerTypes->count() }} types</span>
+                    <span>{{ $customerTypes->total() }} types</span>
                 </div>
             </div>
         </div>
@@ -233,7 +273,7 @@
                     <div class="relative z-10 flex items-center">
                         <i class="fas fa-map-marked-alt mr-2 text-lg"></i>
                     Customer Divisions
-                        <span class="ml-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs px-3 py-1 rounded-full font-medium shadow-sm">{{ $divisions->count() }}</span>
+                        <span class="ml-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs px-3 py-1 rounded-full font-medium shadow-sm">{{ $divisions->total() }}</span>
                     </div>
                 </button>
                 <button class="tab-btn py-6 px-3 border-b-3 font-semibold text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 flex items-center relative group transition-all duration-300" 
@@ -242,7 +282,7 @@
                     <div class="relative z-10 flex items-center">
                         <i class="fas fa-tags mr-2 text-lg"></i>
                     Customer Types
-                        <span class="ml-3 bg-gradient-to-r from-gray-400 to-gray-500 text-white text-xs px-3 py-1 rounded-full font-medium shadow-sm">{{ $customerTypes->count() }}</span>
+                        <span class="ml-3 bg-gradient-to-r from-gray-400 to-gray-500 text-white text-xs px-3 py-1 rounded-full font-medium shadow-sm">{{ $customerTypes->total() }}</span>
                     </div>
                 </button>
             </nav>
@@ -382,6 +422,7 @@
                     </tbody>
                 </table>
             </div>
+            <div class="px-6 py-4">{{ $divisions->links() }}</div>
         </div>
     </div>
 
@@ -518,6 +559,7 @@
                     </tbody>
                 </table>
             </div>
+            <div class="px-6 py-4">{{ $customerTypes->links() }}</div>
         </div>
     </div>
 </div>

@@ -21,6 +21,15 @@
                             <i class="fas fa-edit mr-2"></i>Edit Reading
                         </a>
                     @endif
+                    @if($reading && $reading->id && ($reading->status !== 'billed' || auth()->user()->isSuperAdmin()))
+                        <form action="{{ route('readings.destroy', $reading) }}" method="POST" class="inline">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition duration-200">
+                                <i class="fas fa-trash mr-2"></i>Delete Reading
+                            </button>
+                        </form>
+                    @endif
                     @if($reading && $reading->id && $reading->status === 'pending')
                         <form action="{{ route('readings.verify', $reading) }}" method="POST" class="inline">
                             @csrf
@@ -188,7 +197,7 @@
                                 <div class="flex items-end justify-between gap-4 mb-4">
                                     <div>
                                         <p class="text-sm font-medium text-gray-700">Amount for {{ number_format($reading->consumption) }} units</p>
-                                        <p class="text-sm text-gray-500">{{ ucfirst($reading->waterMeter->customer->customer_type ?? 'customer') }} rate on {{ $reading->reading_date ? $reading->reading_date->format('M d, Y') : 'the reading date' }}</p>
+                                        <p class="text-sm text-gray-500">{{ $reading->waterMeter->customer->customerType->name ?? 'Customer' }} rate on {{ $reading->reading_date ? $reading->reading_date->format('M d, Y') : 'the reading date' }}</p>
                                     </div>
                                     <p class="text-3xl font-bold text-green-600">@lkr($charges['total_charges'])</p>
                                 </div>
@@ -215,7 +224,7 @@
                             @if($reading->bill)
                                 <div class="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
                                     <div>
-                                        <p class="text-sm font-medium text-gray-700">Saved bill {{ $reading->bill->bill_number }}</p>
+                                        <p class="text-sm font-medium text-gray-700">Saved bill <a href="{{ route('bills.show', $reading->bill) }}" class="text-blue-700 hover:text-blue-900">{{ $reading->bill->bill_number }}</a></p>
                                         <p class="text-sm text-gray-500">Includes late fees and other adjustments. Generated {{ $reading->bill->bill_date ? $reading->bill->bill_date->format('M d, Y') : 'on an unknown date' }}.</p>
                                     </div>
                                     <div class="text-right">
@@ -249,7 +258,7 @@
                                          alt="{{ $reading->waterMeter->customer->full_name }}">
                                 </div>
                                 <div class="ml-4">
-                                    <h4 class="text-lg font-semibold text-gray-900">{{ $reading->waterMeter->customer->full_name }}</h4>
+                                    <h4 class="text-lg font-semibold text-gray-900"><a href="{{ route('customers.show', $reading->waterMeter->customer) }}" class="hover:text-blue-700">{{ $reading->waterMeter->customer->full_name }}</a></h4>
                                     <p class="text-sm text-gray-600">{{ $reading->waterMeter->customer->account_number }}</p>
                                 </div>
                             </div>

@@ -17,12 +17,14 @@ use App\Http\Controllers\MobileApiDocsController;
 use App\Http\Controllers\SmsNotificationController;
 use App\Http\Controllers\MonthlyActiveReportController;
 use App\Http\Controllers\ReaderRouteReportController;
+use App\Http\Controllers\ReaderStatisticsController;
 use App\Http\Controllers\OfficeReportController;
 use App\Http\Controllers\BulkSmsController;
 use App\Http\Controllers\SmsLinkController;
 use App\Http\Controllers\SmsSettingsController;
 use App\Http\Controllers\SmsTemplateController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\PaymentCollectionController;
 use App\Http\Controllers\SystemControlController;
 
 // Redirect root to login for admin access
@@ -80,6 +82,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/bills', [BillController::class, 'index'])->name('bills.index');
     Route::get('/bills/{bill}', [BillController::class, 'show'])->whereNumber('bill')->name('bills.show');
     Route::get('bills/{bill}/print', [BillController::class, 'print'])->name('bills.print');
+    Route::get('payments/collect', [PaymentCollectionController::class, 'index'])->name('payments.collect');
+    Route::post('payments/collect', [PaymentCollectionController::class, 'store'])->name('payments.collect.store');
     Route::get('payments/{payment}/receipt', [PaymentController::class, 'print'])->name('payments.receipt');
     Route::get('bills/data/ajax', [BillController::class, 'getBillsData'])->name('bills.data');
     
@@ -101,6 +105,8 @@ Route::middleware(['auth', 'verified', 'system.check'])->group(function () {
     Route::prefix('settings')->name('settings.')->group(function () {
         Route::get('/', [SettingsController::class, 'index'])->name('index');
         Route::put('/map-key', [SettingsController::class, 'updateMapKey'])->name('map-key');
+        Route::put('/reading-limit', [SettingsController::class, 'updateReadingLimit'])->name('reading-limit');
+        Route::put('/mobile-maintenance', [SettingsController::class, 'updateMobileMaintenance'])->name('mobile-maintenance');
         
         // Division routes
         Route::post('/divisions', [SettingsController::class, 'storeDivision'])->name('divisions.store');
@@ -202,6 +208,7 @@ Route::middleware(['auth', 'verified', 'system.check'])->group(function () {
     Route::get('reports/revenue', [DashboardController::class, 'revenueReport'])->name('reports.revenue');
     Route::get('reports/overdue', [DashboardController::class, 'overdueReport'])->name('reports.overdue');
     Route::get('reports/reader-routes', [ReaderRouteReportController::class, 'index'])->name('reports.reader-routes');
+    Route::get('reports/reader-statistics', [ReaderStatisticsController::class, 'index'])->name('reports.reader-statistics');
     Route::get('reports/office/{report}', [OfficeReportController::class, 'show'])->name('reports.office');
     Route::get('reports/monthly-active', [MonthlyActiveReportController::class, 'index'])->name('reports.monthly-active');
     Route::get('reports/monthly-active/export', [MonthlyActiveReportController::class, 'export'])->name('reports.monthly-active.export');

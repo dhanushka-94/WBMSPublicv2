@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\MeterReading;
 use App\Models\User;
+use App\Support\TablePage;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -38,17 +39,19 @@ class ReaderRouteReportController extends Controller
             $rows = $this->detail($selected, $date, $list, $request);
         }
 
+        $totals = [
+            'assigned' => $summaries->sum('assigned'),
+            'completed' => $summaries->sum('completed'),
+            'missed' => $summaries->sum('missed'),
+        ];
+
         return view('reports.reader-routes', [
             'date' => $date,
             'list' => $list,
-            'summaries' => $summaries,
+            'summaries' => TablePage::collection($summaries, 'summary_page'),
             'selected' => $selected,
             'rows' => $rows,
-            'totals' => [
-                'assigned' => $summaries->sum('assigned'),
-                'completed' => $summaries->sum('completed'),
-                'missed' => $summaries->sum('missed'),
-            ],
+            'totals' => $totals,
         ]);
     }
 
@@ -110,7 +113,7 @@ class ReaderRouteReportController extends Controller
         }
 
         $page = LengthAwarePaginator::resolveCurrentPage();
-        $perPage = 50;
+        $perPage = 25;
 
         return new LengthAwarePaginator(
             $rows->forPage($page, $perPage)->values(),

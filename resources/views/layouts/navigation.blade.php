@@ -17,7 +17,7 @@
     ];
     $onCustomers = request()->routeIs('customers.*', 'guarantors.*');
     $onMeters = request()->routeIs('meters.*', 'readings.*');
-    $onBilling = request()->routeIs('bills.*', 'settings.rates.*');
+    $onBilling = request()->routeIs('bills.*', 'payments.*', 'settings.rates.*');
     $onReports = request()->routeIs('reports.*');
     $onSms = request()->routeIs('sms.*');
     $onSystem = request()->routeIs('users.*', 'reader-routes.*', 'activity-logs.*', 'mobile-api.*', 'about', 'changelog')
@@ -163,6 +163,7 @@
                 </button>
                 <div x-show="menu === 'billing'" x-cloak class="absolute left-0 top-full z-50 mt-1 w-56 rounded-lg bg-white p-1.5 shadow-lg ring-1 ring-black/5" style="display: none;">
                     <a href="{{ route('bills.index') }}" class="{{ $link }}"><i class="fas fa-file-invoice w-4 text-green-600"></i>Bills</a>
+                    <a href="{{ route('payments.collect') }}" class="{{ $link }}"><i class="fas fa-hand-holding-usd w-4 text-emerald-600"></i>Take Payment</a>
                     <a href="{{ route('settings.rates.index') }}" class="{{ $link }}"><i class="fas fa-dollar-sign w-4 text-yellow-600"></i>Rates</a>
                 </div>
             </div>
@@ -184,6 +185,7 @@
                             <p class="px-3 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Usage</p>
                             <a href="{{ route('reports.consumption') }}" class="{{ $link }}"><i class="fas fa-chart-line w-4 text-purple-600"></i>Consumption</a>
                             <a href="{{ route('reports.reader-routes') }}" class="{{ $link }}"><i class="fas fa-clipboard-check w-4 text-blue-600"></i>Reader Routes</a>
+                            <a href="{{ route('reports.reader-statistics') }}" class="{{ $link }}"><i class="fas fa-chart-pie w-4 text-cyan-600"></i>Reader Statistics</a>
                             @foreach(['usage-alerts', 'meter-faults'] as $key)
                                 @php [$label, $icon, $color] = $officeReports[$key]; @endphp
                                 <a href="{{ route('reports.office', $key) }}" class="{{ $link }}"><i class="fas {{ $icon }} w-4 {{ $color }}"></i>{{ $label }}</a>
@@ -273,6 +275,7 @@
                         <a href="{{ route('meters.map') }}" class="{{ $mobileLink }}"><i class="fas fa-map-marked-alt w-4"></i>Meter Map</a>
                     @elseif($key === 'billing')
                         <a href="{{ route('bills.index') }}" class="{{ $mobileLink }}"><i class="fas fa-file-invoice w-4"></i>Bills</a>
+                        <a href="{{ route('payments.collect') }}" class="{{ $mobileLink }}"><i class="fas fa-hand-holding-usd w-4"></i>Take Payment</a>
                         <a href="{{ route('settings.rates.index') }}" class="{{ $mobileLink }}"><i class="fas fa-dollar-sign w-4"></i>Rates</a>
                     @elseif($key === 'reports')
                         <a href="{{ route('reports.consumption') }}" class="{{ $mobileLink }}"><i class="fas fa-chart-line w-4"></i>Consumption</a>
@@ -280,6 +283,7 @@
                         <a href="{{ route('reports.overdue') }}" class="{{ $mobileLink }}"><i class="fas fa-exclamation-triangle w-4"></i>Overdue</a>
                         <a href="{{ route('reports.monthly-active') }}" class="{{ $mobileLink }}"><i class="fas fa-users-cog w-4"></i>Monthly Active</a>
                         <a href="{{ route('reports.reader-routes') }}" class="{{ $mobileLink }}"><i class="fas fa-clipboard-check w-4"></i>Reader Routes</a>
+                        <a href="{{ route('reports.reader-statistics') }}" class="{{ $mobileLink }}"><i class="fas fa-chart-pie w-4"></i>Reader Statistics</a>
                         @foreach($officeReports as $reportKey => [$label, $icon])
                             <a href="{{ route('reports.office', $reportKey) }}" class="{{ $mobileLink }}"><i class="fas {{ $icon }} w-4"></i>{{ $label }}</a>
                         @endforeach

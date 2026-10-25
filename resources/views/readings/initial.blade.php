@@ -40,35 +40,38 @@
             </div>
         @endif
 
+        <form method="GET" action="{{ route('readings.initial') }}" class="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+            <div class="p-6">
+                <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">
+                            Showing {{ $waterMeters->firstItem() ?? 0 }}–{{ $waterMeters->lastItem() ?? 0 }} of {{ $meterTotal }} meters
+                            <span class="text-sm font-normal text-gray-500">· {{ $zeroTotal }} still at 0</span>
+                        </h2>
+                        <p class="text-sm text-gray-600 mt-1">Fill the dial, the bill amount, or both. A blank cell is left as it is.</p>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full md:w-auto">
+                        <input type="text" name="q" value="{{ request('q') }}" placeholder="Name, reference, or meter"
+                               class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                        <select name="division" class="px-3 py-2 border border-gray-300 rounded-lg text-sm" onchange="this.form.requestSubmit()">
+                            <option value="">All divisions</option>
+                            @foreach($divisions as $division)
+                                <option value="{{ $division->id }}" @selected(request('division') == $division->id)>{{ $division->name }}</option>
+                            @endforeach
+                        </select>
+                        <select name="zero" class="px-3 py-2 border border-gray-300 rounded-lg text-sm" onchange="this.form.requestSubmit()">
+                            <option value="">All meters</option>
+                            <option value="zero" @selected(request('zero') === 'zero')>Still at 0</option>
+                            <option value="set" @selected(request('zero') === 'set')>Already entered</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </form>
+
         <form id="initialReadingForm" action="{{ route('readings.initial.store') }}" method="POST">
             @csrf
             <div class="bg-white rounded-xl shadow-sm border border-gray-200">
-                <div class="p-6 border-b border-gray-200">
-                    <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-                        <div>
-                            <h2 class="text-lg font-semibold text-gray-900">
-                                {{ $waterMeters->count() }} meters
-                                <span class="text-sm font-normal text-gray-500">· {{ $waterMeters->where('initial_reading', 0)->count() }} still at 0</span>
-                            </h2>
-                            <p class="text-sm text-gray-600 mt-1">Fill the dial, the bill amount, or both. A blank cell is left as it is.</p>
-                        </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full md:w-auto">
-                            <input type="text" id="initialSearch" placeholder="Name, reference, or meter"
-                                   class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                            <select id="divisionFilter" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                                <option value="">All divisions</option>
-                                @foreach($divisions as $division)
-                                    <option value="{{ $division->id }}">{{ $division->name }}</option>
-                                @endforeach
-                            </select>
-                            <select id="zeroFilter" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                                <option value="">All meters</option>
-                                <option value="zero">Still at 0</option>
-                                <option value="set">Already entered</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
 
                 <div class="overflow-x-auto max-h-[70vh]">
                     <table class="w-full">
@@ -94,7 +97,13 @@
                                     data-search="{{ strtolower(($meter->customer?->full_name ?? '') . ' ' . ($meter->customer?->account_number ?? '') . ' ' . $meter->meter_number) }}"
                                     data-division="{{ $meter->customer?->division_id ?? '' }}"
                                     data-zero="{{ $saved == 0 ? '1' : '0' }}">
-                                    <td class="px-4 py-3 text-sm text-gray-900">{{ $meter->customer?->full_name ?? 'Unassigned' }}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-900">
+                                        @if($meter->customer)
+                                            <a href="{{ route('customers.show', $meter->customer) }}" class="font-medium text-blue-700 hover:text-blue-900">{{ $meter->customer->full_name }}</a>
+                                        @else
+                                            Unassigned
+                                        @endif
+                                    </td>
                                     <td class="px-4 py-3 text-sm text-gray-600">{{ $meter->customer?->account_number ?? '—' }}</td>
                                     <td class="px-4 py-3 text-sm text-gray-600">{{ $meter->customer?->division?->name ?? '—' }}</td>
                                     <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ $meter->meter_number }}</td>
@@ -111,7 +120,13 @@
                                                placeholder="Enter dial"
                                                class="initial-entry w-32 px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm">
                                     </td>
-                                    <td class="px-4 py-3 text-sm text-gray-900">{{ $openingBill ? 'Rs. ' . number_format($openingBill->total_amount, 2) : '—' }}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-900">
+                                        @if($openingBill)
+                                            <a href="{{ route('bills.show', $openingBill) }}" class="text-blue-700 hover:text-blue-900">Rs. {{ number_format($openingBill->total_amount, 2) }}</a>
+                                        @else
+                                            —
+                                        @endif
+                                    </td>
                                     <td class="px-4 py-3">
                                         <input type="number"
                                                name="initial_readings[{{ $meter->id }}][bill_amount]"
@@ -134,15 +149,13 @@
                 </div>
             </div>
         </form>
+        <div class="mt-4">{{ $waterMeters->links() }}</div>
     </div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const rows = Array.from(document.querySelectorAll('.initial-row'));
-    const search = document.getElementById('initialSearch');
-    const division = document.getElementById('divisionFilter');
-    const zero = document.getElementById('zeroFilter');
     const count = document.getElementById('entryCount');
     const button = document.getElementById('saveInitials');
 
@@ -153,30 +166,14 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function refresh() {
-        const term = search.value.trim().toLowerCase();
-        const divisionId = division.value;
-        const zeroMode = zero.value;
         let typed = 0;
-
         rows.forEach(row => {
-            const reading = row.querySelector('.initial-entry');
-            const amount = row.querySelector('.bill-entry');
             const key = row.querySelector('.meter-key');
-            reading.disabled = false;
-            amount.disabled = false;
             key.disabled = !rowHasValue(row);
             if (rowHasValue(row)) {
                 typed++;
             }
-
-            const matchesSearch = term === '' || row.dataset.search.includes(term);
-            const matchesDivision = divisionId === '' || row.dataset.division === divisionId;
-            const matchesZero = zeroMode === ''
-                || (zeroMode === 'zero' && row.dataset.zero === '1')
-                || (zeroMode === 'set' && row.dataset.zero === '0');
-            row.style.display = matchesSearch && matchesDivision && matchesZero ? '' : 'none';
         });
-
         count.textContent = typed === 0
             ? 'No new values typed yet'
             : typed + (typed === 1 ? ' row ready to save' : ' rows ready to save');
@@ -213,9 +210,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    [search, division, zero].forEach(control => control.addEventListener('input', refresh));
-    division.addEventListener('change', refresh);
-    zero.addEventListener('change', refresh);
     refresh();
 });
 </script>

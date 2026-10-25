@@ -17,11 +17,13 @@ class SettingsController extends Controller
      */
     public function index(): View
     {
-        $divisions = Division::orderBy('name')->get();
-        $customerTypes = CustomerType::orderBy('name')->get();
+        $divisions = Division::orderBy('name')->paginate(25, ['*'], 'divisions_page')->withQueryString();
+        $customerTypes = CustomerType::orderBy('name')->paginate(25, ['*'], 'types_page')->withQueryString();
         $mapKeySaved = SystemConfiguration::googleMapsKey() !== '';
+        $oneReadingPerMonth = SystemConfiguration::oneReadingPerMonth();
+        $mobileAppMaintenance = SystemConfiguration::mobileAppMaintenance();
 
-        return view('settings.index', compact('divisions', 'customerTypes', 'mapKeySaved'));
+        return view('settings.index', compact('divisions', 'customerTypes', 'mapKeySaved', 'oneReadingPerMonth', 'mobileAppMaintenance'));
     }
 
     public function updateMapKey(Request $request): RedirectResponse
@@ -41,6 +43,46 @@ class SettingsController extends Controller
 
         return redirect()->route('settings.index')
             ->with('success', $key === '' ? 'Map key left unchanged.' : 'Map API key saved.');
+    }
+
+    public function updateReadingLimit(Request $request): RedirectResponse
+    {
+        abort_unless(auth()->user()?->role === 'super_admin', 403);
+
+        $enabled = $request->boolean('one_reading_per_month');
+        SystemConfiguration::set(
+            'one_reading_per_month',
+            $enabled ? '1' : '0',
+            'boolean',
+            'When on, each meter can have only one reading in a calendar month'
+        );
+
+        return redirect()->route('settings.index')->with(
+            'success',
+            $enabled
+                ? 'Only one meter reading per month is now allowed.'
+                : 'Several meter readings per month are now allowed.'
+        );
+    }
+
+    public function updateMobileMaintenance(Request $request): RedirectResponse
+    {
+        abort_unless(auth()->user()?->role === 'super_admin', 403);
+
+        $enabled = $request->boolean('mobile_app_maintenance');
+        SystemConfiguration::set(
+            'mobile_app_maintenance',
+            $enabled ? '1' : '0',
+            'boolean',
+            'When on, the meter reader mobile app is in maintenance'
+        );
+
+        return redirect()->route('settings.index')->with(
+            'success',
+            $enabled
+                ? 'The meter reader app is now in maintenance.'
+                : 'The meter reader app is open again.'
+        );
     }
 
     // DIVISION CRUD METHODS
@@ -103,7 +145,7 @@ class SettingsController extends Controller
     public function destroyDivision(Division $division): RedirectResponse
     {
         // Check if division has customers
-        if ($division->customers()->count() > 0) {
+        if ($division->customers()->count() > 0 && !auth()->user()?->isSuperAdmin()) {
             return redirect()->route('settings.index')
                 ->with('error', 'Cannot delete division. It has associated customers.');
         }
@@ -174,7 +216,7 @@ class SettingsController extends Controller
     public function destroyCustomerType(CustomerType $customerType): RedirectResponse
     {
         // Check if customer type has customers
-        if ($customerType->customers()->count() > 0) {
+        if ($customerType->customers()->count() > 0 && !auth()->user()?->isSuperAdmin()) {
             return redirect()->route('settings.index')
                 ->with('error', 'Cannot delete customer type. It has associated customers.');
         }
@@ -222,7 +264,7 @@ class SettingsController extends Controller
             });
         }
 
-        $customers = $query->orderBy('account_number')->paginate(20);
+        $customers = $query->orderBy('account_number')->paginate(25);
         $divisions = \App\Models\Division::orderBy('name')->get();
         $customerTypes = \App\Models\CustomerType::orderBy('name')->get();
 

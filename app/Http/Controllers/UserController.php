@@ -39,7 +39,7 @@ class UserController extends Controller
             $query->where('is_active', $isActive);
         }
 
-        $users = $query->orderBy('created_at', 'desc')->paginate(15);
+        $users = $query->orderBy('created_at', 'desc')->paginate(25);
 
         return view('users.index', compact('users'));
     }

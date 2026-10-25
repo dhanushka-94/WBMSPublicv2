@@ -200,7 +200,13 @@
                                                 @endif
                                             </div>
                                             <div class="ml-4">
-                                                <div class="text-sm font-medium text-gray-900">{{ $meter->customer ? $meter->customer->full_name : 'Unassigned Customer' }}</div>
+                                                <div class="text-sm font-medium text-gray-900">
+                                                    @if($meter->customer)
+                                                        <a href="{{ route('customers.show', $meter->customer) }}" class="text-blue-700 hover:text-blue-900">{{ $meter->customer->full_name }}</a>
+                                                    @else
+                                                        Unassigned Customer
+                                                    @endif
+                                                </div>
                                                 <div class="text-sm text-gray-500">{{ $meter->customer ? $meter->customer->account_number : 'No Account' }}</div>
                                             </div>
                                         </div>
@@ -257,6 +263,7 @@
                         </tbody>
                     </table>
                 </div>
+                <div class="px-6 py-4 border-t border-gray-200">{{ $waterMeters->links() }}</div>
 
                 <!-- Form Actions -->
                 <div class="p-6 border-t border-gray-200">

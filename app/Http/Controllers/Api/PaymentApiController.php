@@ -54,9 +54,22 @@ class PaymentApiController extends Controller
                 $query->whereIn('status', ['generated', 'sent', 'overdue']);
             }
 
-            $bills = $query->orderBy('bill_date', 'desc')
-                ->get()
-                ->map(function ($bill) {
+            $bills = $query->orderBy('bill_date', 'desc')->get();
+            $walletLeft = round(max(0, (float) $customer->wallet_balance), 2);
+            $walletShares = [];
+            foreach ($bills->sortBy([['due_date', 'asc'], ['id', 'asc']]) as $openBill) {
+                $unpaid = round(max(0, (float) $openBill->balance_amount), 2);
+                $applied = round(min($walletLeft, $unpaid), 2);
+                $walletLeft = round($walletLeft - $applied, 2);
+                $walletShares[$openBill->id] = [
+                    'wallet_applied' => $applied,
+                    'amount_due' => round($unpaid - $applied, 2),
+                ];
+            }
+
+            $bills = $bills->map(function ($bill) use ($walletShares) {
+                    $share = $walletShares[$bill->id];
+
                     return [
                         'id' => $bill->id,
                         'bill_number' => $bill->bill_number,
@@ -78,6 +91,8 @@ class PaymentApiController extends Controller
                         'total_amount' => $bill->total_amount,
                         'paid_amount' => $bill->paid_amount,
                         'balance_amount' => $bill->balance_amount,
+                        'wallet_applied' => $share['wallet_applied'],
+                        'amount_due' => $share['amount_due'],
                         'status' => $bill->status,
                         'is_overdue' => $bill->isOverdue(),
                         'days_overdue' => $bill->getDaysOverdue(),
@@ -96,11 +111,14 @@ class PaymentApiController extends Controller
                         'account_number' => $customer->account_number,
                         'address' => $customer->full_address,
                         'phone' => $customer->phone,
+                        'wallet_balance' => round((float) $customer->wallet_balance, 2),
                     ],
                     'bills' => $bills,
                     'summary' => [
                         'total_bills' => $bills->count(),
                         'total_outstanding' => $totalOutstanding,
+                        'wallet_applied' => round((float) $bills->sum('wallet_applied'), 2),
+                        'amount_due' => round((float) $bills->sum('amount_due'), 2),
                         'overdue_bills' => $bills->where('is_overdue', true)->count(),
                         'overdue_amount' => $bills->where('is_overdue', true)->sum('balance_amount'),
                     ]
@@ -381,8 +399,9 @@ class PaymentApiController extends Controller
             ->get()
             ->map(function ($customer) {
                 $outstandingBills = $customer->bills->where('balance_amount', '>', 0);
-                $totalOutstanding = $outstandingBills->sum('balance_amount');
-                $overdueAmount = $outstandingBills->where('status', 'overdue')->sum('balance_amount');
+                $totalOutstanding = round((float) $outstandingBills->sum('balance_amount'), 2);
+                $overdueAmount = round((float) $outstandingBills->where('status', 'overdue')->sum('balance_amount'), 2);
+                $share = $customer->payableAfterWallet($totalOutstanding);
 
                 return [
                     'id' => $customer->id,
@@ -392,6 +411,8 @@ class PaymentApiController extends Controller
                     'address' => $customer->full_address,
                     'outstanding_bills' => $outstandingBills->count(),
                     'total_outstanding' => $totalOutstanding,
+                    'wallet_balance' => $share['wallet_balance'],
+                    'amount_due' => $share['amount_due'],
                     'overdue_amount' => $overdueAmount,
                     'has_overdue' => $overdueAmount > 0,
                 ];

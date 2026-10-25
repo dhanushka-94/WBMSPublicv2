@@ -2,6 +2,23 @@
 
 return [
     [
+        'version' => '2.6.0',
+        'date' => '25 October 2026',
+        'title' => 'Wallet payments and reader controls',
+        'changes' => [
+            'Take a payment from Billing: filter and search a customer, tick open bills, and record the amount. Extra cash is kept in that customer’s wallet and can pay later bills.',
+            'The reader app shows the wallet and the amount still due. The wallet is not reduced until the office records the payment.',
+            'Super Admin can delete a customer, meter, billed reading, paid bill, division, customer type, or guarantor even when related records remain. Other roles keep the old limits.',
+            'Customer type is Staff or Non Staff. The old residential type is removed.',
+            'Super Admin can put the reader app in maintenance. The office stays open, and the phone API pauses meter reading and payments while it is on.',
+            'Limit each meter to one reading per month from System Settings. The switch starts off.',
+            'Add a Reader Statistics report for readings, phone and office entries, faults, and route coverage.',
+            'Open a customer or a bill from its name or number on lists and reports.',
+            'Show 25 rows per page on office lists.',
+            'Generate Bills only for meters that have a reading in that month. A missed month is not billed from an older reading.',
+        ],
+    ],
+    [
         'version' => '2.5.1',
         'date' => '23 October 2026',
         'title' => 'Keep the system out of search',

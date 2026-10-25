@@ -43,7 +43,7 @@ class RestrictOfficeAccess
 
         $prefixes = match ($role) {
             'manager' => ['dashboard', 'reports.'],
-            'billing_officer', 'staff' => ['dashboard', 'customers.', 'guarantors.', 'meters.', 'readings.', 'bills.', 'sms.'],
+            'billing_officer', 'staff' => ['dashboard', 'customers.', 'guarantors.', 'meters.', 'readings.', 'bills.', 'payments.', 'sms.'],
             'cashier' => ['dashboard', 'bills.index', 'bills.show', 'bills.print', 'bills.payment', 'payments.', 'reports.daily-collection', 'reports.monthly-collection', 'reports.collection-efficiency', 'reports.age-analysis'],
             'meter_reader' => ['readings.', 'meters.index', 'meters.show', 'meters.map'],
             default => [],

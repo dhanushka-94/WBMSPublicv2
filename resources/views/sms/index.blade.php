@@ -155,7 +155,7 @@
                                             <div class="text-xs text-gray-500">{{ ucfirst($notification->source ?? 'automated') }}</div>
                                             <div class="text-xs text-gray-500">{{ $notification->segments ?? 1 }} segment(s)</div>
                                             @if($notification->bill)
-                                                <div class="text-xs text-gray-500">{{ $notification->bill->bill_number }}</div>
+                                                <a href="{{ route('bills.show', $notification->bill) }}" class="text-xs text-blue-700 hover:text-blue-900">{{ $notification->bill->bill_number }}</a>
                                             @endif
                                             @if($notification->receipt_number)
                                                 <div class="text-xs text-gray-500">{{ $notification->receipt_number }}</div>
@@ -167,7 +167,7 @@
                                         </td>
                                         <td class="px-4 py-4">
                                             @if($notification->customer)
-                                                <div class="text-sm font-medium text-gray-900">{{ $notification->customer->full_name }}</div>
+                                                <a href="{{ route('customers.show', $notification->customer) }}" class="text-sm font-medium text-blue-700 hover:text-blue-900">{{ $notification->customer->full_name }}</a>
                                                 <div class="text-xs text-gray-500">{{ $notification->customer->account_number }}</div>
                                             @else
                                                 <span class="text-sm text-gray-400">No Customer</span>

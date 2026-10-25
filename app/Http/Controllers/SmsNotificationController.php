@@ -56,7 +56,7 @@ class SmsNotificationController extends Controller
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
-        $notifications = $query->paginate(20)->appends($request->query());
+        $notifications = $query->paginate(25)->appends($request->query());
 
         // Get statistics
         $stats = $this->getStatistics();

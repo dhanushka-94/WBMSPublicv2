@@ -30,6 +30,17 @@
         </div>
     </div>
 
+    @if(session('success') || session('error'))
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        @if(session('success'))
+            <div class="rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-green-800">{{ session('success') }}</div>
+        @endif
+        @if(session('error'))
+            <div class="mt-3 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-red-800">{{ session('error') }}</div>
+        @endif
+    </div>
+    @endif
+
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         @if($bill->payments->isNotEmpty())
         <div class="bg-white rounded-xl border border-gray-200 p-4 mb-6">
@@ -107,7 +118,13 @@
                                  src="{{ $bill->customer->profile_photo_url }}" 
                                  alt="{{ $bill->customer->full_name }}">
                             <div class="ml-4">
-                                <h4 class="text-lg font-medium text-gray-900">{{ $bill->customer ? $bill->customer->full_name : 'Unknown Customer' }}</h4>
+                                <h4 class="text-lg font-medium text-gray-900">
+                                    @if($bill->customer)
+                                        <a href="{{ route('customers.show', $bill->customer) }}" class="text-blue-700 hover:text-blue-900">{{ $bill->customer->full_name }}</a>
+                                    @else
+                                        Unknown Customer
+                                    @endif
+                                </h4>
                                 <p class="text-sm text-gray-500">{{ $bill->customer ? $bill->customer->account_number : 'No Account' }}</p>
                             </div>
                         </div>
@@ -120,7 +137,7 @@
                             </div>
                             <div>
                                 <p class="text-gray-600">Customer Type</p>
-                                <p class="font-medium">{{ $bill->customer->customerType->name ?? 'Residential' }}</p>
+                                <p class="font-medium">{{ $bill->customer->customerType->name ?? '—' }}</p>
                             </div>
                         </div>
                     </div>
@@ -317,7 +334,7 @@
                                 <i class="fas fa-print mr-2"></i>Print Bill
                             </a>
 
-                            @if($bill->status !== 'paid')
+                            @if($bill->status !== 'paid' || auth()->user()->isSuperAdmin())
                                 <form action="{{ route('bills.destroy', $bill) }}" method="POST" class="w-full">
                                     @csrf
                                     @method('DELETE')
@@ -345,11 +362,17 @@
                                     <label for="amount" class="block text-sm font-medium text-gray-700 mb-2">
                                         Amount (Rs.) <span class="text-red-500">*</span>
                                     </label>
-                                    <input type="number" name="amount" id="amount" 
-                                           step="0.01" min="0.01" max="{{ $bill->balance_amount }}" 
-                                           value="{{ $bill->balance_amount }}" required 
+                                    <input type="number" name="amount" id="amount"
+                                           step="0.01" min="0"
+                                           value="{{ $bill->balance_amount }}" required
                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                    <p class="text-sm text-gray-500 mt-1">Balance: @lkr($bill->balance_amount)</p>
+                                    <p class="text-sm text-gray-500 mt-1">Balance: @lkr($bill->balance_amount). Any extra is added to the customer wallet.</p>
+                                    @if(($bill->customer->wallet_balance ?? 0) > 0)
+                                        <label class="mt-2 inline-flex items-center gap-2 text-sm text-gray-800">
+                                            <input type="checkbox" name="use_wallet" value="1" class="rounded border-gray-300 text-green-600">
+                                            Use wallet (Rs. {{ number_format($bill->customer->wallet_balance, 2) }} available)
+                                        </label>
+                                    @endif
                                 </div>
 
                                 <div>

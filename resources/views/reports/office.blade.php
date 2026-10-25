@@ -30,7 +30,13 @@
                 @forelse($rows as $row)
                     <tr class="border-t">
                         @foreach($row as $cell)
-                            <td class="px-4 py-2">{{ $cell }}</td>
+                            <td class="px-4 py-2">
+                                @if(is_array($cell) && !empty($cell['url']))
+                                    <a href="{{ $cell['url'] }}" class="font-medium text-blue-700 hover:text-blue-900">{{ $cell['text'] }}</a>
+                                @else
+                                    {{ is_array($cell) ? ($cell['text'] ?? '') : $cell }}
+                                @endif
+                            </td>
                         @endforeach
                     </tr>
                 @empty
@@ -39,5 +45,8 @@
             </tbody>
         </table>
     </div>
+    @if($rows instanceof \Illuminate\Contracts\Pagination\Paginator)
+        <div class="mt-4">{{ $rows->links() }}</div>
+    @endif
 </div>
 @endsection

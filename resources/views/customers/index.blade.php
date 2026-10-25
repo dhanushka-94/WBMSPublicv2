@@ -208,7 +208,7 @@
                                             <img src="{{ $customer->qr_code_url }}" alt="QR for {{ $customer->account_number }}" class="ml-3 h-12 w-12 rounded border border-gray-200 bg-white">
                                             @endif
                                             <div class="ml-4">
-                                                <div class="text-base font-bold text-gray-900">{{ $customer->full_name }}</div>
+                                                <a href="{{ route('customers.show', $customer) }}" class="text-base font-bold text-gray-900 hover:text-blue-700">{{ $customer->full_name }}</a>
                                                 @if($customer->address || $customer->city)
                                                     <div class="text-sm text-gray-500">
                                                         {{ $customer->address }}@if($customer->address && $customer->city), @endif{{ $customer->city }}

@@ -207,7 +207,7 @@
                                         <div class="text-sm font-medium text-gray-900">{{ $bill->bill_date->format('M d, Y') }}</div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm font-medium text-blue-600">{{ $bill->bill_number }}</div>
+                                        <a href="{{ route('bills.show', $bill) }}" class="text-sm font-medium text-blue-700 hover:text-blue-900">{{ $bill->bill_number }}</a>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="flex items-center">
@@ -217,7 +217,11 @@
                                                 </div>
                                             </div>
                                             <div class="ml-4">
-                                                <div class="text-sm font-medium text-gray-900">{{ $bill->customer ? $bill->customer->full_name : 'Unknown Customer' }}</div>
+                                                @if($bill->customer)
+                                                    <a href="{{ route('customers.show', $bill->customer) }}" class="text-sm font-medium text-blue-700 hover:text-blue-900">{{ $bill->customer->full_name }}</a>
+                                                @else
+                                                    <div class="text-sm font-medium text-gray-900">Unknown Customer</div>
+                                                @endif
                                                 <div class="text-sm text-gray-500">{{ $bill->customer ? $bill->customer->account_number : 'No Account' }}</div>
                                             </div>
                                         </div>
