@@ -2,6 +2,15 @@
 
 return [
     [
+        'version' => '2.6.3',
+        'date' => '26 October 2026',
+        'title' => 'Division other charges and profile pictures',
+        'changes' => [
+            'Add an other charge to every open bill this month in a chosen division. Paid bills and customers with no bill this month are skipped. The amount prints as Other charges.',
+            'Office users can upload, replace, and remove a profile picture on their own profile and on the Users pages.',
+        ],
+    ],
+    [
         'version' => '2.6.2',
         'date' => '25 October 2026',
         'title' => 'Filters on the customer and meter lists',

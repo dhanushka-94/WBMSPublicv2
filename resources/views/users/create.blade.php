@@ -28,7 +28,7 @@
         <div class="max-w-4xl mx-auto px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-lg rounded-xl border border-blue-100">
                 <div class="p-8">
-                    <form method="POST" action="{{ route('users.store') }}" class="space-y-6">
+                    <form method="POST" action="{{ route('users.store') }}" class="space-y-6" enctype="multipart/form-data">
                         @csrf
 
                         <!-- Basic Information Section -->
@@ -59,6 +59,16 @@
                                     <input type="email" name="email" id="email" value="{{ old('email') }}" required
                                            class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 @error('email') border-red-300 @enderror">
                                     @error('email')
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <div class="md:col-span-2">
+                                    <label for="profile_photo" class="block text-sm font-medium text-gray-700 mb-1">Profile picture</label>
+                                    <input type="file" name="profile_photo" id="profile_photo" accept="image/jpeg,image/png,image/gif,image/webp"
+                                           class="block w-full text-sm text-gray-600">
+                                    <p class="mt-1 text-sm text-gray-500">JPG, PNG, GIF, or WEBP up to 2 MB.</p>
+                                    @error('profile_photo')
                                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                     @enderror
                                 </div>

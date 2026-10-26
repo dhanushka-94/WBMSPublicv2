@@ -374,7 +374,7 @@
             </tr>
             @if($bill->service_charges > 0)
             <tr>
-                <td class="label">Service Charges</td>
+                <td class="label">Other charges</td>
                 <td class="amount">Rs. {{ number_format($bill->service_charges, 2) }}</td>
             </tr>
             @endif

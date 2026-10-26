@@ -43,9 +43,7 @@
                     <!-- User Header -->
                     <div class="flex items-center space-x-6 pb-6 border-b border-gray-200">
                         <div class="flex-shrink-0">
-                            <div class="h-24 w-24 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-3xl shadow-lg">
-                                {{ strtoupper(substr($user->name, 0, 1)) }}
-                            </div>
+                            <img src="{{ $user->profile_photo_url }}" alt="{{ $user->name }}" class="h-24 w-24 rounded-full object-cover shadow-lg">
                         </div>
                         <div class="flex-1">
                             <h3 class="text-3xl font-bold text-gray-900">{{ $user->name }}</h3>

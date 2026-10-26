@@ -30,6 +30,7 @@
             'consumption' => 'Consumption',
             'water' => 'Water charges',
             'fixed' => 'Fixed charge',
+            'other' => 'Other charges',
             'damage' => 'Damage charges',
             'outstanding' => 'Outstanding',
             'total' => 'Total payable',
@@ -47,6 +48,7 @@
             'consumption' => 'நுகர்வு',
             'water' => 'நீர் கட்டணம்',
             'fixed' => 'நிலையான கட்டணம்',
+            'other' => 'பிற கட்டணம்',
             'damage' => 'சேதக் கட்டணம்',
             'outstanding' => 'நிலுவை',
             'total' => 'செலுத்த வேண்டிய மொத்தம்',
@@ -75,6 +77,9 @@
         <tr><td>{{ $label['consumption'] }}</td><td class="right">{{ number_format($bill->consumption, 0) }}</td></tr>
         <tr><td>{{ $label['water'] }}</td><td class="right">LKR {{ number_format($bill->water_charges, 2) }}</td></tr>
         <tr><td>{{ $label['fixed'] }}</td><td class="right">LKR {{ number_format($bill->fixed_charges, 2) }}</td></tr>
+        @if($bill->service_charges > 0)
+        <tr><td>{{ $label['other'] }}</td><td class="right">LKR {{ number_format($bill->service_charges, 2) }}</td></tr>
+        @endif
         @if($bill->damage_charges > 0)
         <tr><td>{{ $label['damage'] }}</td><td class="right">LKR {{ number_format($bill->damage_charges, 2) }}</td></tr>
         @endif

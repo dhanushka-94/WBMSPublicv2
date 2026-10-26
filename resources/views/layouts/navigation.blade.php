@@ -73,9 +73,7 @@
                     <x-dropdown align="right" width="56">
                         <x-slot name="trigger">
                             <button type="button" class="inline-flex items-center gap-2 rounded-lg bg-white/10 px-2.5 py-1.5 text-sm text-white hover:bg-white/20">
-                                <span class="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">
-                                    <i class="fas fa-user text-sm"></i>
-                                </span>
+                                <img src="{{ Auth::user()->profile_photo_url }}" alt="" class="h-8 w-8 rounded-full object-cover">
                                 <span class="hidden text-left xl:block">
                                     <span class="block text-sm font-medium leading-tight">{{ Auth::user()->name }}</span>
                                     <span class="block text-xs text-blue-200">{{ Auth::user()->role_display }}</span>

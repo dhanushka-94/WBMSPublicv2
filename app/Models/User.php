@@ -6,7 +6,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -21,6 +23,7 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'profile_photo',
         'email',
         'password',
         'role',
@@ -49,6 +52,49 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::deleting(function (User $user) {
+            $user->deleteProfilePhotoFile();
+        });
+    }
+
+    public function getProfilePhotoUrlAttribute(): string
+    {
+        if ($this->profile_photo && Storage::disk('public')->exists($this->profile_photo)) {
+            $version = Storage::disk('public')->lastModified($this->profile_photo);
+
+            return asset('storage/'.$this->profile_photo).'?v='.$version;
+        }
+
+        $letter = strtoupper(mb_substr($this->name ?: 'U', 0, 1));
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128"><rect width="128" height="128" fill="#2563eb"/><text x="64" y="78" text-anchor="middle" fill="#ffffff" font-size="64" font-family="Arial,sans-serif">'.$letter.'</text></svg>';
+
+        return 'data:image/svg+xml,'.rawurlencode($svg);
+    }
+
+    public function syncProfilePhoto(?UploadedFile $file, bool $remove = false): void
+    {
+        if ($file) {
+            $this->deleteProfilePhotoFile();
+            $this->profile_photo = $file->store('user-photos', 'public');
+
+            return;
+        }
+
+        if ($remove) {
+            $this->deleteProfilePhotoFile();
+            $this->profile_photo = null;
+        }
+    }
+
+    public function deleteProfilePhotoFile(): void
+    {
+        if ($this->profile_photo && Storage::disk('public')->exists($this->profile_photo)) {
+            Storage::disk('public')->delete($this->profile_photo);
+        }
     }
 
     /**

@@ -163,6 +163,7 @@ Route::middleware(['auth', 'verified', 'system.check'])->group(function () {
     Route::put('/bills/{bill}', [BillController::class, 'update'])->name('bills.update');
     Route::delete('/bills/{bill}', [BillController::class, 'destroy'])->name('bills.destroy');
     Route::post('bills/generate', [BillController::class, 'generate'])->name('bills.generate');
+    Route::post('bills/other-charge', [BillController::class, 'addDivisionCharge'])->name('bills.other-charge');
     Route::post('bills/{bill}/rebill', [BillController::class, 'rebill'])->name('bills.rebill');
     Route::post('bills/{bill}/send', [BillController::class, 'send'])->name('bills.send');
     Route::post('bills/calculate-late-fees', [BillController::class, 'calculateLateFees'])->name('bills.late-fees');

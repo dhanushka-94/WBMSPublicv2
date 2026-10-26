@@ -31,6 +31,46 @@
     </div>
 
     <div class="mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        @if(session('success'))
+            <div class="mb-6 rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-green-800">{{ session('success') }}</div>
+        @endif
+        @if(session('error'))
+            <div class="mb-6 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-red-800">{{ session('error') }}</div>
+        @endif
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-8">
+            <div class="p-6">
+                <h2 class="text-lg font-semibold text-gray-900">Add an other charge by division</h2>
+                <p class="mt-1 text-sm text-gray-600">The amount is added to Service charges on each open bill this month. Paid bills are skipped, and a customer with no bill this month is not charged.</p>
+                <form method="POST" action="{{ route('bills.other-charge') }}" class="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                    @csrf
+                    <div>
+                        <label for="division_id" class="block text-sm font-medium text-gray-700 mb-2">Division</label>
+                        <select name="division_id" id="division_id" class="w-full rounded-lg border border-gray-300 px-3 py-2" required>
+                            <option value="">Select a division</option>
+                            @foreach($divisions as $division)
+                                <option value="{{ $division->id }}" @selected((string) old('division_id') === (string) $division->id)>{{ $division->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label for="amount" class="block text-sm font-medium text-gray-700 mb-2">Amount (Rs.)</label>
+                        <input type="number" name="amount" id="amount" value="{{ old('amount') }}" min="0.01" step="0.01" class="w-full rounded-lg border border-gray-300 px-3 py-2" required>
+                    </div>
+                    <div>
+                        <label for="description" class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                        <input type="text" name="description" id="description" value="{{ old('description') }}" maxlength="120" placeholder="Road repair, connection fee..." class="w-full rounded-lg border border-gray-300 px-3 py-2" required>
+                    </div>
+                    <button type="submit" class="bg-amber-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-amber-600" onclick="return confirm('Add this other charge to every open bill this month in the selected division?')">
+                        Add to division
+                    </button>
+                </form>
+                @if($errors->any())
+                    <p class="mt-3 text-sm text-red-600">{{ $errors->first() }}</p>
+                @endif
+            </div>
+        </div>
+
         <!-- Statistics Cards -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
             <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">

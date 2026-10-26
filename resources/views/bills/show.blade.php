@@ -252,7 +252,7 @@
                             </div>
                             @if($bill->service_charges > 0)
                                 <div class="flex justify-between">
-                                    <span class="text-gray-600">Service Charges</span>
+                                    <span class="text-gray-600">Other charges</span>
                                     <span class="font-medium">@lkr($bill->service_charges)</span>
                                 </div>
                             @endif

@@ -13,9 +13,25 @@
         @csrf
     </form>
 
-    <form method="post" action="{{ route('profile.update') }}" class="mt-6 space-y-6">
+    <form method="post" action="{{ route('profile.update') }}" class="mt-6 space-y-6" enctype="multipart/form-data">
         @csrf
         @method('patch')
+
+        <div>
+            <x-input-label for="profile_photo" :value="__('Profile picture')" />
+            <div class="mt-2 flex items-center gap-4">
+                <img src="{{ $user->profile_photo_url }}" alt="{{ $user->name }}" class="h-16 w-16 rounded-full object-cover">
+                <input id="profile_photo" name="profile_photo" type="file" accept="image/jpeg,image/png,image/gif,image/webp" class="block w-full text-sm text-gray-600" />
+            </div>
+            <p class="mt-1 text-xs text-gray-500">JPG, PNG, GIF, or WEBP up to 2 MB.</p>
+            <x-input-error class="mt-2" :messages="$errors->get('profile_photo')" />
+            @if ($user->profile_photo)
+                <label class="mt-3 flex items-center gap-2 text-sm text-gray-700">
+                    <input type="checkbox" name="remove_profile_photo" value="1" class="rounded border-gray-300">
+                    Remove the current picture
+                </label>
+            @endif
+        </div>
 
         <div>
             <x-input-label for="name" :value="__('Name')" />

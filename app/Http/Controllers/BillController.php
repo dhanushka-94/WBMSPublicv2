@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Bill;
 use App\Models\Customer;
+use App\Models\Division;
 use App\Models\WaterMeter;
 use App\Models\MeterReading;
 use App\Models\Rate;
@@ -77,6 +78,7 @@ class BillController extends Controller
             ->sum('total_amount');
 
         $customers = Customer::active()->orderBy('first_name')->get();
+        $divisions = Division::active()->orderBy('name')->get();
 
         return view('bills.index', compact(
             'bills',
@@ -86,7 +88,8 @@ class BillController extends Controller
             'totalRevenue',
             'outstandingAmount',
             'monthlyRevenue',
-            'customers'
+            'customers',
+            'divisions'
         ));
     }
 
@@ -420,6 +423,68 @@ class BillController extends Controller
             return redirect()->route('bills.index')
                 ->with('error', 'Failed to generate bills. Please try again.');
         }
+    }
+
+    /**
+     * Add one other charge to every open bill this month in a division.
+     */
+    public function addDivisionCharge(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'division_id' => 'required|exists:divisions,id',
+            'amount' => 'required|numeric|min:0.01|max:1000000',
+            'description' => 'required|string|max:120',
+        ]);
+
+        $division = Division::findOrFail($validated['division_id']);
+        $amount = round((float) $validated['amount'], 2);
+        $description = trim($validated['description']);
+        $month = Carbon::now();
+        $note = 'Other charge: '.$description.' Rs. '.number_format($amount, 2);
+
+        $monthBills = Bill::query()
+            ->whereHas('customer', function ($customer) use ($division) {
+                $customer->where('division_id', $division->id);
+            })
+            ->whereMonth('bill_date', $month->month)
+            ->whereYear('bill_date', $month->year);
+
+        $openBills = (clone $monthBills)
+            ->where('balance_amount', '>', 0)
+            ->whereNotIn('status', ['paid', 'cancelled'])
+            ->get();
+
+        $paidCount = (clone $monthBills)
+            ->where(function ($query) {
+                $query->where('status', 'paid')->orWhere('balance_amount', '<=', 0);
+            })
+            ->count();
+
+        $customersWithBill = (clone $monthBills)->distinct()->count('customer_id');
+        $customersInDivision = Customer::where('division_id', $division->id)->count();
+        $withoutBill = max(0, $customersInDivision - $customersWithBill);
+
+        if ($openBills->isEmpty()) {
+            return redirect()->route('bills.index')->with('error', 'No open bills this month in '.$division->name.'. Generate those bills first, then add the other charge.');
+        }
+
+        DB::transaction(function () use ($openBills, $amount, $note) {
+            foreach ($openBills as $bill) {
+                $bill->service_charges = round((float) $bill->service_charges + $amount, 2);
+                $bill->notes = trim(($bill->notes ? $bill->notes."\n" : '').$note);
+                $bill->save();
+            }
+        });
+
+        $message = 'Added Rs. '.number_format($amount, 2).' ('.$description.') to '.$openBills->count().' open '.($openBills->count() === 1 ? 'bill' : 'bills').' in '.$division->name.' for '.$month->format('F Y').'.';
+        if ($paidCount > 0) {
+            $message .= ' '.$paidCount.' paid '.($paidCount === 1 ? 'bill was' : 'bills were').' left unchanged.';
+        }
+        if ($withoutBill > 0) {
+            $message .= ' '.$withoutBill.' '.($withoutBill === 1 ? 'customer has' : 'customers have').' no bill this month.';
+        }
+
+        return redirect()->route('bills.index')->with('success', $message);
     }
 
     /**

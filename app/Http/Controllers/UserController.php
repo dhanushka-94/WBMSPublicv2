@@ -59,6 +59,7 @@ class UserController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'email' => 'required|string|lowercase|email|max:255|unique:users',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'role' => 'required|in:'.implode(',', $this->assignableRoles()),
@@ -68,8 +69,11 @@ class UserController extends Controller
         $validated['password'] = Hash::make($validated['password']);
         $validated['email_verified_at'] = now(); // Auto-verify admin created users
         $validated['is_active'] = $request->has('is_active');
+        unset($validated['profile_photo']);
 
         $user = User::create($validated);
+        $user->syncProfilePhoto($request->file('profile_photo'));
+        $user->save();
 
         return redirect()->route('users.show', $user)
             ->with('success', 'User created successfully.');
@@ -102,6 +106,8 @@ class UserController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'remove_profile_photo' => 'nullable|boolean',
             'email' => [
                 'required',
                 'string',
@@ -123,8 +129,11 @@ class UserController extends Controller
         }
 
         $validated['is_active'] = $request->has('is_active');
+        unset($validated['profile_photo'], $validated['remove_profile_photo']);
 
-        $user->update($validated);
+        $user->fill($validated);
+        $user->syncProfilePhoto($request->file('profile_photo'), $request->boolean('remove_profile_photo'));
+        $user->save();
 
         return redirect()->route('users.show', $user)
             ->with('success', 'User updated successfully.');
