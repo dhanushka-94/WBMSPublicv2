@@ -286,14 +286,13 @@
                         <!-- Phone Number One -->
                         <div class="space-y-2">
                             <label class="block text-sm font-semibold text-gray-700">
-                                Phone Number One <span class="text-red-500">*</span>
+                                Phone Number One
                             </label>
                             <div class="relative">
                                 <input 
                                     type="text" 
                                     name="phone" 
                                     value="{{ old('phone') }}"
-                                    required
                                     placeholder="Primary phone number"
                                     class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none transition-colors @error('phone') border-red-300 @enderror">
                                 <div class="absolute inset-y-0 right-0 flex items-center pr-3">
@@ -479,14 +478,13 @@
                         <!-- Connection Date -->
                         <div class="space-y-2">
                             <label class="block text-sm font-semibold text-gray-700">
-                                Connection Date <span class="text-red-500">*</span>
+                                Connection Date
                             </label>
                             <div class="relative">
                                 <input 
                                     type="date" 
                                     name="connection_date" 
                                     value="{{ old('connection_date') }}"
-                                    required
                                     class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-violet-500 focus:outline-none transition-colors @error('connection_date') border-red-300 @enderror">
                                 <div class="absolute inset-y-0 right-0 flex items-center pr-3">
                                     <i class="fas fa-calendar-alt text-gray-400"></i>

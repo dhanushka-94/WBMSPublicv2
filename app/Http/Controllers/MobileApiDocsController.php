@@ -53,7 +53,7 @@ class MobileApiDocsController extends Controller
                 ],
                 'response' => ['data.token', 'data.user.id', 'data.user.name', 'data.user.email', 'data.user.role', 'data.user.permissions', 'data.app_config', 'data.app_config.mobile_app_maintenance', 'data.expires_at'],
                 'statuses' => ['200 Login successful', '401 Invalid credentials', '403 Role is not allowed', '422 Validation failed'],
-                'notes' => 'Allowed roles: admin, meter_reader, supervisor. Manager and staff are rejected. Token ability is meter-reading. expires_at is 30 days from login and is informational unless Sanctum expiration is enabled on the server. Store data.token and send it as Authorization: Bearer {token}. data.app_config.mobile_app_maintenance is the Super Admin reader-app switch. When it is true, stop reading and payment work and show the maintenance message. Login still succeeds so the phone can read the switch.',
+                'notes' => 'Allowed roles: super_admin, admin, meter_reader, supervisor. Manager and staff are rejected. Token ability is meter-reading. expires_at is 30 days from login and is informational unless Sanctum expiration is enabled on the server. Store data.token and send it as Authorization: Bearer {token}. data.app_config.mobile_app_maintenance is the Super Admin reader-app switch. When it is true, stop reading and payment work and show the maintenance message. Login still succeeds so the phone can read the switch.',
             ],
             [
                 'group' => 'Authentication',
@@ -250,7 +250,7 @@ class MobileApiDocsController extends Controller
                 ],
                 'response' => ['data.reading_id', 'data.customer.wallet_balance', 'data.meter.previous_reading', 'data.meter.current_reading', 'data.meter.consumption', 'data.bill.bill_number', 'data.bill.water_charges', 'data.bill.fixed_charges', 'data.bill.other_charges', 'data.bill.total', 'data.bill.balance', 'data.bill.wallet_applied', 'data.bill.amount_due', 'data.bill.due_date', 'data.receipt_data.charges', 'data.sync_status'],
                 'statuses' => ['200 Meter reading and bill submitted successfully', '400 Meter does not belong to this customer', '400 No active water meter', '422 Validation failed', '500 Duplicate meter and reading_date', '503 The meter reader app is in maintenance'],
-                'notes' => 'This call saves the reading and creates the bill. Water charges and fixed charges are calculated on the server from the customer type tariff. The phone’s own charge figures are not stored. other_charges is fixed charges plus service charges, taxes, and adjustments. total and balance stay the full bill. wallet_applied and amount_due show the cash to collect after the customer wallet, and receipt_data.charges carries the same three wallet fields. The wallet balance is not reduced by this call. The bill status is generated, the due date is 30 days later, and the reading is marked billed. Print data.bill or receipt_data.charges. One reading per meter per date. HTTP 503 with mobile_app_maintenance true means the Super Admin has the reader app in maintenance and this reading was not saved.',
+                'notes' => 'This call saves the reading and creates the bill. Water charges and fixed charges are calculated on the server from the customer type tariff. The phone’s own charge figures are not stored. other_charges is fixed charges plus service charges, taxes, and adjustments. total and balance stay the full bill. wallet_applied and amount_due show the cash to collect after the customer wallet, and receipt_data.charges carries the same three wallet fields. The wallet balance is not reduced by this call. When gps_latitude and gps_longitude are both sent, they are stored on the reading and also saved as the meter’s latitude and longitude pin. The bill status is generated, the due date is 30 days later, and the reading is marked billed. Print data.bill or receipt_data.charges. One reading per meter per date. HTTP 503 with mobile_app_maintenance true means the Super Admin has the reader app in maintenance and this reading was not saved.',
             ],
             [
                 'group' => 'Meter reading',
@@ -296,6 +296,38 @@ class MobileApiDocsController extends Controller
                 'notes' => 'Counts include only this reader’s readings. accuracy_rate is a fixed placeholder of 98.5, not a calculated score.',
             ],
             [
+                'group' => 'Meter location',
+                'method' => 'GET',
+                'path' => '/meter-reading/meters/{meterId}/location',
+                'auth' => true,
+                'summary' => 'Read a water meter’s saved GPS pin',
+                'params' => [
+                    'meterId' => 'path, water meter id',
+                ],
+                'body' => null,
+                'response' => ['data.meter_id', 'data.meter_number', 'data.latitude', 'data.longitude', 'data.location_notes', 'data.has_location', 'data.maps_url', 'data.customer.id', 'data.customer.name', 'data.customer.account_number'],
+                'statuses' => ['200', '404 Meter not found', '503 The meter reader app is in maintenance'],
+                'notes' => 'Returns the coordinates stored on the meter. has_location is true only when both latitude and longitude are set. maps_url is a Google Maps link when a pin exists, otherwise null. customer is null when the meter is unassigned.',
+            ],
+            [
+                'group' => 'Meter location',
+                'method' => 'PUT',
+                'path' => '/meter-reading/meters/{meterId}/location',
+                'auth' => true,
+                'summary' => 'Set or clear a water meter’s GPS pin',
+                'params' => [
+                    'meterId' => 'path, water meter id',
+                ],
+                'body' => [
+                    'latitude' => 'number -90 to 90, or null with longitude null to clear. Must be sent with longitude',
+                    'longitude' => 'number -180 to 180, or null with latitude null to clear. Must be sent with latitude',
+                    'location_notes' => 'optional string, max 500',
+                ],
+                'response' => ['data.meter_id', 'data.meter_number', 'data.latitude', 'data.longitude', 'data.location_notes', 'data.has_location', 'data.maps_url', 'data.customer'],
+                'statuses' => ['200 Meter location updated successfully', '404 Meter not found', '422 Validation failed', '503 The meter reader app is in maintenance'],
+                'notes' => 'Send both latitude and longitude together to set the pin, or both null to clear it. location_notes can be updated on its own. Any reader-API role may update any meter by id, same as QR scan. POST /meter-reading/submit also saves GPS onto the meter when gps_latitude and gps_longitude are both present.',
+            ],
+            [
                 'group' => 'QR',
                 'method' => 'POST',
                 'path' => '/meter-reading/qr-code/scan',
@@ -307,7 +339,7 @@ class MobileApiDocsController extends Controller
                 ],
                 'response' => ['data.meter.id', 'data.meter.meter_number', 'data.meter.current_reading', 'data.meter.latitude', 'data.meter.longitude', 'data.customer.id', 'data.customer.account_number', 'data.customer.name', 'data.customer.address', 'data.customer.phone', 'data.last_reading'],
                 'statuses' => ['200 Meter found successfully', '404 Invalid QR code or meter not found', '422 qr_data required'],
-                'notes' => 'This is the only QR call the field app needs.',
+                'notes' => 'This is the only QR call the field app needs for lookup. To change the meter pin after a scan, call PUT /meter-reading/meters/{meterId}/location with the meter id from data.meter.id.',
             ],
             [
                 'group' => 'QR',
@@ -526,12 +558,25 @@ class MobileApiDocsController extends Controller
             ],
         ];
 
+        $locationExample = [
+            'latitude' => 6.9497,
+            'longitude' => 80.7891,
+            'location_notes' => 'Near the estate gate, left side',
+        ];
+
+        $locationClearExample = [
+            'latitude' => null,
+            'longitude' => null,
+        ];
+
         return view('mobile-api.index', compact(
             'baseUrl',
             'grouped',
             'loginExample',
             'submitExample',
-            'bulkExample'
+            'bulkExample',
+            'locationExample',
+            'locationClearExample'
         ));
     }
 }

@@ -83,6 +83,10 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::post('/bills', [MeterReadingApiController::class, 'submitBill']);
         Route::post('/bulk-sync', [MeterReadingApiController::class, 'bulkSyncReadings']);
         
+        // Meter GPS location
+        Route::get('/meters/{meterId}/location', [MeterReadingApiController::class, 'getMeterLocation']);
+        Route::put('/meters/{meterId}/location', [MeterReadingApiController::class, 'updateMeterLocation']);
+
         // QR Code routes
         Route::post('/qr-code/generate', [MeterReadingApiController::class, 'generateQrCode'])->name('api.meter.qr-code.generate');
         Route::post('/qr-code/scan', [MeterReadingApiController::class, 'scanQrCode'])->name('api.meter.qr-code.scan');

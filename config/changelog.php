@@ -2,6 +2,15 @@
 
 return [
     [
+        'version' => '2.6.4',
+        'date' => '14 November 2026',
+        'title' => 'Meter GPS API and optional customer fields',
+        'changes' => [
+            'The reader API can read and update a water meter’s GPS pin, and a reading submit with GPS also saves that pin on the meter. The Mobile API guide documents the new calls.',
+            'Phone Number One and Connection Date are optional when creating or editing a customer. Connection date may be left blank in the database.',
+        ],
+    ],
+    [
         'version' => '2.6.3',
         'date' => '26 October 2026',
         'title' => 'Division other charges and profile pictures',

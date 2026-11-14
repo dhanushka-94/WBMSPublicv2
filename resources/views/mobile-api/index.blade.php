@@ -27,8 +27,9 @@
                 <li>Send <code class="bg-gray-100 px-1 rounded">Accept: application/json</code> on every call.</li>
                 <li>Send <code class="bg-gray-100 px-1 rounded">Content-Type: application/json</code> unless the call includes a photo. Photo calls use <code class="bg-gray-100 px-1 rounded">multipart/form-data</code>.</li>
                 <li>After login, send <code class="bg-gray-100 px-1 rounded">Authorization: Bearer {token}</code> on every protected call.</li>
-                <li>Roles that can log in: <strong>admin</strong>, <strong>meter_reader</strong>, <strong>supervisor</strong>. Manager and staff receive HTTP 403.</li>
+                <li>Roles that can log in: <strong>super_admin</strong>, <strong>admin</strong>, <strong>meter_reader</strong>, <strong>supervisor</strong>. Manager and staff receive HTTP 403.</li>
                 <li>Currency is LKR. Dates are <code class="bg-gray-100 px-1 rounded">YYYY-MM-DD</code>. Server timezone is Asia/Colombo.</li>
+                <li>Meter GPS uses the meter’s <code class="bg-gray-100 px-1 rounded">latitude</code> / <code class="bg-gray-100 px-1 rounded">longitude</code>. Read or update them with the Meter location endpoints below.</li>
             </ul>
             <p class="mt-4 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
                 Test meter reader: <strong>reader1@aquabill.olexto.com</strong> / <strong>password</strong>.
@@ -43,8 +44,9 @@
                 <li><code class="bg-gray-100 px-1 rounded">GET /meter-reading/rates</code> and store the tariff slabs for offline receipts.</li>
                 <li><code class="bg-gray-100 px-1 rounded">GET /meter-reading/route/today</code> for the day’s customer list.</li>
                 <li>Open a customer with <code class="bg-gray-100 px-1 rounded">GET /meter-reading/customers/{id}</code>, or find one with search or QR scan.</li>
+                <li>Optional: read the meter pin with <code class="bg-gray-100 px-1 rounded">GET /meter-reading/meters/{meterId}/location</code>, or save the phone GPS with <code class="bg-gray-100 px-1 rounded">PUT /meter-reading/meters/{meterId}/location</code>.</li>
                 <li>Price the new reading with the stored slabs, or call <code class="bg-gray-100 px-1 rounded">POST /meter-reading/quote</code> while online. The receipt shows previous reading, new reading, consumption, water charges, other charges, and the LKR total.</li>
-                <li><code class="bg-gray-100 px-1 rounded">POST /meter-reading/submit</code> saves the reading and creates the bill from the server tariff. The response <code class="bg-gray-100 px-1 rounded">data.bill</code> is the bill stored in this system. If the reading was saved earlier, create the bill with <code class="bg-gray-100 px-1 rounded">POST /meter-reading/bills</code>.</li>
+                <li><code class="bg-gray-100 px-1 rounded">POST /meter-reading/submit</code> saves the reading and creates the bill from the server tariff. When <code class="bg-gray-100 px-1 rounded">gps_latitude</code> and <code class="bg-gray-100 px-1 rounded">gps_longitude</code> are both sent, they are also saved as the meter’s map pin. The response <code class="bg-gray-100 px-1 rounded">data.bill</code> is the bill stored in this system. If the reading was saved earlier, create the bill with <code class="bg-gray-100 px-1 rounded">POST /meter-reading/bills</code>.</li>
                 <li>If the phone was offline, keep the readings on the device and upload them with <code class="bg-gray-100 px-1 rounded">POST /meter-reading/bulk-sync</code>.</li>
                 <li>Optional: show unpaid bills and record a cash payment.</li>
                 <li><code class="bg-gray-100 px-1 rounded">POST /logout</code> when the reader finishes.</li>
@@ -58,6 +60,7 @@
                 <li>Do not submit a reading below <code class="bg-gray-100 px-1 rounded">meter.current_reading</code>. The server’s cumulative check does not run, so a lower number can be saved.</li>
                 <li>One reading per meter per calendar date. A second submit for the same meter and <code class="bg-gray-100 px-1 rounded">reading_date</code> fails.</li>
                 <li>QR sticker text is the meter number, for example <code class="bg-gray-100 px-1 rounded">WM-00118</code>. The field app only calls scan. Generate, download, and batch-generate are for printing stickers.</li>
+                <li>Meter GPS: send both <code class="bg-gray-100 px-1 rounded">latitude</code> and <code class="bg-gray-100 px-1 rounded">longitude</code> together on <code class="bg-gray-100 px-1 rounded">PUT .../location</code>, or both <code class="bg-gray-100 px-1 rounded">null</code> to clear the pin. <code class="bg-gray-100 px-1 rounded">location_notes</code> may be updated alone. Any reader-API role may update any meter by id.</li>
                 <li>Customer search accepts <code class="bg-gray-100 px-1 rounded">q</code> or <code class="bg-gray-100 px-1 rounded">search</code>. Payment search accepts only <code class="bg-gray-100 px-1 rounded">search</code>.</li>
                 <li>Payment amount minimum is 0.01, and it cannot be higher than the bill balance. Amount 0 saves nothing.</li>
                 <li>A bulk-sync response of HTTP 200 can still contain failed rows. Keep those rows on the phone.</li>
@@ -69,7 +72,7 @@
 
         <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
             <h2 class="text-xl font-bold text-gray-900 mb-3">How to authenticate</h2>
-            <div class="grid md:grid-cols-3 gap-4">
+            <div class="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
                 <div>
                     <p class="text-sm font-semibold text-gray-600 mb-2">Login body</p>
                     <pre class="bg-slate-900 text-green-300 text-xs p-4 rounded-lg overflow-x-auto">{{ json_encode($loginExample, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
@@ -79,10 +82,27 @@
                     <pre class="bg-slate-900 text-cyan-200 text-xs p-4 rounded-lg overflow-x-auto">{{ json_encode($submitExample, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
                 </div>
                 <div>
-                    <p class="text-sm font-semibold text-gray-600 mb-2">Offline bulk-sync body</p>
+                    <p class="text-sm font-semibold text-gray-600 mb-2">Set meter GPS body</p>
+                    <pre class="bg-slate-900 text-emerald-200 text-xs p-4 rounded-lg overflow-x-auto">{{ json_encode($locationExample, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+                    <p class="mt-2 text-xs text-gray-500">PUT {{ $baseUrl }}/meter-reading/meters/{meterId}/location</p>
+                </div>
+                <div>
+                    <p class="text-sm font-semibold text-gray-600 mb-2">Clear meter GPS / offline bulk-sync</p>
+                    <pre class="bg-slate-900 text-rose-200 text-xs p-4 rounded-lg overflow-x-auto mb-3">{{ json_encode($locationClearExample, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
                     <pre class="bg-slate-900 text-amber-200 text-xs p-4 rounded-lg overflow-x-auto">{{ json_encode($bulkExample, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
                 </div>
             </div>
+        </div>
+
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-3">Meter GPS location</h2>
+            <ul class="list-disc list-inside text-gray-700 space-y-2">
+                <li><code class="bg-gray-100 px-1 rounded">GET {{ $baseUrl }}/meter-reading/meters/{meterId}/location</code> — returns <code class="bg-gray-100 px-1 rounded">latitude</code>, <code class="bg-gray-100 px-1 rounded">longitude</code>, <code class="bg-gray-100 px-1 rounded">has_location</code>, <code class="bg-gray-100 px-1 rounded">maps_url</code>, notes, and linked customer.</li>
+                <li><code class="bg-gray-100 px-1 rounded">PUT {{ $baseUrl }}/meter-reading/meters/{meterId}/location</code> — set both coordinates, or both <code class="bg-gray-100 px-1 rounded">null</code> to clear. Optional <code class="bg-gray-100 px-1 rounded">location_notes</code>.</li>
+                <li>Needs a Bearer token. Returns HTTP 503 while the reader app is in maintenance.</li>
+                <li>After QR scan, use <code class="bg-gray-100 px-1 rounded">data.meter.id</code> as <code class="bg-gray-100 px-1 rounded">meterId</code>.</li>
+                <li>Submitting a reading with both <code class="bg-gray-100 px-1 rounded">gps_latitude</code> and <code class="bg-gray-100 px-1 rounded">gps_longitude</code> also updates the same meter pin.</li>
+            </ul>
         </div>
 
         <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 text-sm text-gray-700">

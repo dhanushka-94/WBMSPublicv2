@@ -215,13 +215,16 @@ class MeterReadingApiController extends Controller
                 'created_at' => $request->offline_timestamp ?? now(),
             ]);
 
-            // Update meter current reading
-            $meter->update([
+            // Update meter current reading, and pin GPS when the phone sent coordinates
+            $meterUpdate = [
                 'current_reading' => $request->current_reading,
                 'last_reading_date' => $request->reading_date,
-                'gps_latitude' => $request->gps_latitude ?? $meter->gps_latitude,
-                'gps_longitude' => $request->gps_longitude ?? $meter->gps_longitude,
-            ]);
+            ];
+            if ($request->filled('gps_latitude') && $request->filled('gps_longitude')) {
+                $meterUpdate['latitude'] = $request->gps_latitude;
+                $meterUpdate['longitude'] = $request->gps_longitude;
+            }
+            $meter->update($meterUpdate);
 
             $bill = $this->createBillFromReading($meterReading, $customer, [
                 'service_charges' => $request->input('service_charges', 0),
@@ -939,6 +942,26 @@ class MeterReadingApiController extends Controller
     /**
      * Log mobile app activities
      */
+    private function meterLocationPayload(WaterMeter $meter): array
+    {
+        $hasLocation = $meter->hasLocation();
+
+        return [
+            'meter_id' => $meter->id,
+            'meter_number' => $meter->meter_number,
+            'latitude' => $meter->latitude !== null ? (float) $meter->latitude : null,
+            'longitude' => $meter->longitude !== null ? (float) $meter->longitude : null,
+            'location_notes' => $meter->location_notes,
+            'has_location' => $hasLocation,
+            'maps_url' => $hasLocation ? $meter->getGoogleMapsUrl() : null,
+            'customer' => $meter->customer ? [
+                'id' => $meter->customer->id,
+                'name' => $meter->customer->full_name,
+                'account_number' => $meter->customer->account_number,
+            ] : null,
+        ];
+    }
+
     private function logMobileActivity(string $action, array $data = []): void
     {
         try {
@@ -1005,6 +1028,122 @@ class MeterReadingApiController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error generating QR code: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Read a water meter's saved GPS location.
+     */
+    public function getMeterLocation($meterId): JsonResponse
+    {
+        try {
+            $meter = WaterMeter::with('customer')->find($meterId);
+
+            if (!$meter) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Meter not found',
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $this->meterLocationPayload($meter),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load meter location',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Update or clear a water meter's GPS location.
+     */
+    public function updateMeterLocation(Request $request, $meterId): JsonResponse
+    {
+        try {
+            $meter = WaterMeter::with('customer')->find($meterId);
+
+            if (!$meter) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Meter not found',
+                ], 404);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'latitude' => 'nullable|numeric|between:-90,90|required_with:longitude',
+                'longitude' => 'nullable|numeric|between:-180,180|required_with:latitude',
+                'location_notes' => 'nullable|string|max:500',
+            ]);
+
+            $validator->after(function ($validator) use ($request) {
+                $hasLat = $request->exists('latitude');
+                $hasLng = $request->exists('longitude');
+                if ($hasLat xor $hasLng) {
+                    $validator->errors()->add('latitude', 'Send both latitude and longitude together, or both as null to clear the pin.');
+                }
+                if ($hasLat && $hasLng) {
+                    $latNull = $request->input('latitude') === null;
+                    $lngNull = $request->input('longitude') === null;
+                    if ($latNull xor $lngNull) {
+                        $validator->errors()->add('latitude', 'Send both latitude and longitude together, or both as null to clear the pin.');
+                    }
+                }
+            });
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+
+            $updates = [];
+            if ($request->exists('latitude') && $request->exists('longitude')) {
+                $updates['latitude'] = $request->input('latitude');
+                $updates['longitude'] = $request->input('longitude');
+            }
+            if ($request->exists('location_notes')) {
+                $updates['location_notes'] = $request->input('location_notes');
+            }
+
+            if ($updates === []) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => [
+                        'latitude' => ['Send latitude and longitude, or location_notes to update.'],
+                    ],
+                ], 422);
+            }
+
+            $meter->update($updates);
+            $meter->refresh()->load('customer');
+
+            $this->logMobileActivity('meter_location_updated', [
+                'meter_id' => $meter->id,
+                'meter_number' => $meter->meter_number,
+                'latitude' => $meter->latitude,
+                'longitude' => $meter->longitude,
+                'location_notes' => $meter->location_notes,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Meter location updated successfully',
+                'data' => $this->meterLocationPayload($meter),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update meter location',
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

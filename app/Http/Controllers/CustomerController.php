@@ -155,7 +155,7 @@ class CustomerController extends Controller
             'last_name' => 'nullable|string|max:255', // Optional
             'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'email' => 'nullable|email|max:255',
-            'phone' => 'required|string|max:20', // Required (Phone Number One)
+            'phone' => 'nullable|string|max:20',
             'phone_two' => 'nullable|string|max:20',
             'nic' => 'nullable|string|unique:customers,nic|max:12',
             'epf_number' => 'nullable|string|unique:customers,epf_number|max:20',
@@ -165,7 +165,7 @@ class CustomerController extends Controller
             'customer_type_id' => 'required|exists:customer_types,id', // Required
             'division_id' => 'required|exists:divisions,id', // Required
             'guarantor_id' => 'nullable|exists:guarantors,id',
-            'connection_date' => 'required|date', // Required
+            'connection_date' => 'nullable|date',
             'deposit_amount' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string',
             // Billing settings
@@ -379,7 +379,7 @@ class CustomerController extends Controller
             'last_name' => 'nullable|string|max:255', // Optional
             'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'email' => 'nullable|email|max:255',
-            'phone' => 'required|string|max:20', // Required (Phone Number One)
+            'phone' => 'nullable|string|max:20',
             'phone_two' => 'nullable|string|max:20',
             'nic' => [
                 'nullable',
@@ -400,7 +400,7 @@ class CustomerController extends Controller
             'customer_type_id' => 'required|exists:customer_types,id', // Required
             'division_id' => 'required|exists:divisions,id', // Required
             'guarantor_id' => 'nullable|exists:guarantors,id',
-            'connection_date' => 'required|date', // Required
+            'connection_date' => 'nullable|date',
             'deposit_amount' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string',
             // Billing settings

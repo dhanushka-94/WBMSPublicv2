@@ -176,9 +176,11 @@
                                             🔴 Inactive
                                         </span>
                                     @endif
+                                    @if($customer->connection_date)
                                     <span class="text-blue-100 text-sm">
                                         Member since {{ $customer->connection_date->format('M Y') }}
                                     </span>
+                                    @endif
                                 </div>
                             </div>
                         </div>
@@ -213,7 +215,7 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-500">Connection Date</label>
-                                <p class="mt-1 text-sm text-gray-900">{{ $customer->connection_date->format('M d, Y') }}</p>
+                                <p class="mt-1 text-sm text-gray-900">{{ $customer->connection_date?->format('M d, Y') ?? 'Not set' }}</p>
                             </div>
                             @if($customer->deposit_amount > 0)
                             <div>
