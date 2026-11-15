@@ -43,7 +43,7 @@
                     <!-- User Header -->
                     <div class="flex items-center space-x-6 pb-6 border-b border-gray-200">
                         <div class="flex-shrink-0">
-                            <img src="{{ $user->profile_photo_url }}" alt="{{ $user->name }}" class="h-24 w-24 rounded-full object-cover shadow-lg">
+                            <img src="{{ $user->profile_photo_url }}" alt="{{ $user->name }}" class="h-24 w-24 rounded-full object-cover shadow-lg cursor-pointer hover:opacity-90 transition-opacity" data-lightbox title="View photo">
                         </div>
                         <div class="flex-1">
                             <h3 class="text-3xl font-bold text-gray-900">{{ $user->name }}</h3>

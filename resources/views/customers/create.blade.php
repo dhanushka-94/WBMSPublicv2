@@ -242,20 +242,22 @@
                                     <img id="profile_preview" 
                                          src="{{ asset('images/profile.png') }}" 
                                          alt="Profile Preview" 
-                                         class="h-24 w-24 rounded-full object-cover border-4 border-emerald-200 shadow-lg">
+                                         class="h-24 w-24 rounded-full object-cover border-4 border-emerald-200 shadow-lg cursor-pointer hover:opacity-90 transition-opacity"
+                                         data-lightbox
+                                         title="View photo">
                                 </div>
                                 <div class="flex-1">
                                     <div class="relative">
                                         <input type="file" 
                                                name="profile_photo" 
                                                id="profile_photo"
-                                               accept="image/*"
-                                               onchange="previewImage(this)"
+                                               accept="image/jpeg,image/png,.jpg,.jpeg,.png"
+                                               data-preview="#profile_preview"
                                                class="block w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-6 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 file:cursor-pointer cursor-pointer @error('profile_photo') border-red-300 @enderror">
                                     </div>
                                     <p class="mt-2 text-xs text-gray-500 flex items-center">
                                         <i class="fas fa-info-circle mr-1"></i>
-                                        PNG, JPG, GIF up to 2MB
+                                        JPG or PNG only, 1:1 square, max 1 MB
                                     </p>
                                 </div>
                             </div>
@@ -861,17 +863,6 @@
 </div>
 
 <script>
-function previewImage(input) {
-    const preview = document.getElementById('profile_preview');
-    if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            preview.src = e.target.result;
-        }
-        reader.readAsDataURL(input.files[0]);
-    }
-}
-
 // Handle searchable meter selection
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('meter_search_input');

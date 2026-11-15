@@ -253,9 +253,11 @@
                             @if($reading->waterMeter && $reading->waterMeter->customer)
                             <div class="flex items-center mb-4">
                                 <div class="flex-shrink-0 h-16 w-16">
-                                    <img class="h-16 w-16 rounded-full object-cover" 
+                                    <img class="h-16 w-16 rounded-full object-cover cursor-pointer hover:opacity-90 transition-opacity" 
                                          src="{{ $reading->waterMeter->customer->profile_photo_url }}" 
-                                         alt="{{ $reading->waterMeter->customer->full_name }}">
+                                         alt="{{ $reading->waterMeter->customer->full_name }}"
+                                         data-lightbox
+                                         title="View photo">
                                 </div>
                                 <div class="ml-4">
                                     <h4 class="text-lg font-semibold text-gray-900"><a href="{{ route('customers.show', $reading->waterMeter->customer) }}" class="hover:text-blue-700">{{ $reading->waterMeter->customer->full_name }}</a></h4>

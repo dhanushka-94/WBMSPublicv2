@@ -153,7 +153,7 @@ class CustomerController extends Controller
             'title' => 'required|in:Mr,Mrs,Miss,Ms,Dr', // Required
             'first_name' => 'required|string|max:255', // Required
             'last_name' => 'nullable|string|max:255', // Optional
-            'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg|max:1024|dimensions:ratio=1/1',
             'email' => 'nullable|email|max:255',
             'phone' => 'nullable|string|max:20',
             'phone_two' => 'nullable|string|max:20',
@@ -377,7 +377,7 @@ class CustomerController extends Controller
             'title' => 'required|in:Mr,Mrs,Miss,Ms,Dr', // Required
             'first_name' => 'required|string|max:255', // Required
             'last_name' => 'nullable|string|max:255', // Optional
-            'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg|max:1024|dimensions:ratio=1/1',
             'email' => 'nullable|email|max:255',
             'phone' => 'nullable|string|max:20',
             'phone_two' => 'nullable|string|max:20',

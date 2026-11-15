@@ -261,7 +261,7 @@
                                     @if($activity->user)
                                         <div class="flex items-center">
                                             <div class="flex-shrink-0 h-8 w-8">
-                                                <img class="h-8 w-8 rounded-full" src="{{ $activity->user->profile_photo_url }}" alt="{{ $activity->user_name }}">
+                                                <img class="h-8 w-8 rounded-full cursor-pointer hover:opacity-90 transition-opacity" src="{{ $activity->user->profile_photo_url }}" alt="{{ $activity->user_name }}" data-lightbox title="View photo">
                                             </div>
                                             <div class="ml-3">
                                                 <div class="text-sm font-medium text-gray-900">{{ $activity->user_name }}</div>

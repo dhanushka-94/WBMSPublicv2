@@ -20,10 +20,10 @@
         <div>
             <x-input-label for="profile_photo" :value="__('Profile picture')" />
             <div class="mt-2 flex items-center gap-4">
-                <img src="{{ $user->profile_photo_url }}" alt="{{ $user->name }}" class="h-16 w-16 rounded-full object-cover">
-                <input id="profile_photo" name="profile_photo" type="file" accept="image/jpeg,image/png,image/gif,image/webp" class="block w-full text-sm text-gray-600" />
+                <img id="profile_preview" src="{{ $user->profile_photo_url }}" alt="{{ $user->name }}" class="h-16 w-16 rounded-full object-cover cursor-pointer hover:opacity-90 transition-opacity" data-lightbox title="View photo">
+                <input id="profile_photo" name="profile_photo" type="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png" data-preview="#profile_preview" class="block w-full text-sm text-gray-600" />
             </div>
-            <p class="mt-1 text-xs text-gray-500">JPG, PNG, GIF, or WEBP up to 2 MB.</p>
+            <p class="mt-1 text-xs text-gray-500">JPG or PNG only, 1:1 square, max 1 MB. A crop editor opens after you choose a file.</p>
             <x-input-error class="mt-2" :messages="$errors->get('profile_photo')" />
             @if ($user->profile_photo)
                 <label class="mt-3 flex items-center gap-2 text-sm text-gray-700">

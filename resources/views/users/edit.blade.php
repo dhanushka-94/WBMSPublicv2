@@ -36,7 +36,7 @@
                         <div class="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg p-6 mb-6 border border-blue-200">
                             <div class="flex items-center space-x-4">
                                 <div class="flex-shrink-0">
-                                    <img src="{{ $user->profile_photo_url }}" alt="{{ $user->name }}" class="h-16 w-16 rounded-full object-cover">
+                                    <img id="profile_preview" src="{{ $user->profile_photo_url }}" alt="{{ $user->name }}" class="h-16 w-16 rounded-full object-cover cursor-pointer hover:opacity-90 transition-opacity" data-lightbox title="View photo">
                                 </div>
                                 <div>
                                     <h3 class="text-xl font-bold text-blue-900">{{ $user->name }}</h3>
@@ -83,9 +83,10 @@
 
                                 <div class="md:col-span-2">
                                     <label for="profile_photo" class="block text-sm font-medium text-gray-700 mb-1">Profile picture</label>
-                                    <input type="file" name="profile_photo" id="profile_photo" accept="image/jpeg,image/png,image/gif,image/webp"
+                                    <input type="file" name="profile_photo" id="profile_photo" accept="image/jpeg,image/png,.jpg,.jpeg,.png"
+                                           data-preview="#profile_preview"
                                            class="block w-full text-sm text-gray-600">
-                                    <p class="mt-1 text-sm text-gray-500">JPG, PNG, GIF, or WEBP up to 2 MB. A new file replaces the current picture.</p>
+                                    <p class="mt-1 text-sm text-gray-500">JPG or PNG only, 1:1 square, max 1 MB. A crop editor opens after you choose a file.</p>
                                     @if($user->profile_photo)
                                         <label class="mt-2 flex items-center gap-2 text-sm text-gray-700">
                                             <input type="checkbox" name="remove_profile_photo" value="1" class="rounded border-gray-300">

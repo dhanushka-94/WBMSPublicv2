@@ -138,9 +138,11 @@
                                     <label class="block text-sm font-medium text-gray-500">Customer</label>
                                     @if($water_meter->customer)
                                         <div class="text-center">
-                                            <img class="mx-auto h-24 w-24 rounded-full object-cover" 
+                                            <img class="mx-auto h-24 w-24 rounded-full object-cover cursor-pointer hover:opacity-90 transition-opacity" 
                                                  src="{{ $water_meter->customer->profile_photo_url }}" 
-                                                 alt="{{ $water_meter->customer->full_name }}">
+                                                 alt="{{ $water_meter->customer->full_name }}"
+                                                 data-lightbox
+                                                 title="View photo">
                                         <a href="{{ route('customers.show', $water_meter->customer) }}" class="mt-1 block text-lg font-semibold text-blue-700 hover:text-blue-900">{{ $water_meter->customer->full_name }}</a>
                                         <p class="text-sm text-gray-500">{{ $water_meter->customer->account_number }}</p>
                                         </div>

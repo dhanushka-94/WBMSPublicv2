@@ -51,9 +51,9 @@ class MobileApiDocsController extends Controller
                     'device_name' => 'required string. Logging in again with the same device name replaces that device token',
                     'device_info' => 'optional object (brand, model, os)',
                 ],
-                'response' => ['data.token', 'data.user.id', 'data.user.name', 'data.user.email', 'data.user.role', 'data.user.permissions', 'data.app_config', 'data.app_config.mobile_app_maintenance', 'data.expires_at'],
+                'response' => ['data.token', 'data.user.id', 'data.user.name', 'data.user.email', 'data.user.role', 'data.user.profile_photo_url', 'data.user.permissions', 'data.app_config', 'data.app_config.mobile_app_maintenance', 'data.expires_at'],
                 'statuses' => ['200 Login successful', '401 Invalid credentials', '403 Role is not allowed', '422 Validation failed'],
-                'notes' => 'Allowed roles: super_admin, admin, meter_reader, supervisor. Manager and staff are rejected. Token ability is meter-reading. expires_at is 30 days from login and is informational unless Sanctum expiration is enabled on the server. Store data.token and send it as Authorization: Bearer {token}. data.app_config.mobile_app_maintenance is the Super Admin reader-app switch. When it is true, stop reading and payment work and show the maintenance message. Login still succeeds so the phone can read the switch.',
+                'notes' => 'Allowed roles: super_admin, admin, meter_reader, supervisor. Manager and staff are rejected. Token ability is meter-reading. expires_at is 30 days from login and is informational unless Sanctum expiration is enabled on the server. Store data.token and send it as Authorization: Bearer {token}. data.user.profile_photo_url is an absolute image URL when the user has a photo, otherwise null. data.app_config.settings includes profile_photo_max_size 1024, profile_photo_mimes, and profile_photo_ratio 1:1. data.app_config.mobile_app_maintenance is the Super Admin reader-app switch. When it is true, stop reading and payment work and show the maintenance message. Login still succeeds so the phone can read the switch.',
             ],
             [
                 'group' => 'Authentication',
@@ -99,16 +99,16 @@ class MobileApiDocsController extends Controller
                 'summary' => 'Logged-in reader profile and app config',
                 'params' => [],
                 'body' => null,
-                'response' => ['data.user.id', 'data.user.name', 'data.user.email', 'data.user.role', 'data.user.permissions', 'data.user.last_login', 'data.user.created_at', 'data.app_config'],
+                'response' => ['data.user.id', 'data.user.name', 'data.user.email', 'data.user.phone', 'data.user.role', 'data.user.profile_photo_url', 'data.user.permissions', 'data.user.last_login', 'data.user.created_at', 'data.app_config'],
                 'statuses' => ['200', '401 Unauthenticated'],
-                'notes' => 'app_config includes currency LKR, max photo size 5120 KB, suggested auto-sync interval 300 seconds, offline queue limit 1000 readings, and mobile_app_maintenance.',
+                'notes' => 'profile_photo_url is an absolute URL when the user has a photo, otherwise null. app_config includes currency LKR, meter photo max 5120 KB, profile photo rules (JPG/PNG, 1:1, max 1024 KB), suggested auto-sync interval 300 seconds, offline storage limit 1000 readings, and mobile_app_maintenance.',
             ],
             [
                 'group' => 'Authentication',
                 'method' => 'PUT',
                 'path' => '/profile',
                 'auth' => true,
-                'summary' => 'Update name, phone, or password',
+                'summary' => 'Update name, phone, password, or profile picture',
                 'params' => [],
                 'body' => [
                     'name' => 'optional string, max 255',
@@ -116,10 +116,27 @@ class MobileApiDocsController extends Controller
                     'current_password' => 'required when new_password is sent',
                     'new_password' => 'optional, min 6',
                     'new_password_confirmation' => 'required with new_password and must match it',
+                    'profile_photo' => 'optional JPG/PNG, 1:1 square, max 1 MB. Prefer POST /profile/photo for multipart',
+                    'remove_profile_photo' => 'optional boolean',
                 ],
-                'response' => ['data.user.id', 'data.user.name', 'data.user.email', 'data.user.phone', 'data.user.role'],
+                'response' => ['data.user.id', 'data.user.name', 'data.user.email', 'data.user.phone', 'data.user.role', 'data.user.profile_photo_url'],
                 'statuses' => ['200 Profile updated successfully', '400 Current password is incorrect', '422 Validation failed'],
-                'notes' => 'Email cannot be changed from the mobile app.',
+                'notes' => 'Email cannot be changed from the mobile app. For reliable photo upload use POST /profile/photo with multipart/form-data.',
+            ],
+            [
+                'group' => 'Authentication',
+                'method' => 'POST',
+                'path' => '/profile/photo',
+                'auth' => true,
+                'summary' => 'Upload or remove the signed-in system user profile picture',
+                'params' => [],
+                'body' => [
+                    'profile_photo' => 'required unless removing. JPG or PNG, 1:1 square, max 1 MB. multipart/form-data',
+                    'remove_profile_photo' => 'optional. Send 1 to delete the current picture',
+                ],
+                'response' => ['data.user.id', 'data.user.name', 'data.user.profile_photo_url', 'data.user.role'],
+                'statuses' => ['200 Profile picture updated', '200 Profile picture removed', '422 Validation failed'],
+                'notes' => 'Crop to 1:1 on the phone before upload. profile_photo_url is null after remove. Login and GET /profile also return this URL.',
             ],
             [
                 'group' => 'Meter reading',
@@ -129,9 +146,9 @@ class MobileApiDocsController extends Controller
                 'summary' => 'Customers assigned to the signed-in reader for today',
                 'params' => [],
                 'body' => null,
-                'response' => ['message', 'data.total_count', 'data.route_info.date', 'data.route_info.reader', 'data.route_info.route', 'data.customers[].id', 'data.customers[].connection_number', 'data.customers[].name', 'data.customers[].address', 'data.customers[].phone', 'data.customers[].customer_type', 'data.customers[].wallet_balance', 'data.customers[].meter', 'data.customers[].last_reading'],
+                'response' => ['message', 'data.total_count', 'data.route_info.date', 'data.route_info.reader', 'data.route_info.route', 'data.customers[].id', 'data.customers[].connection_number', 'data.customers[].name', 'data.customers[].address', 'data.customers[].phone', 'data.customers[].profile_photo_url', 'data.customers[].customer_type', 'data.customers[].wallet_balance', 'data.customers[].meter', 'data.customers[].last_reading'],
                 'statuses' => ['200', '503 The meter reader app is in maintenance'],
-                'notes' => 'The list is only the divisions and individual customers assigned to this reader in Reader Routes. A reader with no assignment gets total_count 0 and message "No route is assigned to this reader." Suspended customers are omitted. route_info.route is the assigned division names. customer_type selects the tariff. wallet_balance is that customer’s credit in LKR. Keep it with the customer for offline pricing. After the tariff total is known, wallet_applied is the smaller of wallet_balance and the unpaid amount, and amount_due is the unpaid amount minus wallet_applied. Water charges and the fixed charge do not change. The wallet is not reduced until a payment is recorded in the office. meter.current_reading is the value the next reading must not go below. meter.id is the meter_id to send on submit. HTTP 503 with mobile_app_maintenance true means the Super Admin switch is on. Every meter-reading call returns that same 503 until the switch is turned off.',
+                'notes' => 'The list is only the divisions and individual customers assigned to this reader in Reader Routes. A reader with no assignment gets total_count 0 and message "No route is assigned to this reader." Suspended customers are omitted. route_info.route is the assigned division names. customer_type selects the tariff. wallet_balance is that customer’s credit in LKR. Keep it with the customer for offline pricing. After the tariff total is known, wallet_applied is the smaller of wallet_balance and the unpaid amount, and amount_due is the unpaid amount minus wallet_applied. Water charges and the fixed charge do not change. The wallet is not reduced until a payment is recorded in the office. meter.current_reading is the value the next reading must not go below. meter.id is the meter_id to send on submit. Each customer includes profile_photo_url (absolute URL or null). HTTP 503 with mobile_app_maintenance true means the Super Admin switch is on. Every meter-reading call returns that same 503 until the switch is turned off.',
             ],
             [
                 'group' => 'Meter reading',
@@ -144,9 +161,9 @@ class MobileApiDocsController extends Controller
                     'limit' => 'optional, default 20, max 50',
                 ],
                 'body' => null,
-                'response' => ['data.count', 'data.query', 'data.customers[].id', 'data.customers[].connection_number', 'data.customers[].name', 'data.customers[].address', 'data.customers[].phone', 'data.customers[].customer_type', 'data.customers[].wallet_balance', 'data.customers[].meter_number', 'data.customers[].current_reading'],
+                'response' => ['data.count', 'data.query', 'data.customers[].id', 'data.customers[].connection_number', 'data.customers[].name', 'data.customers[].address', 'data.customers[].phone', 'data.customers[].profile_photo_url', 'data.customers[].customer_type', 'data.customers[].wallet_balance', 'data.customers[].meter_number', 'data.customers[].current_reading'],
                 'statuses' => ['200', '400 Search query is required'],
-                'notes' => 'Does not match meter numbers. Use QR scan for a meter number such as WM-00118.',
+                'notes' => 'Does not match meter numbers. Use QR scan for a meter number such as WM-00118. Each customer includes profile_photo_url (absolute URL or null).',
             ],
             [
                 'group' => 'Meter reading',
@@ -158,9 +175,9 @@ class MobileApiDocsController extends Controller
                     'customerId' => 'path, customer id from the route list or search',
                 ],
                 'body' => null,
-                'response' => ['data.customer', 'data.customer.customer_type', 'data.customer.wallet_balance', 'data.meter', 'data.recent_readings[]'],
+                'response' => ['data.customer', 'data.customer.profile_photo_url', 'data.customer.customer_type', 'data.customer.wallet_balance', 'data.meter', 'data.recent_readings[]'],
                 'statuses' => ['200', '404 Customer not found'],
-                'notes' => 'data.meter is null when the customer has no active meter. customer_type selects the tariff slabs. wallet_balance is the credit to subtract after the tariff total. Each recent reading includes reading, consumption, date, reader, condition, and photo_available.',
+                'notes' => 'data.meter is null when the customer has no active meter. customer_type selects the tariff slabs. wallet_balance is the credit to subtract after the tariff total. data.customer.profile_photo_url is an absolute URL when a photo exists, otherwise null. Each recent reading includes reading, consumption, date, reader, condition, and photo_available.',
             ],
             [
                 'group' => 'Meter reading',
@@ -305,9 +322,9 @@ class MobileApiDocsController extends Controller
                     'meterId' => 'path, water meter id',
                 ],
                 'body' => null,
-                'response' => ['data.meter_id', 'data.meter_number', 'data.latitude', 'data.longitude', 'data.location_notes', 'data.has_location', 'data.maps_url', 'data.customer.id', 'data.customer.name', 'data.customer.account_number'],
+                'response' => ['data.meter_id', 'data.meter_number', 'data.latitude', 'data.longitude', 'data.location_notes', 'data.has_location', 'data.maps_url', 'data.customer.id', 'data.customer.name', 'data.customer.account_number', 'data.customer.profile_photo_url'],
                 'statuses' => ['200', '404 Meter not found', '503 The meter reader app is in maintenance'],
-                'notes' => 'Returns the coordinates stored on the meter. has_location is true only when both latitude and longitude are set. maps_url is a Google Maps link when a pin exists, otherwise null. customer is null when the meter is unassigned.',
+                'notes' => 'Returns the coordinates stored on the meter. has_location is true only when both latitude and longitude are set. maps_url is a Google Maps link when a pin exists, otherwise null. customer is null when the meter is unassigned. When present, customer.profile_photo_url is the absolute photo URL or null.',
             ],
             [
                 'group' => 'Meter location',
@@ -337,9 +354,9 @@ class MobileApiDocsController extends Controller
                 'body' => [
                     'qr_data' => 'required string. The sticker text is the meter number, for example WM-00118',
                 ],
-                'response' => ['data.meter.id', 'data.meter.meter_number', 'data.meter.current_reading', 'data.meter.latitude', 'data.meter.longitude', 'data.customer.id', 'data.customer.account_number', 'data.customer.name', 'data.customer.address', 'data.customer.phone', 'data.last_reading'],
+                'response' => ['data.meter.id', 'data.meter.meter_number', 'data.meter.current_reading', 'data.meter.latitude', 'data.meter.longitude', 'data.customer.id', 'data.customer.account_number', 'data.customer.name', 'data.customer.address', 'data.customer.phone', 'data.customer.profile_photo_url', 'data.last_reading'],
                 'statuses' => ['200 Meter found successfully', '404 Invalid QR code or meter not found', '422 qr_data required'],
-                'notes' => 'This is the only QR call the field app needs for lookup. To change the meter pin after a scan, call PUT /meter-reading/meters/{meterId}/location with the meter id from data.meter.id.',
+                'notes' => 'This is the only QR call the field app needs for lookup. data.customer.profile_photo_url is an absolute URL or null. To change the meter pin after a scan, call PUT /meter-reading/meters/{meterId}/location with the meter id from data.meter.id.',
             ],
             [
                 'group' => 'QR',
@@ -400,9 +417,9 @@ class MobileApiDocsController extends Controller
                     'limit' => 'optional, default 20, max 50',
                 ],
                 'body' => null,
-                'response' => ['data.total_found', 'data.customers[].id', 'data.customers[].name', 'data.customers[].account_number', 'data.customers[].phone', 'data.customers[].outstanding_bills', 'data.customers[].total_outstanding', 'data.customers[].wallet_balance', 'data.customers[].amount_due', 'data.customers[].overdue_amount', 'data.customers[].has_overdue'],
+                'response' => ['data.total_found', 'data.customers[].id', 'data.customers[].name', 'data.customers[].account_number', 'data.customers[].phone', 'data.customers[].profile_photo_url', 'data.customers[].outstanding_bills', 'data.customers[].total_outstanding', 'data.customers[].wallet_balance', 'data.customers[].amount_due', 'data.customers[].overdue_amount', 'data.customers[].has_overdue'],
                 'statuses' => ['200', '422 search is required'],
-                'notes' => 'Active customers only. Matches name, account number, phone, and NIC. total_outstanding is the unpaid bill balances. amount_due is that figure after one use of wallet_balance. The same credit is not subtracted again for each bill.',
+                'notes' => 'Active customers only. Matches name, account number, phone, and NIC. total_outstanding is the unpaid bill balances. amount_due is that figure after one use of wallet_balance. The same credit is not subtracted again for each bill. Each customer includes profile_photo_url (absolute URL or null).',
             ],
             [
                 'group' => 'Payments',
@@ -415,7 +432,7 @@ class MobileApiDocsController extends Controller
                     'status' => 'optional: generated, sent, overdue, or paid',
                 ],
                 'body' => null,
-                'response' => ['data.customer.wallet_balance', 'data.bills[].id', 'data.bills[].bill_number', 'data.bills[].bill_date', 'data.bills[].due_date', 'data.bills[].balance_amount', 'data.bills[].wallet_applied', 'data.bills[].amount_due', 'data.bills[].status', 'data.bills[].is_overdue', 'data.summary.total_outstanding', 'data.summary.wallet_applied', 'data.summary.amount_due', 'data.summary.overdue_amount'],
+                'response' => ['data.customer.profile_photo_url', 'data.customer.wallet_balance', 'data.bills[].id', 'data.bills[].bill_number', 'data.bills[].bill_date', 'data.bills[].due_date', 'data.bills[].balance_amount', 'data.bills[].wallet_applied', 'data.bills[].amount_due', 'data.bills[].status', 'data.bills[].is_overdue', 'data.summary.total_outstanding', 'data.summary.wallet_applied', 'data.summary.amount_due', 'data.summary.overdue_amount'],
                 'statuses' => ['200', '404 Customer not found', '422 bad status'],
                 'notes' => 'With no status filter, only unpaid bills are returned: generated, sent, and overdue. The wallet is shared across those bills, oldest due date first, so the same credit is not offered on every bill. balance_amount is the unpaid bill. amount_due is the cash for that bill after its share of the wallet. summary.amount_due is the cash for the whole list. Use bills[].id as bill_id when recording a payment. This call does not reduce the wallet.',
             ],
@@ -455,9 +472,9 @@ class MobileApiDocsController extends Controller
                     'to_date' => 'optional date',
                 ],
                 'body' => null,
-                'response' => ['data.payments[].bill_number', 'data.payments[].payment_amount', 'data.payments[].payment_date', 'data.payments[].status', 'data.summary.total_amount_paid'],
+                'response' => ['data.customer.profile_photo_url', 'data.payments[].bill_number', 'data.payments[].payment_amount', 'data.payments[].payment_date', 'data.payments[].status', 'data.summary.total_amount_paid'],
                 'statuses' => ['200', '404 Customer not found', '422 Validation failed'],
-                'notes' => 'payment_amount is the bill’s total paid amount, not a separate payment-by-payment ledger.',
+                'notes' => 'payment_amount is the bill’s total paid amount, not a separate payment-by-payment ledger. data.customer.profile_photo_url is the absolute photo URL or null.',
             ],
             [
                 'group' => 'Sync',
@@ -569,6 +586,14 @@ class MobileApiDocsController extends Controller
             'longitude' => null,
         ];
 
+        $profilePhotoExample = [
+            'profile_photo' => '(binary JPG or PNG file, 1:1 square, max 1 MB)',
+        ];
+
+        $profilePhotoRemoveExample = [
+            'remove_profile_photo' => 1,
+        ];
+
         return view('mobile-api.index', compact(
             'baseUrl',
             'grouped',
@@ -576,7 +601,9 @@ class MobileApiDocsController extends Controller
             'submitExample',
             'bulkExample',
             'locationExample',
-            'locationClearExample'
+            'locationClearExample',
+            'profilePhotoExample',
+            'profilePhotoRemoveExample'
         ));
     }
 }

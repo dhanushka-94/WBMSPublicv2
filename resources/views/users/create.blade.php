@@ -65,9 +65,9 @@
 
                                 <div class="md:col-span-2">
                                     <label for="profile_photo" class="block text-sm font-medium text-gray-700 mb-1">Profile picture</label>
-                                    <input type="file" name="profile_photo" id="profile_photo" accept="image/jpeg,image/png,image/gif,image/webp"
+                                    <input type="file" name="profile_photo" id="profile_photo" accept="image/jpeg,image/png,.jpg,.jpeg,.png"
                                            class="block w-full text-sm text-gray-600">
-                                    <p class="mt-1 text-sm text-gray-500">JPG, PNG, GIF, or WEBP up to 2 MB.</p>
+                                    <p class="mt-1 text-sm text-gray-500">JPG or PNG only, 1:1 square, max 1 MB. A crop editor opens after you choose a file.</p>
                                     @error('profile_photo')
                                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                     @enderror

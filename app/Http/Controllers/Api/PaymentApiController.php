@@ -111,6 +111,7 @@ class PaymentApiController extends Controller
                         'account_number' => $customer->account_number,
                         'address' => $customer->full_address,
                         'phone' => $customer->phone,
+                        'profile_photo_url' => $customer->profile_photo ? $customer->profile_photo_url : null,
                         'wallet_balance' => round((float) $customer->wallet_balance, 2),
                     ],
                     'bills' => $bills,
@@ -345,6 +346,7 @@ class PaymentApiController extends Controller
                         'id' => $customer->id,
                         'name' => $customer->full_name,
                         'account_number' => $customer->account_number,
+                        'profile_photo_url' => $customer->profile_photo ? $customer->profile_photo_url : null,
                     ],
                     'payments' => $payments,
                     'summary' => [
@@ -409,6 +411,7 @@ class PaymentApiController extends Controller
                     'account_number' => $customer->account_number,
                     'phone' => $customer->phone,
                     'address' => $customer->full_address,
+                    'profile_photo_url' => $customer->profile_photo ? $customer->profile_photo_url : null,
                     'outstanding_bills' => $outstandingBills->count(),
                     'total_outstanding' => $totalOutstanding,
                     'wallet_balance' => $share['wallet_balance'],

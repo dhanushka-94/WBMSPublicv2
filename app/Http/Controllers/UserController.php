@@ -59,7 +59,7 @@ class UserController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg|max:1024|dimensions:ratio=1/1',
             'email' => 'required|string|lowercase|email|max:255|unique:users',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'role' => 'required|in:'.implode(',', $this->assignableRoles()),
@@ -106,7 +106,7 @@ class UserController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg|max:1024|dimensions:ratio=1/1',
             'remove_profile_photo' => 'nullable|boolean',
             'email' => [
                 'required',

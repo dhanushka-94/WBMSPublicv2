@@ -264,9 +264,11 @@
                                         <div class="flex items-center">
                                             <div class="flex-shrink-0 h-12 w-12">
                                                 @if($customer->profile_photo)
-                                                    <img class="h-12 w-12 rounded-full object-cover border-2 border-blue-200 shadow-lg" 
+                                                    <img class="h-12 w-12 rounded-full object-cover border-2 border-blue-200 shadow-lg cursor-pointer hover:opacity-90 transition-opacity" 
                                                          src="{{ $customer->profile_photo_url }}" 
-                                                         alt="{{ $customer->full_name }}">
+                                                         alt="{{ $customer->full_name }}"
+                                                         data-lightbox
+                                                         title="View photo">
                                                 @else
                                                     <div class="h-12 w-12 rounded-full bg-gradient-to-r from-blue-400 to-indigo-500 flex items-center justify-center text-white font-bold text-lg shadow-lg">
                                                         {{ substr($customer->first_name, 0, 1) }}{{ substr($customer->last_name ?? '', 0, 1) }}

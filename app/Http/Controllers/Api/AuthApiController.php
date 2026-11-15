@@ -8,6 +8,7 @@ use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Sanctum\HasApiTokens;
@@ -105,13 +106,7 @@ class AuthApiController extends Controller
                 'message' => 'Login successful',
                 'data' => [
                     'token' => $token,
-                    'user' => [
-                        'id' => $user->id,
-                        'name' => $user->name,
-                        'email' => $user->email,
-                        'role' => $user->role,
-                        'permissions' => $this->getUserPermissions($user),
-                    ],
+                    'user' => $this->userPayload($user, true),
                     'app_config' => $this->getAppConfig(),
                     'expires_at' => now()->addDays(30)->toISOString(), // Token expires in 30 days
                 ]
@@ -203,18 +198,14 @@ class AuthApiController extends Controller
         try {
             $user = Auth::user();
 
+            $payload = $this->userPayload($user, true);
+            $payload['last_login'] = $user->last_login_at;
+            $payload['created_at'] = $user->created_at;
+
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'user' => [
-                        'id' => $user->id,
-                        'name' => $user->name,
-                        'email' => $user->email,
-                        'role' => $user->role,
-                        'permissions' => $this->getUserPermissions($user),
-                        'last_login' => $user->last_login_at,
-                        'created_at' => $user->created_at,
-                    ],
+                    'user' => $payload,
                     'app_config' => $this->getAppConfig(),
                 ]
             ]);
@@ -239,6 +230,8 @@ class AuthApiController extends Controller
                 'phone' => 'sometimes|nullable|string|max:20',
                 'current_password' => 'sometimes|required_with:new_password|string',
                 'new_password' => 'sometimes|required|string|min:6|confirmed',
+                'profile_photo' => 'sometimes|nullable|image|mimes:jpeg,png,jpg|max:1024|dimensions:ratio=1/1',
+                'remove_profile_photo' => 'sometimes|boolean',
             ]);
 
             if ($validator->fails()) {
@@ -251,6 +244,7 @@ class AuthApiController extends Controller
 
             $user = Auth::user();
             $updates = [];
+            $updatedFields = [];
 
             if ($request->has('name')) {
                 $updates['name'] = $request->name;
@@ -272,13 +266,25 @@ class AuthApiController extends Controller
 
             if (!empty($updates)) {
                 $user->update($updates);
+                $updatedFields = array_keys($updates);
+            }
 
+            if ($request->hasFile('profile_photo') || $request->boolean('remove_profile_photo')) {
+                $user->syncProfilePhoto(
+                    $request->file('profile_photo'),
+                    $request->boolean('remove_profile_photo')
+                );
+                $user->save();
+                $updatedFields[] = 'profile_photo';
+            }
+
+            if (!empty($updatedFields)) {
                 ActivityLog::logActivity([
                     'action' => 'mobile_profile_updated',
                     'description' => "Mobile profile updated for {$user->name}",
                     'module' => 'mobile_app',
                     'properties' => [
-                        'updated_fields' => array_keys($updates),
+                        'updated_fields' => array_values(array_unique($updatedFields)),
                     ],
                 ]);
             }
@@ -287,13 +293,7 @@ class AuthApiController extends Controller
                 'success' => true,
                 'message' => 'Profile updated successfully',
                 'data' => [
-                    'user' => [
-                        'id' => $user->id,
-                        'name' => $user->name,
-                        'email' => $user->email,
-                        'phone' => $user->phone,
-                        'role' => $user->role,
-                    ]
+                    'user' => $this->userPayload($user),
                 ]
             ]);
 
@@ -301,6 +301,65 @@ class AuthApiController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Profile update failed',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Upload or remove the signed-in user's profile picture (multipart).
+     */
+    public function updateProfilePhoto(Request $request): JsonResponse
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'profile_photo' => 'required_without:remove_profile_photo|nullable|image|mimes:jpeg,png,jpg|max:1024|dimensions:ratio=1/1',
+                'remove_profile_photo' => 'sometimes|boolean',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            if (!$request->hasFile('profile_photo') && !$request->boolean('remove_profile_photo')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Send profile_photo or remove_profile_photo=1',
+                ], 422);
+            }
+
+            $user = Auth::user();
+            $user->syncProfilePhoto(
+                $request->file('profile_photo'),
+                $request->boolean('remove_profile_photo')
+            );
+            $user->save();
+
+            ActivityLog::logActivity([
+                'action' => 'mobile_profile_photo_updated',
+                'description' => $request->boolean('remove_profile_photo')
+                    ? "Mobile profile photo removed for {$user->name}"
+                    : "Mobile profile photo updated for {$user->name}",
+                'module' => 'mobile_app',
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => $request->boolean('remove_profile_photo')
+                    ? 'Profile picture removed'
+                    : 'Profile picture updated',
+                'data' => [
+                    'user' => $this->userPayload($user),
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Profile picture update failed',
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -324,6 +383,33 @@ class AuthApiController extends Controller
         return $permissions;
     }
 
+    private function userPayload(User $user, bool $withPermissions = false): array
+    {
+        $payload = [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'phone' => $user->phone ?? null,
+            'role' => $user->role,
+            'profile_photo_url' => $this->apiProfilePhotoUrl($user),
+        ];
+
+        if ($withPermissions) {
+            $payload['permissions'] = $this->getUserPermissions($user);
+        }
+
+        return $payload;
+    }
+
+    private function apiProfilePhotoUrl(User $user): ?string
+    {
+        if ($user->profile_photo && Storage::disk('public')->exists($user->profile_photo)) {
+            return $user->profile_photo_url;
+        }
+
+        return null;
+    }
+
     /**
      * Get app configuration for mobile
      */
@@ -341,7 +427,10 @@ class AuthApiController extends Controller
                 'auto_sync' => true,
             ],
             'settings' => [
-                'max_photo_size' => 5120, // KB
+                'max_photo_size' => 5120, // KB (meter / receipt photos)
+                'profile_photo_max_size' => 1024, // KB
+                'profile_photo_mimes' => ['jpeg', 'jpg', 'png'],
+                'profile_photo_ratio' => '1:1',
                 'auto_sync_interval' => 300, // seconds
                 'offline_storage_limit' => 1000, // readings
                 'gps_accuracy_threshold' => 10, // meters

@@ -114,9 +114,11 @@
                         </h3>
                         
                         <div class="flex items-center mb-4">
-                            <img class="h-16 w-16 rounded-full object-cover mr-4" 
+                            <img class="h-16 w-16 rounded-full object-cover mr-4 cursor-pointer hover:opacity-90 transition-opacity" 
                                  src="{{ $bill->customer->profile_photo_url }}" 
-                                 alt="{{ $bill->customer->full_name }}">
+                                 alt="{{ $bill->customer->full_name }}"
+                                 data-lightbox
+                                 title="View photo">
                             <div class="ml-4">
                                 <h4 class="text-lg font-medium text-gray-900">
                                     @if($bill->customer)

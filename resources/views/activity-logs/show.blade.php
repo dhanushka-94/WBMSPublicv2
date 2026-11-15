@@ -187,7 +187,7 @@
                     <div class="p-6">
                         @if($activity->user)
                             <div class="flex items-center space-x-4 mb-4">
-                                <img class="h-12 w-12 rounded-full" src="{{ $activity->user->profile_photo_url }}" alt="{{ $activity->user_name }}">
+                                <img class="h-12 w-12 rounded-full cursor-pointer hover:opacity-90 transition-opacity" src="{{ $activity->user->profile_photo_url }}" alt="{{ $activity->user_name }}" data-lightbox title="View photo">
                                 <div>
                                     <p class="text-gray-900 font-medium">{{ $activity->user_name }}</p>
                                     <p class="text-sm text-gray-600">{{ $activity->user_email }}</p>

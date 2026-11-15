@@ -150,9 +150,11 @@
                         <div class="flex items-center">
                             <div class="flex-shrink-0">
                                 @if($customer->profile_photo)
-                                    <img class="h-20 w-20 rounded-full object-cover border-4 border-white shadow-lg" 
+                                    <img class="h-20 w-20 rounded-full object-cover border-4 border-white shadow-lg cursor-pointer hover:opacity-90 transition-opacity" 
                                          src="{{ $customer->profile_photo_url }}" 
-                                         alt="{{ $customer->full_name }}">
+                                         alt="{{ $customer->full_name }}"
+                                         data-lightbox
+                                         title="View photo">
                                 @else
                                     <div class="h-20 w-20 rounded-full bg-white bg-opacity-20 flex items-center justify-center border-4 border-white shadow-lg">
                                         <i class="fas fa-user text-white text-2xl"></i>

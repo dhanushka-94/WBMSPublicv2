@@ -45,6 +45,7 @@ class MeterReadingApiController extends Controller
                         'name' => $customer->full_name,
                         'address' => $customer->full_address,
                         'phone' => $customer->phone,
+                        'profile_photo_url' => $customer->profile_photo ? $customer->profile_photo_url : null,
                         'customer_type' => $customer->billingCategory(),
                         'wallet_balance' => round((float) $customer->wallet_balance, 2),
                         'area' => null,
@@ -411,6 +412,7 @@ class MeterReadingApiController extends Controller
                     'address' => $customer->full_address,
                     'phone' => $customer->phone,
                     'email' => $customer->email,
+                    'profile_photo_url' => $customer->profile_photo ? $customer->profile_photo_url : null,
                     'customer_type' => $customer->billingCategory(),
                     'wallet_balance' => round((float) $customer->wallet_balance, 2),
                     'area' => null, // Area not implemented yet
@@ -492,6 +494,7 @@ class MeterReadingApiController extends Controller
                         'name' => $customer->full_name,
                         'address' => $customer->full_address,
                         'phone' => $customer->phone,
+                        'profile_photo_url' => $customer->profile_photo ? $customer->profile_photo_url : null,
                         'customer_type' => $customer->billingCategory(),
                         'wallet_balance' => round((float) $customer->wallet_balance, 2),
                         'area' => null, // Area not implemented yet
@@ -958,6 +961,7 @@ class MeterReadingApiController extends Controller
                 'id' => $meter->customer->id,
                 'name' => $meter->customer->full_name,
                 'account_number' => $meter->customer->account_number,
+                'profile_photo_url' => $meter->customer->profile_photo ? $meter->customer->profile_photo_url : null,
             ] : null,
         ];
     }
@@ -1203,6 +1207,7 @@ class MeterReadingApiController extends Controller
                         'address' => $meter->customer->full_address,
                         'phone' => $meter->customer->phone,
                         'email' => $meter->customer->email,
+                        'profile_photo_url' => $meter->customer->profile_photo ? $meter->customer->profile_photo_url : null,
                         'status' => $meter->customer->status,
                     ] : null,
                     'last_reading' => $latestReading ? [

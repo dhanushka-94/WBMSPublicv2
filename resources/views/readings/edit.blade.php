@@ -77,9 +77,11 @@
                             <div class="flex items-center">
                                 <div class="flex-shrink-0">
                                     @if($reading->waterMeter && $reading->waterMeter->customer)
-                                        <img class="h-16 w-16 rounded-full object-cover" 
+                                        <img class="h-16 w-16 rounded-full object-cover cursor-pointer hover:opacity-90 transition-opacity" 
                                              src="{{ $reading->waterMeter->customer->profile_photo_url }}" 
-                                             alt="{{ $reading->waterMeter->customer->full_name }}">
+                                             alt="{{ $reading->waterMeter->customer->full_name }}"
+                                             data-lightbox
+                                             title="View photo">
                                     @else
                                         <div class="h-16 w-16 rounded-full bg-gray-300 flex items-center justify-center">
                                             <i class="fas fa-user text-gray-500 text-2xl"></i>

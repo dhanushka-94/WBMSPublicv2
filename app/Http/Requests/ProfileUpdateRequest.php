@@ -17,7 +17,7 @@ class ProfileUpdateRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'profile_photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048'],
+            'profile_photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:1024', 'dimensions:ratio=1/1'],
             'remove_profile_photo' => ['nullable', 'boolean'],
             'email' => [
                 'required',
@@ -27,6 +27,15 @@ class ProfileUpdateRequest extends FormRequest
                 'max:255',
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'profile_photo.mimes' => 'Profile picture must be a JPG or PNG file.',
+            'profile_photo.max' => 'Profile picture must be 1 MB or smaller.',
+            'profile_photo.dimensions' => 'Profile picture must be a 1:1 square image.',
         ];
     }
 }

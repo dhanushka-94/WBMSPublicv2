@@ -67,6 +67,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
     // User profile
     Route::get('/profile', [AuthApiController::class, 'profile']);
     Route::put('/profile', [AuthApiController::class, 'updateProfile']);
+    Route::post('/profile/photo', [AuthApiController::class, 'updateProfilePhoto']);
     
     // Meter reading routes
     Route::prefix('meter-reading')->middleware('mobile.maintenance')->group(function () {

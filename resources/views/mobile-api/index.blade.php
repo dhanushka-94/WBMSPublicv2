@@ -30,6 +30,7 @@
                 <li>Roles that can log in: <strong>super_admin</strong>, <strong>admin</strong>, <strong>meter_reader</strong>, <strong>supervisor</strong>. Manager and staff receive HTTP 403.</li>
                 <li>Currency is LKR. Dates are <code class="bg-gray-100 px-1 rounded">YYYY-MM-DD</code>. Server timezone is Asia/Colombo.</li>
                 <li>Meter GPS uses the meter’s <code class="bg-gray-100 px-1 rounded">latitude</code> / <code class="bg-gray-100 px-1 rounded">longitude</code>. Read or update them with the Meter location endpoints below.</li>
+                <li>Profile pictures: customer and system-user objects include <code class="bg-gray-100 px-1 rounded">profile_photo_url</code> (absolute URL, or <code class="bg-gray-100 px-1 rounded">null</code> if none). Upload the signed-in user’s photo with <code class="bg-gray-100 px-1 rounded">POST /profile/photo</code>.</li>
             </ul>
             <p class="mt-4 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
                 Test meter reader: <strong>reader1@aquabill.olexto.com</strong> / <strong>password</strong>.
@@ -40,7 +41,8 @@
         <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
             <h2 class="text-xl font-bold text-gray-900 mb-3">App flow</h2>
             <ol class="list-decimal list-inside text-gray-700 space-y-2">
-                <li><code class="bg-gray-100 px-1 rounded">POST /login</code> and store <code class="bg-gray-100 px-1 rounded">data.token</code>.</li>
+                <li><code class="bg-gray-100 px-1 rounded">POST /login</code> and store <code class="bg-gray-100 px-1 rounded">data.token</code>. Use <code class="bg-gray-100 px-1 rounded">data.user.profile_photo_url</code> for the reader avatar when it is not null.</li>
+                <li>Optional: upload or refresh the reader’s own photo with <code class="bg-gray-100 px-1 rounded">POST /profile/photo</code> (JPG/PNG, 1:1, max 1 MB).</li>
                 <li><code class="bg-gray-100 px-1 rounded">GET /meter-reading/rates</code> and store the tariff slabs for offline receipts.</li>
                 <li><code class="bg-gray-100 px-1 rounded">GET /meter-reading/route/today</code> for the day’s customer list.</li>
                 <li>Open a customer with <code class="bg-gray-100 px-1 rounded">GET /meter-reading/customers/{id}</code>, or find one with search or QR scan.</li>
@@ -67,6 +69,7 @@
                 <li>Today’s route contains only the divisions and customers assigned to the signed-in reader. With no assignment, <code class="bg-gray-100 px-1 rounded">route/today</code> returns an empty list.</li>
                 <li>Dashboard <code class="bg-gray-100 px-1 rounded">accuracy_rate</code> is a fixed 98.5, not a live score.</li>
                 <li>Price a reading from the customer’s <code class="bg-gray-100 px-1 rounded">customer_type</code> slabs. Add the 0–0 slab’s fixed charge on every bill. A null <code class="bg-gray-100 px-1 rounded">tier_to</code> takes the remaining units. The total is water charges plus the fixed charge.</li>
+                <li>Profile photos: JPG or PNG only, square <code class="bg-gray-100 px-1 rounded">1:1</code>, max 1 MB. Crop on the phone before upload. Customer photos are managed in the office web app; the API only returns <code class="bg-gray-100 px-1 rounded">profile_photo_url</code>.</li>
             </ul>
         </div>
 
@@ -90,6 +93,27 @@
                     <p class="text-sm font-semibold text-gray-600 mb-2">Clear meter GPS / offline bulk-sync</p>
                     <pre class="bg-slate-900 text-rose-200 text-xs p-4 rounded-lg overflow-x-auto mb-3">{{ json_encode($locationClearExample, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
                     <pre class="bg-slate-900 text-amber-200 text-xs p-4 rounded-lg overflow-x-auto">{{ json_encode($bulkExample, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-3">Profile pictures</h2>
+            <ul class="list-disc list-inside text-gray-700 space-y-2">
+                <li>Login, <code class="bg-gray-100 px-1 rounded">GET /profile</code>, and profile update responses include <code class="bg-gray-100 px-1 rounded">data.user.profile_photo_url</code>.</li>
+                <li>Customer lists and details (route, search, customer show, QR scan, payments search/bills) include <code class="bg-gray-100 px-1 rounded">profile_photo_url</code>. Show a placeholder avatar when it is <code class="bg-gray-100 px-1 rounded">null</code>.</li>
+                <li><code class="bg-gray-100 px-1 rounded">POST {{ $baseUrl }}/profile/photo</code> — multipart field <code class="bg-gray-100 px-1 rounded">profile_photo</code> (JPG/PNG, 1:1, max 1 MB), or <code class="bg-gray-100 px-1 rounded">remove_profile_photo=1</code> to clear.</li>
+                <li><code class="bg-gray-100 px-1 rounded">app_config.settings</code> after login includes <code class="bg-gray-100 px-1 rounded">profile_photo_max_size</code> (1024 KB), <code class="bg-gray-100 px-1 rounded">profile_photo_mimes</code>, and <code class="bg-gray-100 px-1 rounded">profile_photo_ratio</code> (<code class="bg-gray-100 px-1 rounded">1:1</code>).</li>
+                <li>Prefer <code class="bg-gray-100 px-1 rounded">POST /profile/photo</code> over PUT multipart; PHP often does not populate uploaded files on PUT.</li>
+            </ul>
+            <div class="mt-4 grid md:grid-cols-2 gap-4">
+                <div>
+                    <p class="text-sm font-semibold text-gray-600 mb-2">Upload (multipart fields)</p>
+                    <pre class="bg-slate-900 text-sky-200 text-xs p-4 rounded-lg overflow-x-auto">{{ json_encode($profilePhotoExample, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+                </div>
+                <div>
+                    <p class="text-sm font-semibold text-gray-600 mb-2">Remove</p>
+                    <pre class="bg-slate-900 text-rose-200 text-xs p-4 rounded-lg overflow-x-auto">{{ json_encode($profilePhotoRemoveExample, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
                 </div>
             </div>
         </div>

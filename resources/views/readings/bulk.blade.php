@@ -190,9 +190,11 @@
                                         <div class="flex items-center">
                                             <div class="flex-shrink-0 h-10 w-10">
                                                 @if($meter->customer)
-                                                <img class="h-10 w-10 rounded-full object-cover" 
+                                                <img class="h-10 w-10 rounded-full object-cover cursor-pointer hover:opacity-90 transition-opacity" 
                                                      src="{{ $meter->customer->profile_photo_url }}" 
-                                                     alt="{{ $meter->customer->full_name }}">
+                                                     alt="{{ $meter->customer->full_name }}"
+                                                     data-lightbox
+                                                     title="View photo">
                                                 @else
                                                     <div class="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
                                                         <i class="fas fa-user text-gray-500"></i>

@@ -2,6 +2,16 @@
 
 return [
     [
+        'version' => '2.6.5',
+        'date' => '15 November 2026',
+        'title' => 'Profile photo crop, lightbox, and API photos',
+        'changes' => [
+            'Profile pictures are JPG or PNG only, 1:1 square, max 1 MB. Choosing a file opens a crop editor before save.',
+            'Click a customer or user profile photo in the office to open it in a lightbox.',
+            'The reader API returns profile_photo_url for customers and the signed-in user. Readers can upload or remove their own photo with POST /profile/photo. The Mobile API guide covers the new fields and call.',
+        ],
+    ],
+    [
         'version' => '2.6.4',
         'date' => '14 November 2026',
         'title' => 'Meter GPS API and optional customer fields',
