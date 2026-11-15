@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\Bill;
+use App\Models\Payment;
 use App\Models\ActivityLog;
 use App\Traits\LogsActivity;
 use Illuminate\Http\Request;
@@ -198,55 +199,84 @@ class PaymentApiController extends Controller
 
             DB::beginTransaction();
 
-            // Handle receipt photo upload
+            $bill = Bill::query()->lockForUpdate()->findOrFail($bill->id);
+            $previousBalance = round((float) $bill->balance_amount, 2);
+            $amount = round((float) $request->payment_amount, 2);
+
+            if ($amount > $previousBalance) {
+                DB::rollBack();
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Payment amount cannot exceed outstanding balance',
+                    'outstanding_balance' => $previousBalance,
+                    'payment_amount' => $amount,
+                ], 400);
+            }
+
+            $notes = $request->notes;
             $receiptPath = null;
             if ($request->hasFile('receipt_photo')) {
                 $photo = $request->file('receipt_photo');
-                $filename = 'receipt_' . $bill->id . '_' . time() . '.' . $photo->getClientOriginalExtension();
+                $filename = 'receipt_'.$bill->id.'_'.time().'.'.$photo->getClientOriginalExtension();
                 $receiptPath = $photo->storeAs('payment-receipts', $filename, 'public');
+                $notes = trim(($notes ? $notes."\n" : '').'Receipt photo: '.$receiptPath);
             }
 
-            // Record payment in the bill
-            $previousPaidAmount = $bill->paid_amount;
-            $bill->paid_amount += $request->payment_amount;
-            $bill->balance_amount = $bill->total_amount - $bill->paid_amount;
-            
-            if ($bill->balance_amount <= 0) {
-                $bill->status = 'paid';
-                $bill->paid_at = $request->payment_date;
+            if ($request->gps_latitude !== null && $request->gps_longitude !== null) {
+                $notes = trim(($notes ? $notes."\n" : '').'GPS: '.$request->gps_latitude.', '.$request->gps_longitude);
             }
 
-            $bill->save();
+            $saved = $bill->recordPayment($amount, $request->payment_method, [
+                'paid_on' => $request->payment_date,
+                'reference' => $request->transaction_reference,
+                'notes' => $notes,
+                'received_by' => $user->id,
+            ]);
 
-            // Create payment record (you might want to create a separate payments table)
+            if (!$saved) {
+                DB::rollBack();
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Payment could not be saved',
+                ], 400);
+            }
+
+            $bill->refresh();
+            $payment = $bill->payments()->latest('id')->first();
+
             $paymentRecord = [
                 'bill_id' => $bill->id,
                 'customer_id' => $customer->id,
-                'payment_amount' => $request->payment_amount,
+                'payment_amount' => $amount,
                 'payment_method' => $request->payment_method,
                 'payment_date' => $request->payment_date,
                 'transaction_reference' => $request->transaction_reference,
-                'notes' => $request->notes,
+                'notes' => $notes,
                 'receipt_path' => $receiptPath,
                 'collector_id' => $user->id,
                 'collector_name' => $user->name,
                 'gps_latitude' => $request->gps_latitude,
                 'gps_longitude' => $request->gps_longitude,
                 'created_at' => now(),
+                'receipt_number' => $payment?->receipt_number,
             ];
 
-            // Log activity
             $this->logMobileActivity('payment_recorded', [
                 'customer' => $customer->full_name,
                 'bill_number' => $bill->bill_number,
-                'payment_amount' => $request->payment_amount,
+                'payment_id' => $payment?->id,
+                'receipt_number' => $payment?->receipt_number,
+                'payment_amount' => $amount,
                 'payment_method' => $request->payment_method,
                 'transaction_reference' => $request->transaction_reference,
-                'previous_balance' => $bill->balance_amount + $request->payment_amount,
+                'previous_balance' => $previousBalance,
                 'new_balance' => $bill->balance_amount,
                 'bill_status' => $bill->status,
-                'location' => $request->gps_latitude && $request->gps_longitude ? 
-                    [$request->gps_latitude, $request->gps_longitude] : null,
+                'location' => $request->gps_latitude && $request->gps_longitude
+                    ? [$request->gps_latitude, $request->gps_longitude]
+                    : null,
             ]);
 
             DB::commit();
@@ -255,17 +285,17 @@ class PaymentApiController extends Controller
                 'success' => true,
                 'message' => 'Payment recorded successfully',
                 'data' => [
-                    'payment_id' => $bill->id . '_' . time(), // Temporary ID
+                    'payment_id' => $payment?->id,
                     'bill_number' => $bill->bill_number,
                     'customer_name' => $customer->full_name,
-                    'payment_amount' => $request->payment_amount,
+                    'payment_amount' => $amount,
                     'payment_method' => $request->payment_method,
                     'payment_date' => $request->payment_date,
                     'transaction_reference' => $request->transaction_reference,
-                    'previous_balance' => $previousPaidAmount,
-                    'new_balance' => $bill->balance_amount,
+                    'previous_balance' => $previousBalance,
+                    'new_balance' => round((float) $bill->balance_amount, 2),
                     'bill_status' => $bill->status,
-                    'receipt_number' => $this->generateReceiptNumber($bill),
+                    'receipt_number' => $payment?->receipt_number,
                     'receipt_data' => $this->generatePaymentReceiptData($customer, $bill, $paymentRecord),
                     'timestamp' => now()->toISOString(),
                 ]
@@ -310,32 +340,39 @@ class PaymentApiController extends Controller
                 ], 404);
             }
             
-            $query = Bill::where('customer_id', $customer_id)
-                ->where('paid_amount', '>', 0);
+            $query = Payment::query()
+                ->with('bill')
+                ->where('customer_id', $customer_id);
 
             if ($request->from_date) {
-                $query->where('paid_at', '>=', $request->from_date);
+                $query->whereDate('paid_on', '>=', $request->from_date);
             }
 
             if ($request->to_date) {
-                $query->where('paid_at', '<=', $request->to_date);
+                $query->whereDate('paid_on', '<=', $request->to_date);
             }
 
-            $payments = $query->orderBy('paid_at', 'desc')
+            $payments = $query->orderByDesc('paid_on')
+                ->orderByDesc('id')
                 ->limit($request->limit ?? 50)
                 ->get()
-                ->map(function ($bill) {
+                ->map(function (Payment $payment) {
+                    $bill = $payment->bill;
+
                     return [
-                        'id' => $bill->id,
-                        'bill_number' => $bill->bill_number,
-                        'payment_amount' => $bill->paid_amount,
-                        'payment_date' => $bill->paid_at ? $bill->paid_at->format('Y-m-d h:i:s A') : null,
-                        'bill_amount' => $bill->total_amount,
-                        'status' => $bill->status,
-                        'billing_period' => [
+                        'id' => $payment->id,
+                        'receipt_number' => $payment->receipt_number,
+                        'bill_number' => $bill?->bill_number,
+                        'payment_amount' => round((float) $payment->amount, 2),
+                        'payment_method' => $payment->payment_method,
+                        'payment_date' => $payment->paid_on?->format('Y-m-d'),
+                        'reference' => $payment->reference,
+                        'bill_amount' => $bill ? round((float) $bill->total_amount, 2) : null,
+                        'status' => $bill?->status,
+                        'billing_period' => $bill ? [
                             'from' => $bill->billing_period_from->format('Y-m-d'),
                             'to' => $bill->billing_period_to->format('Y-m-d'),
-                        ],
+                        ] : null,
                     ];
                 });
 
@@ -351,7 +388,7 @@ class PaymentApiController extends Controller
                     'payments' => $payments,
                     'summary' => [
                         'total_payments' => $payments->count(),
-                        'total_amount_paid' => $payments->sum('payment_amount'),
+                        'total_amount_paid' => round((float) $payments->sum('payment_amount'), 2),
                     ]
                 ]
             ]);
@@ -442,18 +479,13 @@ class PaymentApiController extends Controller
     /**
      * Generate receipt number
      */
-    private function generateReceiptNumber($bill): string
-    {
-        return "RCP" . date('Ymd') . str_pad($bill->id, 6, '0', STR_PAD_LEFT);
-    }
-
     /**
      * Generate payment receipt data
      */
     private function generatePaymentReceiptData($customer, $bill, $paymentRecord): array
     {
         return [
-            'receipt_number' => $this->generateReceiptNumber($bill),
+            'receipt_number' => $paymentRecord['receipt_number'] ?? null,
             'date' => now()->format('Y-m-d h:i:s A'),
             'customer' => [
                 'name' => $customer->full_name,
@@ -465,7 +497,7 @@ class PaymentApiController extends Controller
                 'date' => $bill->bill_date->format('Y-m-d'),
                 'due_date' => $bill->due_date->format('Y-m-d'),
                 'total_amount' => $bill->total_amount,
-                'previous_balance' => $bill->total_amount - $paymentRecord['payment_amount'],
+                'previous_balance' => round((float) $bill->balance_amount + (float) $paymentRecord['payment_amount'], 2),
             ],
             'payment' => [
                 'amount' => $paymentRecord['payment_amount'],
@@ -482,9 +514,9 @@ class PaymentApiController extends Controller
                 'id' => $paymentRecord['collector_id'],
             ],
             'company' => [
-                'name' => 'Water Board Management System',
-                'address' => 'Your Company Address',
-                'phone' => 'Your Company Phone',
+                'name' => 'AquaBill by olexto',
+                'address' => '',
+                'phone' => '',
             ],
         ];
     }
