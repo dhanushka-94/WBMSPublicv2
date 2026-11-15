@@ -524,7 +524,7 @@ class BillController extends Controller
                 (float) $request->input('amount', 0),
                 $request->boolean('use_wallet'),
                 $request->payment_method,
-                $request->payment_date,
+                \App\Models\Payment::parsePaidOn($request->payment_date)->toDateTimeString(),
                 $request->reference,
                 $request->notes,
                 $request->user()?->id
@@ -548,6 +548,11 @@ class BillController extends Controller
         }
         if ($result['wallet_used'] > 0) {
             $parts[] = 'Rs. '.number_format($result['wallet_used'], 2).' used from the wallet';
+        }
+        if (($result['sms_sent'] ?? 0) > 0) {
+            $parts[] = 'Payment SMS sent';
+        } elseif (($result['sms_skipped'] ?? 0) > 0) {
+            $parts[] = 'Payment SMS not sent (check phone number or SMS settings)';
         }
 
         return redirect()->route('bills.show', $bill)->with('success', implode('. ', $parts).'.');

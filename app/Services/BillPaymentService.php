@@ -2,10 +2,13 @@
 
 namespace App\Services;
 
+use App\Models\ActivityLog;
 use App\Models\Bill;
 use App\Models\Customer;
+use App\Models\Payment;
 use App\Models\WalletEntry;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 
 class BillPaymentService
@@ -90,12 +93,31 @@ class BillPaymentService
                 ]);
             }
 
-            return [
+            $smsSent = collect($applied)->where('sms_sent', true)->count();
+            $smsSkipped = collect($applied)->where('sms_sent', false)->count();
+
+            $result = [
                 'applied' => $applied,
                 'wallet_used' => $walletUse,
                 'wallet_added' => $walletAdded,
                 'wallet_balance' => (float) $customer->wallet_balance,
+                'sms_sent' => $smsSent,
+                'sms_skipped' => $smsSkipped,
             ];
+
+            try {
+                ActivityLog::logPaymentCollection($customer->fresh(), $result, [
+                    'payment_method' => $method,
+                    'paid_on' => $paidOn,
+                    'reference' => $reference,
+                    'notes' => $notes,
+                    'received_by' => $userId,
+                ]);
+            } catch (\Throwable $exception) {
+                Log::warning('Payment collection activity log failed: '.$exception->getMessage());
+            }
+
+            return $result;
         });
     }
 
@@ -106,7 +128,9 @@ class BillPaymentService
             return round($pool, 2);
         }
 
-        $saved = $bill->recordPayment($take, $method, $details);
+        $saved = $bill->recordPayment($take, $method, array_merge($details, [
+            'source' => $details['source'] ?? 'office_collect',
+        ]));
         if (!$saved) {
             throw new InvalidArgumentException('The payment could not be saved on '.$bill->bill_number.'.');
         }
@@ -115,8 +139,164 @@ class BillPaymentService
             'bill_number' => $bill->bill_number,
             'amount' => $take,
             'method' => $method,
+            'sms_sent' => (bool) $bill->lastPaymentSmsSent,
+            'payment_id' => $bill->lastRecordedPayment?->id,
+            'receipt_number' => $bill->lastRecordedPayment?->receipt_number,
         ];
 
         return round($pool - $take, 2);
+    }
+
+    /**
+     * Update an existing payment and keep the bill / wallet balances in sync.
+     */
+    public function updatePayment(Payment $payment, array $data, ?int $userId = null): Payment
+    {
+        return DB::transaction(function () use ($payment, $data, $userId) {
+            $payment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
+            $bill = Bill::query()->lockForUpdate()->findOrFail($payment->bill_id);
+            $customer = Customer::query()->lockForUpdate()->findOrFail($payment->customer_id);
+
+            $oldSnapshot = ActivityLog::paymentSnapshot($payment->loadMissing(['customer', 'bill']));
+            $oldAmount = round((float) $payment->amount, 2);
+            $oldMethod = $payment->payment_method;
+            $newAmount = round((float) $data['amount'], 2);
+            $newMethod = $data['payment_method'];
+
+            if ($newAmount <= 0) {
+                throw new InvalidArgumentException('The payment amount must be greater than zero.');
+            }
+
+            $maxAmount = round($oldAmount + (float) $bill->balance_amount, 2);
+            if ($newAmount > $maxAmount + 0.001) {
+                throw new InvalidArgumentException(
+                    'The payment cannot exceed Rs. '.number_format($maxAmount, 2).' for this bill.'
+                );
+            }
+
+            $delta = round($newAmount - $oldAmount, 2);
+
+            if ($oldMethod === 'wallet') {
+                $customer->wallet_balance = round((float) $customer->wallet_balance + $oldAmount, 2);
+            }
+
+            if ($newMethod === 'wallet') {
+                if ((float) $customer->wallet_balance + 0.001 < $newAmount) {
+                    throw new InvalidArgumentException(
+                        'Wallet has only Rs. '.number_format((float) $customer->wallet_balance, 2).' available.'
+                    );
+                }
+                $customer->wallet_balance = round((float) $customer->wallet_balance - $newAmount, 2);
+            }
+
+            if ($oldMethod === 'wallet' || $newMethod === 'wallet') {
+                $customer->save();
+
+                if ($oldMethod === 'wallet' && $newMethod !== 'wallet') {
+                    WalletEntry::create([
+                        'customer_id' => $customer->id,
+                        'bill_id' => $bill->id,
+                        'payment_id' => $payment->id,
+                        'user_id' => $userId,
+                        'amount' => $oldAmount,
+                        'reason' => 'payment_reversed',
+                        'notes' => 'Wallet restored after editing '.$payment->receipt_number,
+                    ]);
+                } elseif ($oldMethod !== 'wallet' && $newMethod === 'wallet') {
+                    WalletEntry::create([
+                        'customer_id' => $customer->id,
+                        'bill_id' => $bill->id,
+                        'payment_id' => $payment->id,
+                        'user_id' => $userId,
+                        'amount' => round(-1 * $newAmount, 2),
+                        'reason' => 'applied',
+                        'notes' => 'Wallet applied after editing '.$payment->receipt_number,
+                    ]);
+                } elseif ($oldMethod === 'wallet' && $newMethod === 'wallet' && abs($delta) > 0.001) {
+                    WalletEntry::create([
+                        'customer_id' => $customer->id,
+                        'bill_id' => $bill->id,
+                        'payment_id' => $payment->id,
+                        'user_id' => $userId,
+                        'amount' => round(-1 * $delta, 2),
+                        'reason' => $delta > 0 ? 'applied' : 'payment_reversed',
+                        'notes' => 'Wallet adjusted after editing '.$payment->receipt_number,
+                    ]);
+                }
+            }
+
+            if (abs($delta) > 0.001) {
+                $bill->deferPaymentSms = true;
+                $bill->paid_amount = round((float) $bill->paid_amount + $delta, 2);
+                $bill->save();
+            }
+
+            $payment->fill([
+                'amount' => $newAmount,
+                'payment_method' => $newMethod,
+                'paid_on' => Payment::parsePaidOn($data['paid_on'] ?? now()),
+                'reference' => $data['reference'] ?? null,
+                'notes' => $data['notes'] ?? null,
+            ]);
+            $payment->save();
+
+            $fresh = $payment->fresh(['bill', 'customer', 'receiver']);
+
+            try {
+                ActivityLog::logPaymentUpdated($fresh, $oldSnapshot, [
+                    'edited_by' => $userId,
+                    'amount_delta' => $delta,
+                ]);
+            } catch (\Throwable $exception) {
+                Log::warning('Payment update activity log failed: '.$exception->getMessage());
+            }
+
+            return $fresh;
+        });
+    }
+
+    /**
+     * Delete a payment and reverse its effect on the bill (and wallet when needed).
+     */
+    public function deletePayment(Payment $payment, ?int $userId = null): void
+    {
+        DB::transaction(function () use ($payment, $userId) {
+            $payment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
+            $bill = Bill::query()->lockForUpdate()->findOrFail($payment->bill_id);
+            $customer = Customer::query()->lockForUpdate()->findOrFail($payment->customer_id);
+            $amount = round((float) $payment->amount, 2);
+            $snapshot = ActivityLog::paymentSnapshot($payment->loadMissing(['customer', 'bill']));
+
+            $bill->deferPaymentSms = true;
+            $bill->paid_amount = round(max(0, (float) $bill->paid_amount - $amount), 2);
+            $bill->save();
+
+            if ($payment->payment_method === 'wallet') {
+                $customer->wallet_balance = round((float) $customer->wallet_balance + $amount, 2);
+                $customer->save();
+
+                WalletEntry::create([
+                    'customer_id' => $customer->id,
+                    'bill_id' => $bill->id,
+                    'payment_id' => $payment->id,
+                    'user_id' => $userId,
+                    'amount' => $amount,
+                    'reason' => 'payment_reversed',
+                    'notes' => 'Reversed payment '.$payment->receipt_number,
+                ]);
+            }
+
+            $payment->delete();
+
+            try {
+                ActivityLog::logPaymentDeleted($payment, $snapshot, [
+                    'deleted_by' => $userId,
+                    'wallet_restored' => $snapshot['payment_method'] === 'wallet',
+                    'bill_balance_after' => (float) $bill->fresh()->balance_amount,
+                ]);
+            } catch (\Throwable $exception) {
+                Log::warning('Payment delete activity log failed: '.$exception->getMessage());
+            }
+        });
     }
 }

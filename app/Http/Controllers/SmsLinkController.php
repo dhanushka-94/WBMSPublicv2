@@ -21,11 +21,12 @@ class SmsLinkController extends Controller
 
     public function receipt(Payment $payment): View
     {
-        $payment->load(['customer', 'bill']);
+        $payment->load(['customer', 'bill', 'receiver']);
+        $language = 'all';
+        $format = 'a4';
+        $public = true;
 
-        return view('sms.public-receipt', [
-            'payment' => $payment,
-        ]);
+        return view('payments.receipt', compact('payment', 'language', 'format', 'public'));
     }
 
     public function due(Customer $customer): View

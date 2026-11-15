@@ -84,7 +84,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('bills/{bill}/print', [BillController::class, 'print'])->name('bills.print');
     Route::get('payments/collect', [PaymentCollectionController::class, 'index'])->name('payments.collect');
     Route::post('payments/collect', [PaymentCollectionController::class, 'store'])->name('payments.collect.store');
+    Route::get('payments', [PaymentController::class, 'index'])->name('payments.index');
     Route::get('payments/{payment}/receipt', [PaymentController::class, 'print'])->name('payments.receipt');
+    Route::get('payments/{payment}/edit', [PaymentController::class, 'edit'])->name('payments.edit');
+    Route::put('payments/{payment}', [PaymentController::class, 'update'])->name('payments.update');
+    Route::delete('payments/{payment}', [PaymentController::class, 'destroy'])->name('payments.destroy');
     Route::get('bills/data/ajax', [BillController::class, 'getBillsData'])->name('bills.data');
     
     // Payment routes (always accessible)

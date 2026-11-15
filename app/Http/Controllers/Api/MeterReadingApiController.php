@@ -71,8 +71,16 @@ class MeterReadingApiController extends Controller
                     ];
                 });
 
-            $this->logMobileActivity('route_fetched', [
-                'customer_count' => $customers->count(),
+            $customerCount = $customers->count();
+            $meterCount = $customers->filter(fn ($row) => ! empty($row['meter']))->count();
+            $routeLabel = $divisionNames->join(', ') ?: null;
+
+            $this->logMobileActivity('route_downloaded', [
+                'customer_count' => $customerCount,
+                'meter_count' => $meterCount,
+                'route' => $routeLabel,
+                'direction' => 'download',
+                'date' => now()->toDateString(),
             ]);
 
             $assigned = $user->hasRouteAssignment();
@@ -234,14 +242,19 @@ class MeterReadingApiController extends Controller
                 'notes' => $request->notes,
             ]);
 
-            // Log activity
-            $this->logMobileActivity('meter_reading_submitted', [
+            $this->logMobileActivity('reading_uploaded', [
+                'direction' => 'upload',
                 'customer' => $customer->full_name,
+                'account_number' => $customer->account_number,
                 'meter_number' => $meter->meter_number,
                 'reading' => $request->current_reading,
                 'consumption' => $consumption,
-                'location' => $request->gps_latitude && $request->gps_longitude ? 
-                    [$request->gps_latitude, $request->gps_longitude] : null,
+                'bill_number' => $bill?->bill_number,
+                'reading_id' => $meterReading->id,
+                'offline' => (bool) $request->offline_timestamp,
+                'location' => $request->gps_latitude && $request->gps_longitude
+                    ? [$request->gps_latitude, $request->gps_longitude]
+                    : null,
             ]);
 
             DB::commit();
@@ -350,7 +363,8 @@ class MeterReadingApiController extends Controller
                 }
             }
 
-            $this->logMobileActivity('bulk_sync_completed', [
+            $this->logMobileActivity('readings_bulk_uploaded', [
+                'direction' => 'upload',
                 'total_readings' => count($request->readings),
                 'successful' => $successCount,
                 'failed' => $failureCount,
@@ -969,17 +983,7 @@ class MeterReadingApiController extends Controller
     private function logMobileActivity(string $action, array $data = []): void
     {
         try {
-            $user = Auth::user() ?? Auth::guard('sanctum')->user();
-            ActivityLog::logActivity([
-                'user_id' => $user?->id,
-                'user_name' => $user?->name,
-                'user_email' => $user?->email,
-                'user_role' => $user?->role,
-                'action' => $action,
-                'description' => ($user?->name ?? 'Mobile user') . ' ' . str_replace('_', ' ', $action) . ' from the mobile app',
-                'module' => 'mobile_app',
-                'properties' => array_merge(['source' => 'api'], $data),
-            ]);
+            ActivityLog::logMobileApp($action, $data);
         } catch (\Exception $e) {
             // Silent fail - don't break app functionality for logging issues
         }

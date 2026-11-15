@@ -162,6 +162,7 @@
                 <div x-show="menu === 'billing'" x-cloak class="absolute left-0 top-full z-50 mt-1 w-56 rounded-lg bg-white p-1.5 shadow-lg ring-1 ring-black/5" style="display: none;">
                     <a href="{{ route('bills.index') }}" class="{{ $link }}"><i class="fas fa-file-invoice w-4 text-green-600"></i>Bills</a>
                     <a href="{{ route('payments.collect') }}" class="{{ $link }}"><i class="fas fa-hand-holding-usd w-4 text-emerald-600"></i>Take Payment</a>
+                    <a href="{{ route('payments.index') }}" class="{{ $link }}"><i class="fas fa-receipt w-4 text-teal-600"></i>Payments</a>
                     <a href="{{ route('settings.rates.index') }}" class="{{ $link }}"><i class="fas fa-dollar-sign w-4 text-yellow-600"></i>Rates</a>
                 </div>
             </div>
@@ -274,6 +275,7 @@
                     @elseif($key === 'billing')
                         <a href="{{ route('bills.index') }}" class="{{ $mobileLink }}"><i class="fas fa-file-invoice w-4"></i>Bills</a>
                         <a href="{{ route('payments.collect') }}" class="{{ $mobileLink }}"><i class="fas fa-hand-holding-usd w-4"></i>Take Payment</a>
+                        <a href="{{ route('payments.index') }}" class="{{ $mobileLink }}"><i class="fas fa-receipt w-4"></i>Payments</a>
                         <a href="{{ route('settings.rates.index') }}" class="{{ $mobileLink }}"><i class="fas fa-dollar-sign w-4"></i>Rates</a>
                     @elseif($key === 'reports')
                         <a href="{{ route('reports.consumption') }}" class="{{ $mobileLink }}"><i class="fas fa-chart-line w-4"></i>Consumption</a>

@@ -119,6 +119,17 @@ class ActivityLogger
             '/broadcasting/auth'
         ];
 
+        // Noisy mobile polling / health checks (login and real sync stay logged).
+        $skipApiPaths = [
+            'api/v1/health',
+            'api/v1/app-info',
+            'api/v1/check-token',
+            'api/v1/sync/pending',
+            'api/v1/utils/system-info',
+            'api/health',
+            'api/app-info',
+        ];
+
         $routeName = $request->route()?->getName();
         $path = $request->path();
 
@@ -134,6 +145,12 @@ class ActivityLogger
         // Skip if path matches skip patterns
         foreach ($skipPaths as $skipPath) {
             if (str_contains($path, $skipPath)) {
+                return true;
+            }
+        }
+
+        foreach ($skipApiPaths as $skipApiPath) {
+            if ($path === $skipApiPath || str_starts_with($path, $skipApiPath.'/')) {
                 return true;
             }
         }
@@ -165,36 +182,34 @@ class ActivityLogger
         $path = preg_replace('#^api/v1/#', '', $request->path());
         $method = $request->method();
         $patterns = [
-            ['POST', '#^logout$#', 'logout', 'signed out of the mobile app', 'mobile_app'],
+            ['POST', '#^logout$#', 'mobile_logout', 'signed out of the mobile app', 'mobile_app'],
             ['POST', '#^refresh$#', 'token_refresh', 'refreshed the mobile login token', 'mobile_app'],
-            ['GET', '#^check-token$#', 'token_check', 'checked the mobile login token', 'mobile_app'],
             ['GET', '#^profile$#', 'view', 'viewed their profile from the mobile app', 'mobile_app'],
-            ['PUT', '#^profile$#', 'update', 'updated their profile from the mobile app', 'mobile_app'],
-            ['PATCH', '#^profile$#', 'update', 'updated their profile from the mobile app', 'mobile_app'],
-            ['GET', '#^meter-reading/route/today$#', 'view', "viewed today's reading route", 'readings'],
+            ['PUT', '#^profile$#', 'mobile_profile_updated', 'updated their profile from the mobile app', 'mobile_app'],
+            ['PATCH', '#^profile$#', 'mobile_profile_updated', 'updated their profile from the mobile app', 'mobile_app'],
+            ['POST', '#^profile/photo$#', 'mobile_profile_photo_updated', 'updated their profile photo from the mobile app', 'mobile_app'],
+            ['GET', '#^meter-reading/route/today$#', 'route_downloaded', "downloaded today's reading route", 'mobile_app'],
             ['GET', '#^meter-reading/customers/search$#', 'search', 'searched customers from the mobile app', 'customers'],
             ['GET', '#^meter-reading/customers/\d+$#', 'view', 'viewed a customer from the mobile app', 'customers'],
-            ['GET', '#^meter-reading/customers/\d+/history$#', 'view', 'viewed meter history from the mobile app', 'readings'],
-            ['GET', '#^meter-reading/rates$#', 'view', 'viewed water rates from the mobile app', 'billing'],
+            ['GET', '#^meter-reading/customers/\d+/history$#', 'view', 'downloaded meter history from the mobile app', 'mobile_app'],
+            ['GET', '#^meter-reading/rates$#', 'download', 'downloaded water rates from the mobile app', 'mobile_app'],
             ['POST', '#^meter-reading/quote$#', 'quote', 'calculated a bill quote from the mobile app', 'billing'],
-            ['POST', '#^meter-reading/submit$#', 'create', 'submitted a meter reading from the mobile app', 'readings'],
-            ['POST', '#^meter-reading/bills$#', 'create', 'submitted a bill from the mobile app', 'billing'],
-            ['POST', '#^meter-reading/bulk-sync$#', 'sync', 'synced meter readings from the mobile app', 'readings'],
+            ['POST', '#^meter-reading/submit$#', 'reading_uploaded', 'uploaded a meter reading from the mobile app', 'mobile_app'],
+            ['POST', '#^meter-reading/bills$#', 'create', 'uploaded a bill from the mobile app', 'mobile_app'],
+            ['POST', '#^meter-reading/bulk-sync$#', 'readings_bulk_uploaded', 'uploaded bulk meter readings from the mobile app', 'mobile_app'],
             ['POST', '#^meter-reading/qr-code/generate$#', 'create', 'generated a meter QR code from the mobile app', 'meters'],
             ['POST', '#^meter-reading/qr-code/scan$#', 'scan', 'scanned a meter QR code', 'meters'],
             ['GET', '#^meter-reading/qr-code/download/\d+$#', 'download', 'downloaded a meter QR code', 'meters'],
             ['POST', '#^meter-reading/qr-code/batch-generate$#', 'create', 'generated meter QR codes from the mobile app', 'meters'],
-            ['GET', '#^meter-reading/readings/recent$#', 'view', 'viewed recent meter readings', 'readings'],
+            ['GET', '#^meter-reading/readings/recent$#', 'download', 'downloaded recent meter readings', 'mobile_app'],
             ['GET', '#^meter-reading/stats$#', 'view', 'viewed mobile reading statistics', 'readings'],
-            ['GET', '#^payments/customer/\d+/bills$#', 'view', "viewed a customer's bills for collection", 'payments'],
-            ['POST', '#^payments/record$#', 'payment', 'recorded a payment from the mobile app', 'payments'],
-            ['GET', '#^payments/customer/\d+/history$#', 'view', 'viewed payment history from the mobile app', 'payments'],
+            ['GET', '#^payments/customer/\d+/bills$#', 'download', "downloaded a customer's bills for collection", 'mobile_app'],
+            ['POST', '#^payments/record$#', 'payment_uploaded', 'uploaded a payment from the mobile app', 'mobile_app'],
+            ['GET', '#^payments/customer/\d+/history$#', 'download', 'downloaded payment history from the mobile app', 'mobile_app'],
             ['GET', '#^payments/customers/search$#', 'search', 'searched customers for payment collection', 'payments'],
-            ['GET', '#^sync/pending$#', 'view', 'checked pending mobile sync items', 'mobile_app'],
-            ['POST', '#^sync/force$#', 'sync', 'forced a mobile sync', 'mobile_app'],
-            ['GET', '#^utils/areas$#', 'view', 'viewed areas from the mobile app', 'mobile_app'],
-            ['GET', '#^utils/routes$#', 'view', 'viewed routes from the mobile app', 'mobile_app'],
-            ['GET', '#^utils/system-info$#', 'view', 'viewed system information from the mobile app', 'mobile_app'],
+            ['POST', '#^sync/force$#', 'sync', 'forced a mobile sync upload/download', 'mobile_app'],
+            ['GET', '#^utils/areas$#', 'download', 'downloaded areas from the mobile app', 'mobile_app'],
+            ['GET', '#^utils/routes$#', 'download', 'downloaded routes from the mobile app', 'mobile_app'],
         ];
 
         foreach ($patterns as [$verb, $regex, $action, $text, $module]) {
@@ -244,10 +259,16 @@ class ActivityLogger
 
         // Route-based actions
         if ($routeName) {
+            if ($routeName === 'payments.collect.store' || $routeName === 'bills.payment') {
+                return 'payment';
+            }
+            if ($routeName === 'payments.receipt') {
+                return 'payment_receipt_viewed';
+            }
             if (str_contains($routeName, '.create') || str_contains($routeName, '.store')) {
                 return 'create';
             }
-            if (str_contains($routeName, '.show') || str_contains($routeName, '.index')) {
+            if (str_contains($routeName, '.show') || str_contains($routeName, '.index') || str_contains($routeName, '.collect')) {
                 return 'view';
             }
             if (str_contains($routeName, '.edit') || str_contains($routeName, '.update')) {
@@ -298,10 +319,12 @@ class ActivityLogger
                     'meters' => 'meters',
                     'readings' => 'readings',
                     'bills' => 'billing',
+                    'payments' => 'payments',
                     'users' => 'users',
                     'dashboard' => 'dashboard',
                     'reports' => 'reports',
-                    'settings' => 'settings'
+                    'settings' => 'settings',
+                    'sms' => 'sms',
                 ];
                 
                 if (isset($routeModuleMap[$firstPart])) {
@@ -326,12 +349,14 @@ class ActivityLogger
                 'readings' => 'readings',
                 'bills' => 'bills',
                 'billing' => 'billing',
+                'payments' => 'payments',
                 'rates' => 'rates',
                 'settings' => 'settings',
                 'dashboard' => 'dashboard',
                 'reports' => 'reports',
                 'users' => 'users',
                 'profile' => 'profile',
+                'sms' => 'sms',
                 'login' => 'authentication',
                 'logout' => 'authentication',
                 'register' => 'authentication',
@@ -366,6 +391,7 @@ class ActivityLogger
             'verify' => 'verified',
             'approve' => 'approved',
             'reject' => 'rejected',
+            'payment' => 'recorded a payment on',
             default => $action
         };
 
@@ -374,6 +400,7 @@ class ActivityLogger
             'meters' => 'water meter',
             'readings' => 'meter reading',
             'bills' => 'bill',
+            'payments' => 'payment',
             'rates' => 'rate',
             'settings' => 'settings',
             'users' => 'user',

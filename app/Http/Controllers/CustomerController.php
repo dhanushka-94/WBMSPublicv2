@@ -242,12 +242,10 @@ class CustomerController extends Controller
     /**
      * Display the specified customer.
      */
-    public function show(Customer $customer): View
+    public function show(Request $request, Customer $customer): View
     {
         $customer->load(['waterMeters.meterReadings' => function ($query) {
             $query->latest('reading_date')->limit(5);
-        }, 'bills' => function ($query) {
-            $query->latest('bill_date')->limit(10);
         }, 'customerType', 'division', 'connectionEvents.user']);
 
         // Log customer view activity
@@ -269,15 +267,72 @@ class CustomerController extends Controller
         $chartYear = Carbon::now()->year;
         $yearChart = $this->currentYearMonths($customer, $chartYear);
 
+        $billFilters = [
+            'bill_q' => trim((string) $request->input('bill_q', '')),
+            'bill_status' => (string) $request->input('bill_status', ''),
+            'bill_from' => (string) $request->input('bill_from', ''),
+            'bill_to' => (string) $request->input('bill_to', ''),
+        ];
+
+        $paymentFilters = [
+            'payment_q' => trim((string) $request->input('payment_q', '')),
+            'payment_method' => (string) $request->input('payment_method', ''),
+            'payment_from' => (string) $request->input('payment_from', ''),
+            'payment_to' => (string) $request->input('payment_to', ''),
+        ];
+
+        $customerBills = $customer->bills()
+            ->when($billFilters['bill_q'] !== '', function ($query) use ($billFilters) {
+                $like = '%'.$billFilters['bill_q'].'%';
+                $query->where('bill_number', 'like', $like);
+            })
+            ->when($billFilters['bill_status'] !== '', fn ($query) => $query->where('status', $billFilters['bill_status']))
+            ->when($billFilters['bill_from'] !== '', fn ($query) => $query->whereDate('bill_date', '>=', $billFilters['bill_from']))
+            ->when($billFilters['bill_to'] !== '', fn ($query) => $query->whereDate('bill_date', '<=', $billFilters['bill_to']))
+            ->orderByDesc('bill_date')
+            ->orderByDesc('id')
+            ->paginate(10, ['*'], 'bills_page')
+            ->withQueryString();
+
+        $customerPayments = $customer->payments()
+            ->with(['bill:id,bill_number', 'receiver:id,name'])
+            ->when($paymentFilters['payment_q'] !== '', function ($query) use ($paymentFilters) {
+                $like = '%'.$paymentFilters['payment_q'].'%';
+                $query->where(function ($search) use ($like) {
+                    $search->where('receipt_number', 'like', $like)
+                        ->orWhere('reference', 'like', $like)
+                        ->orWhereHas('bill', fn ($bill) => $bill->where('bill_number', 'like', $like));
+                });
+            })
+            ->when($paymentFilters['payment_method'] !== '', fn ($query) => $query->where('payment_method', $paymentFilters['payment_method']))
+            ->when($paymentFilters['payment_from'] !== '', fn ($query) => $query->whereDate('paid_on', '>=', $paymentFilters['payment_from']))
+            ->when($paymentFilters['payment_to'] !== '', fn ($query) => $query->whereDate('paid_on', '<=', $paymentFilters['payment_to']))
+            ->orderByDesc('paid_on')
+            ->orderByDesc('id')
+            ->paginate(10, ['*'], 'payments_page')
+            ->withQueryString();
+
+        $openBills = $customer->bills()
+            ->where('balance_amount', '>', 0)
+            ->whereNotIn('status', ['cancelled', 'draft'])
+            ->orderBy('due_date')
+            ->orderBy('id')
+            ->get(['id', 'bill_number', 'balance_amount', 'due_date', 'status']);
+
         return view('customers.show', compact(
-            'customer', 
-            'activeMeters', 
-            'outstandingBalance', 
-            'lastBill', 
+            'customer',
+            'activeMeters',
+            'outstandingBalance',
+            'lastBill',
             'currentReading',
             'financialSummary',
             'chartYear',
-            'yearChart'
+            'yearChart',
+            'customerBills',
+            'customerPayments',
+            'billFilters',
+            'paymentFilters',
+            'openBills'
         ));
     }
 

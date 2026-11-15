@@ -156,11 +156,11 @@ trait LogsActivity
     {
         $user = auth()->user();
         $billNumber = $bill->bill_number ?? "ID: {$bill->id}";
-        $description = "{$user->name} processed payment of {$amount} for bill {$billNumber} via {$method}";
+        $description = ($user?->name ?? 'System')." processed payment of {$amount} for bill {$billNumber} via {$method}";
 
         return ActivityLog::logModelActivity('payment', $bill, null, [
             'amount' => $amount,
-            'payment_method' => $method
+            'payment_method' => $method,
         ], $description);
     }
 
@@ -205,6 +205,8 @@ trait LogsActivity
             'WaterMeter' => 'meters',
             'MeterReading' => 'readings',
             'Bill' => 'bills',
+            'Payment' => 'payments',
+            'WalletEntry' => 'payments',
             'Rate' => 'rates',
             'User' => 'users',
             default => strtolower($modelName)

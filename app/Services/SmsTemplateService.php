@@ -43,7 +43,7 @@ class SmsTemplateService
         $variables = $this->billVariables($bill);
         $variables['paid_amount'] = number_format($paidAmount, 2);
         $variables['amount'] = $variables['paid_amount'];
-        $variables['payment_date'] = ($payment?->paid_on ?? now())->format('M d, Y');
+        $variables['payment_date'] = ($payment?->paid_on ?? now())->format('M d, Y H:i');
         $variables['receipt_number'] = $payment->receipt_number ?? '';
         $variables['receipt_link'] = $payment ? $this->receiptLink($payment) : '';
 
@@ -91,9 +91,7 @@ class SmsTemplateService
      */
     public function meterReadingReminderMessage(Customer $customer, Carbon $readingDate, string $timeRange = '9:00 AM - 4:00 PM'): string
     {
-        $template = config('sms.templates.meter_reading_reminder');
-        
-        return $this->replaceVariables($template, [
+        return $this->fill('meter_reading_reminder', [
             'customer_name' => $customer->full_name,
             'date' => $readingDate->format('M d, Y'),
             'day' => $readingDate->format('l'),
@@ -107,9 +105,7 @@ class SmsTemplateService
      */
     public function maintenanceNoticeMessage(string $area, Carbon $date, string $startTime, string $endTime, string $reason = 'routine maintenance'): string
     {
-        $template = config('sms.templates.maintenance_notice');
-        
-        return $this->replaceVariables($template, [
+        return $this->fill('maintenance_notice', [
             'area' => $area,
             'date' => $date->format('M d, Y'),
             'day' => $date->format('l'),
@@ -200,44 +196,54 @@ class SmsTemplateService
     {
         return [
             'new_bill' => [
-                'name' => 'New Bill Notification',
+                'name' => 'Bill Created',
                 'template' => config('sms.templates.new_bill'),
-                'variables' => ['{customer_name}', '{bill_number}', '{amount}', '{due_date}', '{payment_link}']
+                'variables' => ['{customer_name}', '{account_number}', '{bill_number}', '{billing_period}', '{bill_amount}', '{due_date}', '{bill_link}'],
             ],
             'due_reminder' => [
-                'name' => 'Payment Due Reminder',
+                'name' => 'Due Reminder',
                 'template' => config('sms.templates.due_reminder'),
-                'variables' => ['{customer_name}', '{bill_number}', '{amount}', '{due_date}', '{payment_link}']
+                'variables' => ['{customer_name}', '{account_number}', '{bill_number}', '{outstanding_amount}', '{due_date}', '{payment_link}'],
             ],
             'overdue_alert' => [
-                'name' => 'Overdue Bill Alert',
+                'name' => 'Overdue Reminder',
                 'template' => config('sms.templates.overdue_alert'),
-                'variables' => ['{customer_name}', '{bill_number}', '{amount}', '{days_overdue}', '{payment_link}']
+                'variables' => ['{customer_name}', '{bill_number}', '{days_overdue}', '{outstanding_amount}', '{payment_link}'],
             ],
             'payment_confirmation' => [
                 'name' => 'Payment Confirmation',
                 'template' => config('sms.templates.payment_confirmation'),
-                'variables' => ['{customer_name}', '{amount}', '{bill_number}', '{balance}', '{payment_date}']
+                'variables' => ['{customer_name}', '{paid_amount}', '{payment_date}', '{receipt_number}', '{bill_number}', '{balance}', '{receipt_link}'],
             ],
             'late_fee_notice' => [
                 'name' => 'Late Fee Notice',
                 'template' => config('sms.templates.late_fee_notice'),
-                'variables' => ['{customer_name}', '{late_fee}', '{bill_number}', '{total_due}', '{payment_link}']
+                'variables' => ['{customer_name}', '{late_fee}', '{bill_number}', '{outstanding_amount}', '{payment_link}'],
             ],
             'service_disconnection' => [
-                'name' => 'Service Disconnection Warning',
+                'name' => 'Disconnection Notice',
                 'template' => config('sms.templates.service_disconnection'),
-                'variables' => ['{customer_name}', '{total_due}', '{account_number}', '{payment_link}']
+                'variables' => ['{customer_name}', '{account_number}', '{disconnection_date}', '{outstanding_amount}', '{payment_link}'],
+            ],
+            'reconnection' => [
+                'name' => 'Reconnection Notice',
+                'template' => config('sms.templates.reconnection'),
+                'variables' => ['{customer_name}', '{account_number}'],
             ],
             'meter_reading_reminder' => [
                 'name' => 'Meter Reading Reminder',
                 'template' => config('sms.templates.meter_reading_reminder'),
-                'variables' => ['{customer_name}', '{date}', '{day}', '{time_range}', '{account_number}']
+                'variables' => ['{customer_name}', '{account_number}', '{date}', '{day}', '{time_range}'],
             ],
             'maintenance_notice' => [
                 'name' => 'Maintenance Notice',
                 'template' => config('sms.templates.maintenance_notice'),
-                'variables' => ['{area}', '{date}', '{day}', '{start_time}', '{end_time}', '{reason}']
+                'variables' => ['{area}', '{date}', '{day}', '{start_time}', '{end_time}', '{reason}'],
+            ],
+            'custom' => [
+                'name' => 'Custom SMS',
+                'template' => config('sms.templates.custom'),
+                'variables' => ['{customer_name}', '{account_number}'],
             ],
         ];
     }
@@ -253,7 +259,7 @@ class SmsTemplateService
             'amount' => '2,500.00',
             'due_date' => 'Aug 15, 2024',
             'balance' => '1,250.00',
-            'payment_date' => 'Jul 29, 2024',
+            'payment_date' => 'Jul 29, 2024 14:30',
             'account_number' => 'AC001234',
             'total_due' => '5,000.00',
             'late_fee' => '250.00',

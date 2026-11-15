@@ -55,21 +55,24 @@ return [
     */
 
     'templates' => [
-        'new_bill' => 'Your water bill has been generated. Bill {bill_number} for {customer_name} is Rs.{amount}. Due date: {due_date}.',
-        
-        'due_reminder' => 'Your account has an outstanding balance of Rs.{amount} for bill {bill_number}. Due date: {due_date}.',
-        
-        'overdue_alert' => 'URGENT: Your water bill #{bill_number} of Rs.{amount} is overdue. Late fees may apply. Pay now: {payment_link}',
-        
-        'payment_confirmation' => 'Thank you for your payment of Rs.{amount} for bill {bill_number}. Remaining balance: Rs.{balance}.',
-        
-        'late_fee_notice' => 'Late fee of Rs.{late_fee} added to your account for overdue bill #{bill_number}. Total due: Rs.{total_due}',
-        
-        'service_disconnection' => 'Your water connection is scheduled for disconnection due to unpaid dues of Rs.{total_due}.',
-        'reconnection' => 'Your water connection has been restored. Account {account_number}.',
-        
-        'meter_reading_reminder' => 'Dear {customer_name}, our meter reader will visit your premises on {date} between {time_range} for monthly reading.',
-        
-        'maintenance_notice' => 'Water supply interruption scheduled on {date} from {start_time} to {end_time} in your area for maintenance work.',
+        'new_bill' => 'Dunsinane Water: Dear {customer_name}, bill {bill_number} ({billing_period}) is Rs.{bill_amount}. Due {due_date}. Account {account_number}. View: {bill_link}',
+
+        'due_reminder' => 'Dunsinane Water: Dear {customer_name}, bill {bill_number} of Rs.{outstanding_amount} is due on {due_date}. Account {account_number}. Pay: {payment_link}',
+
+        'overdue_alert' => 'Dunsinane Water: URGENT - Dear {customer_name}, bill {bill_number} is overdue ({days_overdue} days). Outstanding Rs.{outstanding_amount}. Pay now: {payment_link}',
+
+        'payment_confirmation' => 'Dunsinane Water: Dear {customer_name}, payment Rs.{paid_amount} received on {payment_date}. Receipt {receipt_number}, bill {bill_number}. Balance Rs.{balance}. View: {receipt_link}',
+
+        'late_fee_notice' => 'Dunsinane Water: Late fee Rs.{late_fee} added to bill {bill_number}. Outstanding now Rs.{outstanding_amount}. Pay: {payment_link}',
+
+        'service_disconnection' => 'Dunsinane Water: Dear {customer_name}, account {account_number} may be disconnected on {disconnection_date}. Outstanding Rs.{outstanding_amount}. Pay: {payment_link}',
+
+        'reconnection' => 'Dunsinane Water: Dear {customer_name}, account {account_number} has been reconnected. Thank you.',
+
+        'meter_reading_reminder' => 'Dunsinane Water: Dear {customer_name}, meter reading for account {account_number} is scheduled on {date} ({day}) between {time_range}. Please keep the meter accessible.',
+
+        'maintenance_notice' => 'Dunsinane Water: Water supply interruption in {area} on {date} ({day}) from {start_time} to {end_time}. Reason: {reason}.',
+
+        'custom' => 'Dunsinane Water: Dear {customer_name}, account {account_number}: ',
     ],
 ]; 

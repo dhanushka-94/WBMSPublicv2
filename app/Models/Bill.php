@@ -230,8 +230,20 @@ class Bill extends Model
             if (!$this->paid_at) {
                 $this->paid_at = Carbon::now();
             }
-        } elseif ($this->due_date < Carbon::now() && $this->balance_amount > 0) {
-            $this->status = 'overdue';
+
+            return;
+        }
+
+        if ($this->balance_amount > 0) {
+            $this->paid_at = null;
+
+            if ($this->due_date && $this->due_date->lt(Carbon::now())) {
+                $this->status = 'overdue';
+            } elseif ($this->sent_at) {
+                $this->status = 'sent';
+            } elseif ($this->status === 'paid' || $this->status === 'overdue') {
+                $this->status = 'generated';
+            }
         }
     }
 
@@ -269,6 +281,10 @@ class Bill extends Model
 
     public bool $deferPaymentSms = false;
 
+    public ?bool $lastPaymentSmsSent = null;
+
+    public ?Payment $lastRecordedPayment = null;
+
     public function recordPayment(float $amount, string $paymentMethod = 'cash', array $details = []): bool
     {
         if ($amount <= 0 || $amount > $this->balance_amount) {
@@ -276,6 +292,8 @@ class Bill extends Model
         }
 
         $this->deferPaymentSms = true;
+        $this->lastPaymentSmsSent = null;
+        $this->lastRecordedPayment = null;
         $this->paid_amount += $amount;
         $this->save();
 
@@ -286,12 +304,24 @@ class Bill extends Model
             'receipt_number' => Payment::nextReceiptNumber(),
             'amount' => $amount,
             'payment_method' => $paymentMethod,
-            'paid_on' => $details['paid_on'] ?? now()->toDateString(),
+            'paid_on' => Payment::parsePaidOn($details['paid_on'] ?? now()),
             'reference' => $details['reference'] ?? null,
             'notes' => $details['notes'] ?? null,
         ]);
 
-        $this->sendPaymentConfirmation($amount, $payment);
+        $this->lastPaymentSmsSent = $this->sendPaymentConfirmation($amount, $payment);
+        $this->lastRecordedPayment = $payment->fresh(['customer', 'bill', 'receiver']);
+
+        if (empty($details['skip_activity_log'])) {
+            try {
+                ActivityLog::logPaymentCreated($this->lastRecordedPayment, [
+                    'sms_sent' => (bool) $this->lastPaymentSmsSent,
+                    'source' => $details['source'] ?? 'office',
+                ]);
+            } catch (\Throwable $exception) {
+                \Log::warning('Payment activity log failed: '.$exception->getMessage());
+            }
+        }
 
         return true;
     }

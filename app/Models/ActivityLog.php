@@ -222,6 +222,233 @@ class ActivityLog extends Model
         ]);
     }
 
+    public static function logPaymentCreated(Payment $payment, array $extra = []): self
+    {
+        $payment->loadMissing(['customer', 'bill']);
+        $actor = auth()->user()?->name ?? 'System';
+        $amount = number_format((float) $payment->amount, 2);
+        $customer = $payment->customer?->full_name ?? 'customer';
+        $account = $payment->customer?->account_number ?? '—';
+        $bill = $payment->bill?->bill_number ?? '—';
+        $method = str_replace('_', ' ', (string) $payment->payment_method);
+        $paidOn = $payment->paidOnDisplay();
+
+        return self::logActivity([
+            'action' => 'payment_created',
+            'module' => 'payments',
+            'subject_type' => Payment::class,
+            'subject_id' => $payment->id,
+            'subject_name' => $payment->receipt_number,
+            'description' => "{$actor} recorded payment {$payment->receipt_number} of Rs.{$amount} ({$method}) for {$customer} ({$account}), bill {$bill}, on {$paidOn}",
+            'new_values' => self::paymentSnapshot($payment),
+            'properties' => array_merge([
+                'receipt_number' => $payment->receipt_number,
+                'payment_id' => $payment->id,
+                'bill_id' => $payment->bill_id,
+                'bill_number' => $payment->bill?->bill_number,
+                'customer_id' => $payment->customer_id,
+                'customer_name' => $payment->customer?->full_name,
+                'account_number' => $payment->customer?->account_number,
+                'amount' => (float) $payment->amount,
+                'payment_method' => $payment->payment_method,
+                'paid_on' => optional($payment->paid_on)?->toDateTimeString(),
+                'reference' => $payment->reference,
+                'notes' => $payment->notes,
+                'received_by' => $payment->received_by,
+                'bill_balance' => $payment->bill ? (float) $payment->bill->balance_amount : null,
+                'bill_status' => $payment->bill?->status,
+                'sms_sent' => $extra['sms_sent'] ?? null,
+            ], $extra),
+        ]);
+    }
+
+    public static function logPaymentUpdated(Payment $payment, array $oldValues, array $extra = []): self
+    {
+        $payment->loadMissing(['customer', 'bill']);
+        $actor = auth()->user()?->name ?? 'System';
+        $amount = number_format((float) $payment->amount, 2);
+
+        return self::logActivity([
+            'action' => 'payment_updated',
+            'module' => 'payments',
+            'subject_type' => Payment::class,
+            'subject_id' => $payment->id,
+            'subject_name' => $payment->receipt_number,
+            'description' => "{$actor} updated payment {$payment->receipt_number} to Rs.{$amount} ({$payment->payment_method}) for bill ".($payment->bill?->bill_number ?? '—'),
+            'old_values' => $oldValues,
+            'new_values' => self::paymentSnapshot($payment),
+            'properties' => array_merge([
+                'receipt_number' => $payment->receipt_number,
+                'payment_id' => $payment->id,
+                'bill_id' => $payment->bill_id,
+                'customer_id' => $payment->customer_id,
+            ], $extra),
+        ]);
+    }
+
+    public static function logPaymentDeleted(Payment $payment, array $snapshot, array $extra = []): self
+    {
+        $actor = auth()->user()?->name ?? 'System';
+        $receipt = $snapshot['receipt_number'] ?? ('ID '.$payment->id);
+        $amount = number_format((float) ($snapshot['amount'] ?? 0), 2);
+        $bill = $snapshot['bill_number'] ?? '—';
+
+        return self::logActivity([
+            'action' => 'payment_deleted',
+            'module' => 'payments',
+            'subject_type' => Payment::class,
+            'subject_id' => $snapshot['id'] ?? $payment->id,
+            'subject_name' => $receipt,
+            'description' => "{$actor} deleted payment {$receipt} of Rs.{$amount} for bill {$bill}; bill balance restored",
+            'old_values' => $snapshot,
+            'properties' => array_merge([
+                'receipt_number' => $receipt,
+                'payment_id' => $snapshot['id'] ?? $payment->id,
+                'bill_id' => $snapshot['bill_id'] ?? null,
+                'customer_id' => $snapshot['customer_id'] ?? null,
+                'amount' => $snapshot['amount'] ?? null,
+                'payment_method' => $snapshot['payment_method'] ?? null,
+            ], $extra),
+        ]);
+    }
+
+    public static function logPaymentCollection(Customer $customer, array $result, array $extra = []): self
+    {
+        $actor = auth()->user()?->name ?? 'System';
+        $applied = collect($result['applied'] ?? []);
+        $total = number_format((float) $applied->sum('amount'), 2);
+        $bills = $applied->pluck('bill_number')->unique()->filter()->implode(', ') ?: 'none';
+        $walletUsed = number_format((float) ($result['wallet_used'] ?? 0), 2);
+        $walletAdded = number_format((float) ($result['wallet_added'] ?? 0), 2);
+
+        return self::logActivity([
+            'action' => 'payment_collection',
+            'module' => 'payments',
+            'subject_type' => Customer::class,
+            'subject_id' => $customer->id,
+            'subject_name' => $customer->full_name,
+            'description' => "{$actor} collected Rs.{$total} for {$customer->full_name} ({$customer->account_number}) on bills [{$bills}]; wallet used Rs.{$walletUsed}, wallet added Rs.{$walletAdded}",
+            'properties' => array_merge([
+                'customer_id' => $customer->id,
+                'account_number' => $customer->account_number,
+                'applied' => $result['applied'] ?? [],
+                'wallet_used' => $result['wallet_used'] ?? 0,
+                'wallet_added' => $result['wallet_added'] ?? 0,
+                'wallet_balance' => $result['wallet_balance'] ?? null,
+                'sms_sent' => $result['sms_sent'] ?? 0,
+                'sms_skipped' => $result['sms_skipped'] ?? 0,
+            ], $extra),
+        ]);
+    }
+
+    public static function logPaymentReceiptViewed(Payment $payment): self
+    {
+        $payment->loadMissing(['customer', 'bill']);
+        $actor = auth()->user()?->name ?? 'Guest';
+
+        return self::logActivity([
+            'action' => 'payment_receipt_viewed',
+            'module' => 'payments',
+            'subject_type' => Payment::class,
+            'subject_id' => $payment->id,
+            'subject_name' => $payment->receipt_number,
+            'description' => "{$actor} viewed receipt {$payment->receipt_number} for ".($payment->customer?->full_name ?? 'customer'),
+            'properties' => [
+                'receipt_number' => $payment->receipt_number,
+                'payment_id' => $payment->id,
+                'bill_number' => $payment->bill?->bill_number,
+                'amount' => (float) $payment->amount,
+            ],
+        ]);
+    }
+
+    public static function paymentSnapshot(Payment $payment): array
+    {
+        return [
+            'id' => $payment->id,
+            'receipt_number' => $payment->receipt_number,
+            'bill_id' => $payment->bill_id,
+            'bill_number' => $payment->bill?->bill_number,
+            'customer_id' => $payment->customer_id,
+            'customer_name' => $payment->customer?->full_name,
+            'account_number' => $payment->customer?->account_number,
+            'amount' => (float) $payment->amount,
+            'payment_method' => $payment->payment_method,
+            'paid_on' => optional($payment->paid_on)?->toDateTimeString(),
+            'reference' => $payment->reference,
+            'notes' => $payment->notes,
+            'received_by' => $payment->received_by,
+        ];
+    }
+
+    /**
+     * Mobile app activity with a clear human description for the office activity log.
+     */
+    public static function logMobileApp(
+        string $action,
+        array $properties = [],
+        ?string $description = null,
+        string $status = 'success',
+        ?User $actor = null
+    ): self {
+        $user = $actor ?? auth()->user() ?? auth('sanctum')->user();
+        $name = $user?->name ?? 'Mobile user';
+        $device = $properties['device_name'] ?? null;
+
+        $autoDescription = match ($action) {
+            'mobile_login' => "{$name} signed in to the mobile app".($device ? " on device {$device}" : ''),
+            'mobile_login_failed' => 'Failed mobile login'.(isset($properties['email']) ? " for {$properties['email']}" : '').($device ? " on device {$device}" : ''),
+            'mobile_login_denied' => "{$name} was denied mobile app access".($device ? " on device {$device}" : ''),
+            'mobile_logout' => "{$name} signed out of the mobile app".($device ? " on device {$device}" : ''),
+            'route_downloaded', 'route_fetched' => sprintf(
+                '%s downloaded today\'s route: %d customers, %d meters%s',
+                $name,
+                (int) ($properties['customer_count'] ?? 0),
+                (int) ($properties['meter_count'] ?? 0),
+                !empty($properties['route']) ? ' ('.$properties['route'].')' : ''
+            ),
+            'meter_reading_submitted', 'reading_uploaded' => sprintf(
+                '%s uploaded meter reading for %s%s: reading %s%s',
+                $name,
+                $properties['customer'] ?? 'customer',
+                !empty($properties['meter_number']) ? ' (meter '.$properties['meter_number'].')' : '',
+                $properties['reading'] ?? '—',
+                isset($properties['consumption']) ? ', consumption '.$properties['consumption'] : ''
+            ),
+            'bulk_sync_completed', 'readings_bulk_uploaded' => sprintf(
+                '%s uploaded bulk sync: %d of %d readings succeeded%s',
+                $name,
+                (int) ($properties['successful'] ?? 0),
+                (int) ($properties['total_readings'] ?? 0),
+                ((int) ($properties['failed'] ?? 0)) > 0 ? ', '.(int) $properties['failed'].' failed' : ''
+            ),
+            'payment_recorded', 'payment_uploaded' => sprintf(
+                '%s uploaded payment %s of Rs.%s for %s%s',
+                $name,
+                $properties['receipt_number'] ?? '—',
+                number_format((float) ($properties['payment_amount'] ?? $properties['amount'] ?? 0), 2),
+                $properties['customer'] ?? 'customer',
+                !empty($properties['bill_number']) ? ' (bill '.$properties['bill_number'].')' : ''
+            ),
+            'meter_location_updated' => "{$name} updated meter GPS from the mobile app",
+            'mobile_profile_updated' => "{$name} updated mobile profile",
+            'mobile_profile_photo_updated' => "{$name} updated mobile profile photo",
+            default => "{$name} ".str_replace('_', ' ', $action).' from the mobile app',
+        };
+
+        return self::logActivity([
+            'user_id' => $user?->id,
+            'user_name' => $user?->name,
+            'user_email' => $user?->email,
+            'user_role' => $user?->role,
+            'action' => $action,
+            'description' => $description ?: $autoDescription,
+            'module' => 'mobile_app',
+            'status' => $status,
+            'properties' => array_merge(['source' => 'mobile_api'], $properties),
+        ]);
+    }
+
     /**
      * Copy rows that existed before monthly files started, then drop database rows older than 90 days.
      * Runs at most once a day. The text files are kept.

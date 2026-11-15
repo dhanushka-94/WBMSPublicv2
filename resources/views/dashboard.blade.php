@@ -178,6 +178,51 @@
             </div>
             @endif
 
+            <!-- Monthly charts (before next billing date) -->
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
+                <div class="bg-white overflow-hidden shadow-lg rounded-xl border border-emerald-100">
+                    <div class="bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-4">
+                        <h3 class="text-lg font-bold text-white">
+                            <i class="fas fa-file-invoice-dollar mr-2"></i>{{ $chartYear }} bills by month
+                        </h3>
+                        <p class="text-emerald-100 text-sm mt-1">Draft and billed amounts</p>
+                    </div>
+                    <div class="p-6">
+                        <div class="relative h-72">
+                            <canvas id="yearBillsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white overflow-hidden shadow-lg rounded-xl border border-cyan-100">
+                    <div class="bg-gradient-to-r from-cyan-500 to-blue-600 px-6 py-4">
+                        <h3 class="text-lg font-bold text-white">
+                            <i class="fas fa-tint mr-2"></i>{{ $chartYear }} water use by month
+                        </h3>
+                        <p class="text-cyan-100 text-sm mt-1">Units consumed and readings taken</p>
+                    </div>
+                    <div class="p-6">
+                        <div class="relative h-72">
+                            <canvas id="yearUsageChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white overflow-hidden shadow-lg rounded-xl border border-violet-100">
+                    <div class="bg-gradient-to-r from-violet-500 to-indigo-600 px-6 py-4">
+                        <h3 class="text-lg font-bold text-white">
+                            <i class="fas fa-hand-holding-usd mr-2"></i>{{ $chartYear }} payments by month
+                        </h3>
+                        <p class="text-violet-100 text-sm mt-1">Collected amount and receipt count</p>
+                    </div>
+                    <div class="p-6">
+                        <div class="relative h-72">
+                            <canvas id="yearPaymentsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Billing Countdown Section -->
             <div class="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-6 mb-8 shadow-lg">
                 <div class="flex items-center justify-between">
@@ -268,37 +313,6 @@
                        class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors duration-200">
                         <i class="fas fa-file-invoice mr-2"></i>View Bills
                     </a>
-                </div>
-            </div>
-
-            <!-- Current year charts -->
-            <div class="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
-                <div class="bg-white overflow-hidden shadow-lg rounded-xl border border-emerald-100">
-                    <div class="bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-4">
-                        <h3 class="text-lg font-bold text-white">
-                            <i class="fas fa-chart-bar mr-2"></i>{{ $chartYear }} bills by month
-                        </h3>
-                        <p class="text-emerald-100 text-sm mt-1">Draft, billed, and collected amounts</p>
-                    </div>
-                    <div class="p-6">
-                        <div class="relative h-80">
-                            <canvas id="yearMoneyChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-white overflow-hidden shadow-lg rounded-xl border border-cyan-100">
-                    <div class="bg-gradient-to-r from-cyan-500 to-blue-600 px-6 py-4">
-                        <h3 class="text-lg font-bold text-white">
-                            <i class="fas fa-chart-line mr-2"></i>{{ $chartYear }} water use by month
-                        </h3>
-                        <p class="text-cyan-100 text-sm mt-1">Units consumed and readings taken</p>
-                    </div>
-                    <div class="p-6">
-                        <div class="relative h-80">
-                            <canvas id="yearUsageChart"></canvas>
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -465,14 +479,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const labels = months.map(month => month.label);
     const money = (value) => 'Rs. ' + Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    new Chart(document.getElementById('yearMoneyChart'), {
+    new Chart(document.getElementById('yearBillsChart'), {
         type: 'bar',
         data: {
             labels: labels,
             datasets: [
                 { label: 'Draft', data: months.map(month => month.draft), backgroundColor: '#F59E0B' },
-                { label: 'Billed', data: months.map(month => month.billed), backgroundColor: '#10B981' },
-                { label: 'Collected', data: months.map(month => month.collected), backgroundColor: '#3B82F6' }
+                { label: 'Billed', data: months.map(month => month.billed), backgroundColor: '#10B981' }
             ]
         },
         options: {
@@ -481,7 +494,15 @@ document.addEventListener('DOMContentLoaded', function () {
             scales: { y: { beginAtZero: true } },
             plugins: {
                 legend: { position: 'top' },
-                tooltip: { callbacks: { label: (item) => item.dataset.label + ': ' + money(item.parsed.y) } }
+                tooltip: {
+                    callbacks: {
+                        afterBody: (items) => {
+                            const index = items[0]?.dataIndex ?? 0;
+                            return 'Bills: ' + (months[index]?.bills ?? 0);
+                        },
+                        label: (item) => item.dataset.label + ': ' + money(item.parsed.y)
+                    }
+                }
             }
         }
     });
@@ -517,6 +538,49 @@ document.addEventListener('DOMContentLoaded', function () {
                 readings: { type: 'linear', position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, title: { display: true, text: 'Readings' } }
             },
             plugins: { legend: { position: 'top' } }
+        }
+    });
+
+    new Chart(document.getElementById('yearPaymentsChart'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Collected (Rs.)',
+                    data: months.map(month => month.collected),
+                    backgroundColor: '#8B5CF6',
+                    yAxisID: 'amount'
+                },
+                {
+                    type: 'line',
+                    label: 'Receipts',
+                    data: months.map(month => month.payments),
+                    borderColor: '#4C1D95',
+                    backgroundColor: 'rgba(76, 29, 149, 0.12)',
+                    tension: 0.3,
+                    fill: false,
+                    yAxisID: 'count'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                amount: { type: 'linear', position: 'left', beginAtZero: true, title: { display: true, text: 'Rs.' } },
+                count: { type: 'linear', position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, title: { display: true, text: 'Receipts' } }
+            },
+            plugins: {
+                legend: { position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        label: (item) => item.dataset.yAxisID === 'amount'
+                            ? item.dataset.label + ': ' + money(item.parsed.y)
+                            : item.dataset.label + ': ' + item.parsed.y
+                    }
+                }
+            }
         }
     });
 });

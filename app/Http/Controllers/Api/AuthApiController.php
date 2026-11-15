@@ -39,18 +39,12 @@ class AuthApiController extends Controller
             $user = User::where('email', $request->email)->first();
 
             if (!$user || !Hash::check($request->password, $user->password)) {
-                // Log failed login attempt
-                ActivityLog::logActivity([
-                    'action' => 'mobile_login_failed',
-                    'description' => "Failed mobile login attempt for email: {$request->email}",
-                    'module' => 'mobile_app',
-                    'properties' => [
-                        'email' => $request->email,
-                        'device_name' => $request->device_name,
-                        'ip_address' => $request->ip(),
-                    ],
-                    'status' => 'failed',
-                ]);
+                ActivityLog::logMobileApp('mobile_login_failed', [
+                    'email' => $request->email,
+                    'device_name' => $request->device_name,
+                    'device_info' => $request->device_info,
+                    'ip_address' => $request->ip(),
+                ], null, 'failed');
 
                 return response()->json([
                     'success' => false,
@@ -60,19 +54,11 @@ class AuthApiController extends Controller
 
             // Check if user has meter reader permissions
             if (!in_array($user->role, ['super_admin', 'admin', 'meter_reader', 'supervisor'])) {
-                ActivityLog::logActivity([
-                    'user_id' => $user->id,
-                    'user_name' => $user->name,
-                    'user_email' => $user->email,
-                    'user_role' => $user->role,
-                    'action' => 'mobile_login_denied',
-                    'description' => "Mobile app login denied for {$user->name}",
-                    'module' => 'mobile_app',
-                    'status' => 'failed',
-                    'properties' => [
-                        'device_name' => $request->device_name,
-                    ],
-                ]);
+                ActivityLog::logMobileApp('mobile_login_denied', [
+                    'device_name' => $request->device_name,
+                    'device_info' => $request->device_info,
+                    'role' => $user->role,
+                ], null, 'failed', $user);
 
                 return response()->json([
                     'success' => false,
@@ -86,19 +72,10 @@ class AuthApiController extends Controller
             // Create new token
             $token = $user->createToken($request->device_name, ['meter-reading'])->plainTextToken;
 
-            // Log successful login
-            ActivityLog::logActivity([
-                'user_id' => $user->id,
-                'user_name' => $user->name,
-                'user_email' => $user->email,
-                'user_role' => $user->role,
-                'action' => 'mobile_login',
-                'description' => "Mobile app login successful for {$user->name}",
-                'module' => 'mobile_app',
-                'properties' => [
-                    'device_name' => $request->device_name,
-                    'device_info' => $request->device_info,
-                ],
+            ActivityLog::logMobileApp('mobile_login', [
+                'device_name' => $request->device_name,
+                'device_info' => $request->device_info,
+                'ip_address' => $request->ip(),
             ]);
 
             return response()->json([
@@ -128,19 +105,14 @@ class AuthApiController extends Controller
     {
         try {
             $user = Auth::user();
-            
-            // Revoke current token
-            $request->user()->currentAccessToken()->delete();
+            $token = $request->user()->currentAccessToken();
+            $deviceName = $token?->name;
 
-            // Log logout
-            ActivityLog::logActivity([
-                'user_id' => $user->id,
-                'user_name' => $user->name,
-                'user_email' => $user->email,
-                'user_role' => $user->role,
-                'action' => 'mobile_logout',
-                'description' => "Mobile app logout for {$user->name}",
-                'module' => 'mobile_app',
+            // Revoke current token
+            $token?->delete();
+
+            ActivityLog::logMobileApp('mobile_logout', [
+                'device_name' => $deviceName,
             ]);
 
             return response()->json([
@@ -279,13 +251,8 @@ class AuthApiController extends Controller
             }
 
             if (!empty($updatedFields)) {
-                ActivityLog::logActivity([
-                    'action' => 'mobile_profile_updated',
-                    'description' => "Mobile profile updated for {$user->name}",
-                    'module' => 'mobile_app',
-                    'properties' => [
-                        'updated_fields' => array_values(array_unique($updatedFields)),
-                    ],
+                ActivityLog::logMobileApp('mobile_profile_updated', [
+                    'updated_fields' => array_values(array_unique($updatedFields)),
                 ]);
             }
 
@@ -339,13 +306,13 @@ class AuthApiController extends Controller
             );
             $user->save();
 
-            ActivityLog::logActivity([
-                'action' => 'mobile_profile_photo_updated',
-                'description' => $request->boolean('remove_profile_photo')
-                    ? "Mobile profile photo removed for {$user->name}"
-                    : "Mobile profile photo updated for {$user->name}",
-                'module' => 'mobile_app',
-            ]);
+            ActivityLog::logMobileApp(
+                'mobile_profile_photo_updated',
+                ['removed' => $request->boolean('remove_profile_photo')],
+                $request->boolean('remove_profile_photo')
+                    ? "{$user->name} removed mobile profile photo"
+                    : "{$user->name} updated mobile profile photo"
+            );
 
             return response()->json([
                 'success' => true,

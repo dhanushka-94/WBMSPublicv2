@@ -45,9 +45,26 @@
         @if($bill->payments->isNotEmpty())
         <div class="bg-white rounded-xl border border-gray-200 p-4 mb-6">
             <h2 class="text-sm font-semibold mb-2">Receipts</h2>
-            @foreach($bill->payments as $payment)
-                <a href="{{ route('payments.receipt', $payment) }}" target="_blank" class="block text-sm text-blue-700">{{ $payment->receipt_number }} — LKR {{ number_format($payment->amount, 2) }} — {{ $payment->paid_on->format('Y-m-d') }}</a>
-            @endforeach
+            <div class="space-y-2">
+                @foreach($bill->payments as $payment)
+                    <div class="flex flex-wrap items-center justify-between gap-2 text-sm">
+                        <a href="{{ route('payments.receipt', $payment) }}" target="_blank" class="text-blue-700 hover:text-blue-900">
+                            {{ $payment->receipt_number }} — LKR {{ number_format($payment->amount, 2) }} — {{ $payment->paidOnDisplay() }}
+                        </a>
+                        <div class="flex gap-2">
+                            @if(auth()->user()->isSuperAdmin())
+                                <a href="{{ route('payments.edit', $payment) }}" class="rounded bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800 hover:bg-blue-200">Edit</a>
+                            @endif
+                            <form method="POST" action="{{ route('payments.destroy', $payment) }}" class="inline">
+                                @csrf
+                                @method('DELETE')
+                                <input type="hidden" name="redirect_to" value="bill">
+                                <button type="submit" class="rounded bg-red-100 px-2 py-1 text-xs font-medium text-red-800 hover:bg-red-200">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
         </div>
         @endif
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -392,10 +409,10 @@
 
                                 <div>
                                     <label for="payment_date" class="block text-sm font-medium text-gray-700 mb-2">
-                                        Payment Date <span class="text-red-500">*</span>
+                                        Payment Date &amp; Time <span class="text-red-500">*</span>
                                     </label>
-                                    <input type="date" name="payment_date" id="payment_date" 
-                                           value="{{ date('Y-m-d') }}" required 
+                                    <input type="datetime-local" name="payment_date" id="payment_date" 
+                                           value="{{ now()->format('Y-m-d\TH:i') }}" required 
                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                 </div>
 

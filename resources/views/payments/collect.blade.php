@@ -131,8 +131,8 @@
                         </select>
                     </div>
                     <div>
-                        <label for="payment_date" class="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                        <input type="date" name="payment_date" id="payment_date" value="{{ old('payment_date', now()->toDateString()) }}" required class="w-full rounded-md border-gray-300">
+                        <label for="payment_date" class="block text-sm font-medium text-gray-700 mb-1">Date &amp; time</label>
+                        <input type="datetime-local" name="payment_date" id="payment_date" value="{{ old('payment_date', now()->format('Y-m-d\TH:i')) }}" required class="w-full rounded-md border-gray-300">
                     </div>
                     <div>
                         <label for="reference" class="block text-sm font-medium text-gray-700 mb-1">Reference</label>

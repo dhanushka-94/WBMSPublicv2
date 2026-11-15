@@ -228,10 +228,11 @@ class PaymentApiController extends Controller
             }
 
             $saved = $bill->recordPayment($amount, $request->payment_method, [
-                'paid_on' => $request->payment_date,
+                'paid_on' => \App\Models\Payment::parsePaidOn($request->payment_date)->toDateTimeString(),
                 'reference' => $request->transaction_reference,
                 'notes' => $notes,
                 'received_by' => $user->id,
+                'source' => 'mobile_api',
             ]);
 
             if (!$saved) {
@@ -263,8 +264,10 @@ class PaymentApiController extends Controller
                 'receipt_number' => $payment?->receipt_number,
             ];
 
-            $this->logMobileActivity('payment_recorded', [
+            $this->logMobileActivity('payment_uploaded', [
+                'direction' => 'upload',
                 'customer' => $customer->full_name,
+                'account_number' => $customer->account_number,
                 'bill_number' => $bill->bill_number,
                 'payment_id' => $payment?->id,
                 'receipt_number' => $payment?->receipt_number,
@@ -274,6 +277,7 @@ class PaymentApiController extends Controller
                 'previous_balance' => $previousBalance,
                 'new_balance' => $bill->balance_amount,
                 'bill_status' => $bill->status,
+                'sms_sent' => (bool) $bill->lastPaymentSmsSent,
                 'location' => $request->gps_latitude && $request->gps_longitude
                     ? [$request->gps_latitude, $request->gps_longitude]
                     : null,
@@ -296,6 +300,7 @@ class PaymentApiController extends Controller
                     'new_balance' => round((float) $bill->balance_amount, 2),
                     'bill_status' => $bill->status,
                     'receipt_number' => $payment?->receipt_number,
+                    'sms_sent' => (bool) $bill->lastPaymentSmsSent,
                     'receipt_data' => $this->generatePaymentReceiptData($customer, $bill, $paymentRecord),
                     'timestamp' => now()->toISOString(),
                 ]
@@ -365,7 +370,7 @@ class PaymentApiController extends Controller
                         'bill_number' => $bill?->bill_number,
                         'payment_amount' => round((float) $payment->amount, 2),
                         'payment_method' => $payment->payment_method,
-                        'payment_date' => $payment->paid_on?->format('Y-m-d'),
+                        'payment_date' => $payment->paid_on?->format('Y-m-d H:i:s'),
                         'reference' => $payment->reference,
                         'bill_amount' => $bill ? round((float) $bill->total_amount, 2) : null,
                         'status' => $bill?->status,
@@ -526,17 +531,10 @@ class PaymentApiController extends Controller
      */
     private function logMobileActivity(string $action, array $data = []): void
     {
-        $user = Auth::user() ?? Auth::guard('sanctum')->user();
-
-        ActivityLog::logActivity([
-            'user_id' => $user?->id,
-            'user_name' => $user?->name,
-            'user_email' => $user?->email,
-            'user_role' => $user?->role,
-            'action' => $action,
-            'description' => ($user?->name ?? 'Mobile user') . ' ' . str_replace('_', ' ', $action) . ' from the mobile app',
-            'module' => 'mobile_app',
-            'properties' => array_merge(['source' => 'api'], $data),
-        ]);
+        try {
+            ActivityLog::logMobileApp($action, $data);
+        } catch (\Throwable $exception) {
+            // Silent fail - payment must not break if logging fails.
+        }
     }
 } 

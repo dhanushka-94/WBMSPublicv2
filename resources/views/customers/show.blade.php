@@ -11,7 +11,12 @@
                     <h1 class="text-2xl font-semibold text-gray-900">Customer Details</h1>
                     <p class="mt-1 text-sm text-gray-600">Complete customer profile and account information</p>
                 </div>
-                <div class="flex items-center space-x-3">
+                <div class="flex flex-wrap items-center gap-3">
+                    <a href="#make-payment"
+                       class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-teal-600 hover:bg-teal-700">
+                        <i class="fas fa-hand-holding-usd mr-2"></i>
+                        Make Payment
+                    </a>
                     <a href="{{ route('customers.edit', $customer) }}" 
                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
                         <i class="fas fa-edit mr-2"></i>
@@ -88,7 +93,7 @@
                     <p class="text-xs font-medium uppercase text-green-700">Total paid</p>
                     <p class="mt-1 text-2xl font-bold text-green-900">Rs. {{ number_format($financialSummary['paid'], 2) }}</p>
                     @if($financialSummary['last_payment'])
-                        <p class="text-xs text-green-700">Last payment {{ $financialSummary['last_payment']->paid_on->format('M d, Y') }} · Rs. {{ number_format($financialSummary['last_payment']->amount, 2) }}</p>
+                        <p class="text-xs text-green-700">Last payment {{ $financialSummary['last_payment']->paidOnDisplay('M d, Y H:i') }} · Rs. {{ number_format($financialSummary['last_payment']->amount, 2) }}</p>
                     @else
                         <p class="text-xs text-green-700">{{ $financialSummary['payments'] }} receipts</p>
                     @endif
@@ -104,8 +109,260 @@
                 <div class="rounded-lg bg-teal-50 p-4">
                     <p class="text-xs font-medium uppercase text-teal-700">Wallet</p>
                     <p class="mt-1 text-2xl font-bold text-teal-900">Rs. {{ number_format($customer->wallet_balance, 2) }}</p>
-                    <a href="{{ route('payments.collect', ['customer' => $customer->id]) }}" class="text-xs font-medium text-teal-700 hover:text-teal-900">Take payment</a>
+                    <a href="#make-payment" class="text-xs font-medium text-teal-700 hover:text-teal-900">Make payment</a>
                 </div>
+            </div>
+        </div>
+
+        <div id="make-payment" class="mb-8 bg-white border border-teal-200 rounded-xl shadow-sm overflow-hidden scroll-mt-24">
+            <div class="bg-teal-600 px-6 py-4 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-lg font-semibold text-white">Make Payment</h2>
+                    <p class="text-teal-100 text-sm">Record a payment for this customer. Date and time are stored on the receipt.</p>
+                </div>
+                <a href="{{ route('payments.collect', ['customer' => $customer->id]) }}" class="text-sm font-medium text-white/90 hover:text-white underline">Open full collect page</a>
+            </div>
+            <form method="POST" action="{{ route('payments.collect.store') }}" class="p-6 space-y-4">
+                @csrf
+                <input type="hidden" name="customer_id" value="{{ $customer->id }}">
+                <input type="hidden" name="redirect_to" value="customer">
+
+                <div class="overflow-x-auto border border-gray-200 rounded-lg">
+                    <table class="min-w-full text-sm">
+                        <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
+                            <tr>
+                                <th class="px-3 py-2">Pay</th>
+                                <th class="px-3 py-2">Bill</th>
+                                <th class="px-3 py-2">Due</th>
+                                <th class="px-3 py-2 text-right">Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                            @forelse($openBills as $bill)
+                                <tr>
+                                    <td class="px-3 py-2">
+                                        <input type="checkbox" name="bill_ids[]" value="{{ $bill->id }}" class="customer-bill-pick rounded border-gray-300 text-teal-600" data-balance="{{ $bill->balance_amount }}" checked>
+                                    </td>
+                                    <td class="px-3 py-2">
+                                        <a href="{{ route('bills.show', $bill) }}" class="font-medium text-blue-700 hover:text-blue-900">{{ $bill->bill_number }}</a>
+                                        <div class="text-xs text-gray-500">{{ ucfirst($bill->status) }}</div>
+                                    </td>
+                                    <td class="px-3 py-2 text-gray-700">{{ optional($bill->due_date)->format('Y-m-d') }}</td>
+                                    <td class="px-3 py-2 text-right font-semibold">Rs. {{ number_format($bill->balance_amount, 2) }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="4" class="px-3 py-6 text-center text-gray-500">No open bills. An amount entered below is added to the wallet.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                        <label for="customer_pay_amount" class="block text-sm font-medium text-gray-700 mb-1">Amount (Rs.)</label>
+                        <input type="number" name="amount" id="customer_pay_amount" step="0.01" min="0" value="{{ old('amount', $openBills->sum('balance_amount')) }}" class="w-full rounded-md border-gray-300">
+                    </div>
+                    <div>
+                        <label for="customer_pay_method" class="block text-sm font-medium text-gray-700 mb-1">Method</label>
+                        <select name="payment_method" id="customer_pay_method" class="w-full rounded-md border-gray-300" required>
+                            <option value="cash">Cash</option>
+                            <option value="bank_transfer">Bank transfer</option>
+                            <option value="cheque">Cheque</option>
+                            <option value="card">Card</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="customer_pay_date" class="block text-sm font-medium text-gray-700 mb-1">Date &amp; time</label>
+                        <input type="datetime-local" name="payment_date" id="customer_pay_date" value="{{ old('payment_date', now()->format('Y-m-d\TH:i')) }}" required class="w-full rounded-md border-gray-300">
+                    </div>
+                    <div>
+                        <label for="customer_pay_reference" class="block text-sm font-medium text-gray-700 mb-1">Reference</label>
+                        <input type="text" name="reference" id="customer_pay_reference" value="{{ old('reference') }}" class="w-full rounded-md border-gray-300">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="customer_pay_notes" class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                    <textarea name="notes" id="customer_pay_notes" rows="2" class="w-full rounded-md border-gray-300">{{ old('notes') }}</textarea>
+                </div>
+
+                @if($customer->wallet_balance > 0)
+                    <label class="inline-flex items-center gap-2 text-sm text-gray-800">
+                        <input type="checkbox" name="use_wallet" value="1" class="rounded border-gray-300 text-teal-600" {{ old('use_wallet') ? 'checked' : '' }}>
+                        Use wallet (Rs. {{ number_format($customer->wallet_balance, 2) }} available)
+                    </label>
+                @endif
+
+                <button type="submit" class="rounded-lg bg-teal-600 px-5 py-2.5 font-semibold text-white hover:bg-teal-700">
+                    <i class="fas fa-check mr-2"></i>Save payment
+                </button>
+            </form>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
+            <div id="customer-bills" class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden scroll-mt-24">
+                <div class="bg-orange-500 px-6 py-4">
+                    <h2 class="text-lg font-semibold text-white">Bills</h2>
+                    <p class="text-orange-100 text-sm">{{ $financialSummary['bills'] }} total · filter below</p>
+                </div>
+                <form method="GET" action="{{ route('customers.show', $customer) }}#customer-bills" class="p-4 border-b grid grid-cols-1 md:grid-cols-4 gap-3">
+                    @foreach($paymentFilters as $key => $value)
+                        @if($value !== '')
+                            <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                        @endif
+                    @endforeach
+                    @if(request('payments_page'))
+                        <input type="hidden" name="payments_page" value="{{ request('payments_page') }}">
+                    @endif
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">Search</label>
+                        <input type="search" name="bill_q" value="{{ $billFilters['bill_q'] }}" placeholder="Bill number" class="w-full rounded-md border-gray-300 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">Status</label>
+                        <select name="bill_status" class="w-full rounded-md border-gray-300 text-sm">
+                            <option value="">All</option>
+                            @foreach(['draft','generated','sent','partial','paid','overdue','cancelled'] as $status)
+                                <option value="{{ $status }}" @selected($billFilters['bill_status'] === $status)>{{ ucfirst($status) }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">From</label>
+                        <input type="date" name="bill_from" value="{{ $billFilters['bill_from'] }}" class="w-full rounded-md border-gray-300 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">To</label>
+                        <input type="date" name="bill_to" value="{{ $billFilters['bill_to'] }}" class="w-full rounded-md border-gray-300 text-sm">
+                    </div>
+                    <div class="md:col-span-4 flex gap-2">
+                        <button class="rounded-md bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700">Filter</button>
+                        <a href="{{ route('customers.show', $customer) }}#customer-bills" class="rounded-md bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200">Clear</a>
+                    </div>
+                </form>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-sm">
+                        <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
+                            <tr>
+                                <th class="px-4 py-2">Bill</th>
+                                <th class="px-4 py-2">Date</th>
+                                <th class="px-4 py-2">Status</th>
+                                <th class="px-4 py-2 text-right">Total</th>
+                                <th class="px-4 py-2 text-right">Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                            @forelse($customerBills as $bill)
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-4 py-2">
+                                        <a href="{{ route('bills.show', $bill) }}" class="font-medium text-blue-700 hover:text-blue-900">{{ $bill->bill_number }}</a>
+                                    </td>
+                                    <td class="px-4 py-2 text-gray-700">{{ optional($bill->bill_date)->format('Y-m-d') }}</td>
+                                    <td class="px-4 py-2">
+                                        <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium
+                                            {{ $bill->status === 'paid' ? 'bg-green-100 text-green-800' : ($bill->status === 'overdue' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800') }}">
+                                            {{ ucfirst($bill->status) }}
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-2 text-right">Rs. {{ number_format($bill->total_amount, 2) }}</td>
+                                    <td class="px-4 py-2 text-right font-semibold">Rs. {{ number_format($bill->balance_amount, 2) }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="5" class="px-4 py-8 text-center text-gray-500">No bills match these filters.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+                @if($customerBills->hasPages())
+                    <div class="px-4 py-3 border-t">{{ $customerBills->links() }}</div>
+                @endif
+            </div>
+
+            <div id="customer-payments" class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden scroll-mt-24">
+                <div class="bg-emerald-600 px-6 py-4">
+                    <h2 class="text-lg font-semibold text-white">Payments</h2>
+                    <p class="text-emerald-100 text-sm">{{ $financialSummary['payments'] }} receipts · date &amp; time on each</p>
+                </div>
+                <form method="GET" action="{{ route('customers.show', $customer) }}#customer-payments" class="p-4 border-b grid grid-cols-1 md:grid-cols-4 gap-3">
+                    @foreach($billFilters as $key => $value)
+                        @if($value !== '')
+                            <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                        @endif
+                    @endforeach
+                    @if(request('bills_page'))
+                        <input type="hidden" name="bills_page" value="{{ request('bills_page') }}">
+                    @endif
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">Search</label>
+                        <input type="search" name="payment_q" value="{{ $paymentFilters['payment_q'] }}" placeholder="Receipt, bill, reference" class="w-full rounded-md border-gray-300 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">Method</label>
+                        <select name="payment_method" class="w-full rounded-md border-gray-300 text-sm">
+                            <option value="">All</option>
+                            @foreach(['cash','bank_transfer','cheque','card','wallet','mobile_payment'] as $method)
+                                <option value="{{ $method }}" @selected($paymentFilters['payment_method'] === $method)>{{ str_replace('_', ' ', ucfirst($method)) }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">From</label>
+                        <input type="date" name="payment_from" value="{{ $paymentFilters['payment_from'] }}" class="w-full rounded-md border-gray-300 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">To</label>
+                        <input type="date" name="payment_to" value="{{ $paymentFilters['payment_to'] }}" class="w-full rounded-md border-gray-300 text-sm">
+                    </div>
+                    <div class="md:col-span-4 flex gap-2">
+                        <button class="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">Filter</button>
+                        <a href="{{ route('customers.show', $customer) }}#customer-payments" class="rounded-md bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200">Clear</a>
+                    </div>
+                </form>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-sm">
+                        <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
+                            <tr>
+                                <th class="px-4 py-2">Receipt</th>
+                                <th class="px-4 py-2">Date &amp; time</th>
+                                <th class="px-4 py-2">Bill</th>
+                                <th class="px-4 py-2">Method</th>
+                                <th class="px-4 py-2 text-right">Amount</th>
+                                <th class="px-4 py-2 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                            @forelse($customerPayments as $payment)
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-4 py-2 font-medium text-gray-900">{{ $payment->receipt_number }}</td>
+                                    <td class="px-4 py-2 text-gray-700 whitespace-nowrap">{{ $payment->paidOnDisplay() }}</td>
+                                    <td class="px-4 py-2">
+                                        @if($payment->bill)
+                                            <a href="{{ route('bills.show', $payment->bill) }}" class="text-blue-700 hover:text-blue-900">{{ $payment->bill->bill_number }}</a>
+                                        @else
+                                            —
+                                        @endif
+                                    </td>
+                                    <td class="px-4 py-2 text-gray-700">{{ str_replace('_', ' ', $payment->payment_method) }}</td>
+                                    <td class="px-4 py-2 text-right font-semibold">Rs. {{ number_format($payment->amount, 2) }}</td>
+                                    <td class="px-4 py-2 text-right">
+                                        <a href="{{ route('payments.receipt', $payment) }}" target="_blank" class="text-xs font-medium text-gray-700 hover:text-gray-900">Receipt</a>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="px-4 py-8 text-center text-gray-500">No payments match these filters.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+                @if($customerPayments->hasPages())
+                    <div class="px-4 py-3 border-t">{{ $customerPayments->links() }}</div>
+                @endif
             </div>
         </div>
 
@@ -433,54 +690,6 @@
                     </div>
                 </div>
 
-                <!-- Recent Bills -->
-                @if($customer->bills->count() > 0)
-                <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
-                    <div class="bg-gradient-to-r from-orange-500 to-red-600 p-4">
-                        <h3 class="text-lg font-semibold text-white flex items-center">
-                            <i class="fas fa-file-invoice-dollar mr-2"></i>
-                            Recent Bills
-                        </h3>
-                    </div>
-                    <div class="p-6">
-                        <div class="space-y-3">
-                            @foreach($customer->bills->take(5) as $bill)
-                            <div class="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:border-orange-300 transition-colors">
-                                <div>
-                                    <a href="{{ route('bills.show', $bill) }}" class="font-medium text-blue-700 hover:text-blue-900">{{ $bill->bill_number }}</a>
-                                    <p class="text-sm text-gray-500">{{ $bill->bill_date->format('M d, Y') }}</p>
-                                </div>
-                                <div class="text-right">
-                                    <p class="font-bold text-gray-900">Rs. {{ number_format($bill->total_amount, 2) }}</p>
-                                    @if($bill->status === 'paid')
-                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                            Paid
-                                        </span>
-                                    @elseif($bill->status === 'overdue')
-                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                            Overdue
-                                        </span>
-                                    @else
-                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                            {{ ucfirst($bill->status) }}
-                                        </span>
-                                    @endif
-                                </div>
-                            </div>
-                            @endforeach
-                        </div>
-                        @if($customer->bills->count() > 5)
-                        <div class="mt-4 text-center">
-                            <a href="{{ route('customers.bills', $customer) }}" 
-                               class="text-orange-600 hover:text-orange-800 text-sm font-medium">
-                                View All Bills ({{ $customer->bills->count() }})
-                            </a>
-                        </div>
-                        @endif
-                    </div>
-                </div>
-                @endif
-
                 <!-- Quick Actions -->
                 <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
                     <div class="bg-gradient-to-r from-gray-500 to-gray-700 p-4">
@@ -490,18 +699,26 @@
                         </h3>
                     </div>
                     <div class="p-6 space-y-3">
+                        <a href="#make-payment"
+                           class="w-full flex items-center justify-center px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors">
+                            <i class="fas fa-hand-holding-usd mr-2"></i>
+                            Make Payment
+                        </a>
                         <a href="{{ route('customers.edit', $customer) }}" 
                            class="w-full flex items-center justify-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
                             <i class="fas fa-edit mr-2"></i>
                             Edit Customer
                         </a>
-                        @if($customer->bills->count() > 0)
-                        <a href="{{ route('customers.bills', $customer) }}" 
-                           class="w-full flex items-center justify-center px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">
+                        <a href="#customer-bills"
+                           class="w-full flex items-center justify-center px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
                             <i class="fas fa-file-invoice-dollar mr-2"></i>
-                            View All Bills
+                            View Bills ({{ $financialSummary['bills'] }})
                         </a>
-                        @endif
+                        <a href="#customer-payments"
+                           class="w-full flex items-center justify-center px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors">
+                            <i class="fas fa-receipt mr-2"></i>
+                            View Payments ({{ $financialSummary['payments'] }})
+                        </a>
                         @if($activeMeters->count() > 0)
                         <a href="{{ route('customers.meters', $customer) }}" 
                            class="w-full flex items-center justify-center px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors">
@@ -525,6 +742,15 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const amountInput = document.getElementById('customer_pay_amount');
+    const syncAmount = () => {
+        if (!amountInput) return;
+        const total = [...document.querySelectorAll('.customer-bill-pick:checked')]
+            .reduce((sum, box) => sum + Number(box.dataset.balance || 0), 0);
+        amountInput.value = total.toFixed(2);
+    };
+    document.querySelectorAll('.customer-bill-pick').forEach((box) => box.addEventListener('change', syncAmount));
+
     const months = @json($yearChart);
     const labels = months.map(month => month.label);
     const money = (value) => 'Rs. ' + Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });

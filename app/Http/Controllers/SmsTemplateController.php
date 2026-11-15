@@ -22,8 +22,10 @@ class SmsTemplateController extends Controller
             'templates' => $rows,
             'placeholders' => [
                 '{customer_name}', '{account_number}', '{bill_number}', '{billing_period}',
-                '{bill_amount}', '{paid_amount}', '{outstanding_amount}', '{due_date}',
-                '{payment_date}', '{receipt_number}', '{disconnection_date}',
+                '{bill_amount}', '{paid_amount}', '{amount}', '{balance}', '{outstanding_amount}',
+                '{total_due}', '{late_fee}', '{due_date}', '{payment_date}', '{receipt_number}',
+                '{days_overdue}', '{disconnection_date}', '{date}', '{day}', '{time_range}',
+                '{area}', '{start_time}', '{end_time}', '{reason}',
                 '{bill_link}', '{receipt_link}', '{payment_link}',
             ],
         ]);
@@ -32,7 +34,7 @@ class SmsTemplateController extends Controller
     public function update(Request $request, SmsTemplate $template): RedirectResponse
     {
         $validated = $request->validate([
-            'body' => 'required|string|max:480',
+            'body' => 'required|string|max:640',
             'is_active' => 'nullable|boolean',
         ]);
 

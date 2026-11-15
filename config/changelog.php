@@ -2,6 +2,18 @@
 
 return [
     [
+        'version' => '2.6.6',
+        'date' => '15 November 2026',
+        'title' => 'Payment controls, receipts, SMS, and office charts',
+        'changes' => [
+            'Only Super Admin can edit a payment. Collect and delete stay available to the usual office roles.',
+            'Payment receipts print in English, Sinhala, and Tamil. Payment date and time are stored together, and SMS is sent when a payment is created.',
+            'SMS templates for bill, payment, overdue, and disconnection were refreshed. Make a payment and filter bills or payments from the customer page.',
+            'Activity logs cover payment create, update, and delete, plus richer mobile login, route download, and reading upload detail. Health, token check, and sync-pending calls are no longer logged as noise.',
+            'The dashboard shows monthly bills, water use, and payments charts above the next system billing date.',
+        ],
+    ],
+    [
         'version' => '2.6.5',
         'date' => '15 November 2026',
         'title' => 'Profile photo crop, lightbox, and API photos',

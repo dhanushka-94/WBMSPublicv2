@@ -84,9 +84,11 @@ class PaymentCollectionController extends Controller
             'payment_date' => 'required|date',
             'reference' => 'nullable|string|max:255',
             'notes' => 'nullable|string|max:500',
+            'redirect_to' => 'nullable|string|in:customer,collect',
         ]);
 
         $customer = Customer::query()->findOrFail($validated['customer_id']);
+        $paidOn = \App\Models\Payment::parsePaidOn($validated['payment_date'])->toDateTimeString();
 
         try {
             $result = $payments->collect(
@@ -95,13 +97,19 @@ class PaymentCollectionController extends Controller
                 (float) ($validated['amount'] ?? 0),
                 $request->boolean('use_wallet'),
                 $validated['payment_method'],
-                $validated['payment_date'],
+                $paidOn,
                 $validated['reference'] ?? null,
                 $validated['notes'] ?? null,
                 $request->user()?->id
             );
         } catch (InvalidArgumentException $exception) {
             return back()->withInput()->with('error', $exception->getMessage());
+        }
+
+        if (($validated['redirect_to'] ?? null) === 'customer') {
+            return redirect()
+                ->route('customers.show', $customer)
+                ->with('success', $this->message($result));
         }
 
         return redirect()
@@ -160,6 +168,12 @@ class PaymentCollectionController extends Controller
         }
 
         $parts[] = 'Wallet balance is now Rs. '.number_format($result['wallet_balance'], 2);
+
+        if (($result['sms_sent'] ?? 0) > 0) {
+            $parts[] = 'Payment SMS sent ('.$result['sms_sent'].')';
+        } elseif (($result['sms_skipped'] ?? 0) > 0) {
+            $parts[] = 'Payment SMS not sent (check phone number or SMS settings)';
+        }
 
         return implode('. ', $parts).'.';
     }

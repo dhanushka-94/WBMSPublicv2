@@ -268,6 +268,7 @@ class DashboardController extends Controller
                 'units' => 0.0,
                 'readings' => 0,
                 'bills' => 0,
+                'payments' => 0,
             ];
         }
 
@@ -289,13 +290,14 @@ class DashboardController extends Controller
         }
 
         $paymentRows = Payment::query()
-            ->whereBetween('paid_on', [$start->toDateString(), $end->toDateString()])
-            ->selectRaw('MONTH(paid_on) as month_number, SUM(amount) as collected')
+            ->whereBetween('paid_on', [$start, $end])
+            ->selectRaw('MONTH(paid_on) as month_number, SUM(amount) as collected, COUNT(*) as payment_count')
             ->groupByRaw('MONTH(paid_on)')
             ->get();
 
         foreach ($paymentRows as $row) {
             $months[(int) $row->month_number]['collected'] = round((float) $row->collected, 2);
+            $months[(int) $row->month_number]['payments'] = (int) $row->payment_count;
         }
 
         $readingRows = MeterReading::query()

@@ -21,13 +21,17 @@
                     @csrf
                     @method('PUT')
                     <div class="flex items-center justify-between gap-3">
-                        <h2 class="font-semibold text-gray-900">{{ $template->name }}</h2>
+                        <div>
+                            <h2 class="font-semibold text-gray-900">{{ $template->name }}</h2>
+                            <p class="text-xs text-gray-500 mt-0.5">Key: {{ $template->key }}</p>
+                        </div>
                         <label class="text-sm text-gray-700">
                             <input type="checkbox" name="is_active" value="1" @checked($template->is_active) class="rounded border-gray-300">
                             Active
                         </label>
                     </div>
-                    <textarea name="body" rows="3" class="mt-3 w-full rounded border-gray-300 text-sm">{{ old('body', $template->body) }}</textarea>
+                    <textarea name="body" rows="4" maxlength="640" class="mt-3 w-full rounded border-gray-300 text-sm">{{ old('body', $template->body) }}</textarea>
+                    <p class="mt-1 text-xs text-gray-500">Max 640 characters. Payment confirmations include date &amp; time, receipt number, and receipt link.</p>
                     <p class="mt-3 text-sm text-gray-700"><span class="font-medium">Sample:</span> {{ $template->preview }}</p>
                     <button class="mt-3 rounded bg-blue-600 px-4 py-2 text-sm text-white">Save</button>
                 </form>
