@@ -64,6 +64,11 @@ class RestrictOfficeAccess
             return false;
         }
 
+        // Admins may open the reader APK page; only Super Admin may upload.
+        if ($name === 'settings.mobile-app' || str_starts_with($name, 'settings.mobile-app.')) {
+            return false;
+        }
+
         foreach (['settings.', 'sms.settings', 'system.enable', 'system.disable', 'system.status', 'system.get-status', 'mobile-api.'] as $only) {
             if ($name === $only || str_starts_with($name, $only)) {
                 return true;

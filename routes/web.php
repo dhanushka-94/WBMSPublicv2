@@ -26,6 +26,7 @@ use App\Http\Controllers\SmsTemplateController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PaymentCollectionController;
 use App\Http\Controllers\SystemControlController;
+use App\Http\Controllers\MobileAppDownloadController;
 
 // Redirect root to login for admin access
 Route::get('/', function () {
@@ -137,6 +138,13 @@ Route::middleware(['auth', 'verified', 'system.check'])->group(function () {
         Route::resource('rates', RateController::class);
         Route::post('rates/{rate}/toggle-status', [RateController::class, 'toggleStatus'])->name('rates.toggle-status');
         Route::get('rates/{rate}/duplicate', [RateController::class, 'duplicate'])->name('rates.duplicate');
+
+        // Reader mobile APK: admins download; Super Admin uploads
+        Route::middleware('admin')->group(function () {
+            Route::get('mobile-app', [MobileAppDownloadController::class, 'show'])->name('mobile-app');
+            Route::get('mobile-app/download', [MobileAppDownloadController::class, 'download'])->name('mobile-app.download');
+            Route::post('mobile-app', [MobileAppDownloadController::class, 'upload'])->name('mobile-app.upload');
+        });
     });
     
     // Customer Management (edit/delete - RESTRICTED)

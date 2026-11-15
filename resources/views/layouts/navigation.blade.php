@@ -1,6 +1,7 @@
 @php
     $isSystemEnabled = \App\Helpers\SystemConfig::isSystemEnabled();
     $isSuperAdmin = auth()->check() && auth()->user()->isSuperAdmin();
+    $isOfficeAdmin = auth()->check() && in_array(auth()->user()->role, ['admin', 'super_admin'], true);
     $canControlSystem = $isSuperAdmin;
     $officeReports = [
         'customer-register' => ['Customer Register', 'fa-address-book', 'text-blue-600'],
@@ -230,6 +231,9 @@
                     @if($isSuperAdmin)
                     <a href="{{ route('settings.index') }}" class="{{ $link }}"><i class="fas fa-sliders-h w-4 text-gray-600"></i>Settings</a>
                     @endif
+                    @if($isOfficeAdmin)
+                    <a href="{{ route('settings.mobile-app') }}" class="{{ $link }}"><i class="fas fa-download w-4 text-teal-600"></i>Download Mobile App</a>
+                    @endif
                     <a href="{{ route('activity-logs.index') }}" class="{{ $link }}"><i class="fas fa-history w-4 text-orange-600"></i>Activity Logs</a>
                     @if($isSuperAdmin)
                         <a href="{{ route('mobile-api.index') }}" class="{{ $link }}"><i class="fas fa-mobile-alt w-4 text-cyan-600"></i>Mobile API Docs</a>
@@ -300,6 +304,9 @@
                         <a href="{{ route('reader-routes.index') }}" class="{{ $mobileLink }}"><i class="fas fa-route w-4"></i>Reader Routes</a>
                         @if($isSuperAdmin)
                         <a href="{{ route('settings.index') }}" class="{{ $mobileLink }}"><i class="fas fa-sliders-h w-4"></i>Settings</a>
+                        @endif
+                        @if($isOfficeAdmin)
+                        <a href="{{ route('settings.mobile-app') }}" class="{{ $mobileLink }}"><i class="fas fa-download w-4"></i>Download Mobile App</a>
                         @endif
                         <a href="{{ route('activity-logs.index') }}" class="{{ $mobileLink }}"><i class="fas fa-history w-4"></i>Activity Logs</a>
                         @if($isSuperAdmin)

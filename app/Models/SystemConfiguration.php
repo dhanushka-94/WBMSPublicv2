@@ -154,4 +154,38 @@ class SystemConfiguration extends Model
 
         return trim((string) config('services.google_maps.key', ''));
     }
+
+    /**
+     * Reader mobile APK release metadata stored in system_configurations.
+     *
+     * @return array{version:?string,path:?string,original_name:?string,file_size:?int,uploaded_at:?string}
+     */
+    public static function mobileAppRelease(): array
+    {
+        $size = static::get('mobile_app_file_size', null);
+
+        return [
+            'version' => static::get('mobile_app_version') ?: null,
+            'path' => static::get('mobile_app_path') ?: null,
+            'original_name' => static::get('mobile_app_original_name') ?: null,
+            'file_size' => $size !== null && $size !== '' ? (int) $size : null,
+            'uploaded_at' => static::get('mobile_app_uploaded_at') ?: null,
+        ];
+    }
+
+    public static function setMobileAppRelease(
+        string $version,
+        string $path,
+        string $originalName,
+        int $fileSize,
+        ?string $uploadedAt = null
+    ): void {
+        $uploadedAt = $uploadedAt ?: now()->toDateTimeString();
+
+        static::set('mobile_app_version', $version, 'string', 'Reader mobile app version');
+        static::set('mobile_app_path', $path, 'string', 'Reader mobile APK storage path');
+        static::set('mobile_app_original_name', $originalName, 'string', 'Original uploaded APK filename');
+        static::set('mobile_app_file_size', (string) $fileSize, 'integer', 'Reader mobile APK file size in bytes');
+        static::set('mobile_app_uploaded_at', $uploadedAt, 'string', 'When the reader mobile APK was uploaded');
+    }
 }

@@ -2,6 +2,15 @@
 
 return [
     [
+        'version' => '2.6.7',
+        'date' => '15 November 2026',
+        'title' => 'Download reader mobile app from the office',
+        'changes' => [
+            'System menu includes Download Mobile App for Admin and Super Admin.',
+            'Admins can download the current reader APK. Only Super Admin can upload a new APK and set its version.',
+        ],
+    ],
+    [
         'version' => '2.6.6',
         'date' => '15 November 2026',
         'title' => 'Payment controls, receipts, SMS, and office charts',

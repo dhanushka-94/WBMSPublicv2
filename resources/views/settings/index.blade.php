@@ -208,6 +208,34 @@
             </div>
         </div>
 
+        <!-- Reader Mobile App Card -->
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 hover:shadow-xl hover:border-teal-200 transition-all duration-300 transform hover:-translate-y-1 group">
+            <div class="p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="flex items-center justify-center h-12 w-12 rounded-lg bg-gradient-to-br from-teal-100 to-teal-200 group-hover:from-teal-200 group-hover:to-teal-300 transition-all duration-300">
+                            <i class="fas fa-mobile-alt text-teal-600 text-xl group-hover:scale-110 transition-transform duration-300"></i>
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-lg font-semibold text-gray-900">Download Mobile App</h3>
+                        <p class="text-sm text-gray-600">Reader APK for admins; Super Admin uploads</p>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <a href="{{ route('settings.mobile-app') }}"
+                       class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105">
+                        <i class="fas fa-download mr-2"></i>Open App Page
+                    </a>
+                </div>
+                <div class="mt-3 flex items-center text-sm text-gray-500">
+                    <i class="fas fa-tag mr-1"></i>
+                    @php $mobileRelease = \App\Models\SystemConfiguration::mobileAppRelease(); @endphp
+                    <span>{{ $mobileRelease['version'] ? 'v'.$mobileRelease['version'] : 'No APK uploaded' }}</span>
+                </div>
+            </div>
+        </div>
+
         <!-- Division Management Card -->
         <div class="bg-white rounded-xl shadow-lg border border-gray-200 hover:shadow-xl hover:border-blue-200 transition-all duration-300 transform hover:-translate-y-1 group">
             <div class="p-6">
