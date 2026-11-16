@@ -178,10 +178,21 @@ class BillController extends Controller
                 'status' => 'generated'
             ]);
 
+            $walletApply = app(BillPaymentService::class)->applyWalletCredit($bill, auth()->id(), [
+                'source' => 'manual_bill_wallet',
+                'notes' => 'Auto-applied wallet credit when the bill was created',
+                'skip_sms' => true,
+            ]);
+
             DB::commit();
 
+            $message = 'Bill created successfully.';
+            if (($walletApply['wallet_used'] ?? 0) > 0) {
+                $message .= ' Wallet used Rs. '.number_format($walletApply['wallet_used'], 2).'.';
+            }
+
             return redirect()->route('bills.show', $bill)
-                ->with('success', 'Bill created successfully.');
+                ->with('success', $message);
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error creating bill: ' . $e->getMessage());
@@ -400,6 +411,12 @@ class BillController extends Controller
                         'fixed_charges' => $charges['fixed_charges'],
                         'rate_breakdown' => $charges['breakdown'],
                         'status' => 'generated'
+                    ]);
+
+                    app(BillPaymentService::class)->applyWalletCredit($bill, auth()->id(), [
+                        'source' => 'monthly_bill_wallet',
+                        'notes' => 'Auto-applied wallet credit when the monthly bill was created',
+                        'skip_sms' => true,
                     ]);
 
                     // Mark reading as billed

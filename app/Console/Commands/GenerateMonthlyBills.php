@@ -8,6 +8,7 @@ use App\Models\Customer;
 use App\Models\WaterMeter;
 use App\Models\MeterReading;
 use App\Models\Rate;
+use App\Services\BillPaymentService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -133,6 +134,12 @@ class GenerateMonthlyBills extends Command
                             'fixed_charges' => $charges['fixed_charges'],
                             'rate_breakdown' => $charges['breakdown'],
                             'status' => 'generated'
+                        ]);
+
+                        app(BillPaymentService::class)->applyWalletCredit($bill, null, [
+                            'source' => 'monthly_bill_wallet',
+                            'notes' => 'Auto-applied wallet credit when the monthly bill was created',
+                            'skip_sms' => true,
                         ]);
 
                         // Mark reading as billed

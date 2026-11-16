@@ -9,6 +9,7 @@ use App\Models\MeterReading;
 use App\Models\Bill;
 use App\Models\Rate;
 use App\Models\ActivityLog;
+use App\Services\BillPaymentService;
 use App\Traits\LogsActivity;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -696,11 +697,22 @@ class MeterReadingApiController extends Controller
 
         $reading->markAsBilled();
 
+        app(BillPaymentService::class)->applyWalletCredit($bill, Auth::id(), [
+            'source' => 'reading_bill_wallet',
+            'notes' => 'Auto-applied wallet credit when the reading bill was created',
+            'skip_sms' => true,
+        ]);
+
+        $customer->refresh();
+        $bill->refresh();
+
         return $bill;
     }
 
     private function billPayload(Bill $bill): array
     {
+        $bill->loadMissing(['customer', 'payments']);
+
         $other = round(
             (float) $bill->fixed_charges
             + (float) $bill->service_charges
@@ -709,6 +721,12 @@ class MeterReadingApiController extends Controller
             + (float) $bill->late_fees,
             2
         );
+
+        $walletPayments = $bill->payments->where('payment_method', 'wallet');
+        $walletApplied = round((float) $walletPayments->sum('amount'), 2);
+        $walletPayment = $walletPayments->sortByDesc('id')->first();
+        $balance = round((float) $bill->balance_amount, 2);
+        $customer = $bill->customer;
 
         return [
             'id' => $bill->id,
@@ -728,9 +746,20 @@ class MeterReadingApiController extends Controller
             'late_fees' => round((float) $bill->late_fees, 2),
             'other_charges' => $other,
             'total' => round((float) $bill->total_amount, 2),
-            'balance' => round((float) $bill->balance_amount, 2),
+            'paid_amount' => round((float) $bill->paid_amount, 2),
+            'balance' => $balance,
             'breakdown' => $bill->rate_breakdown ?? [],
-        ] + $this->walletShare($bill->customer, (float) $bill->balance_amount);
+            'wallet_balance' => round((float) ($customer?->wallet_balance ?? 0), 2),
+            'wallet_applied' => $walletApplied,
+            'amount_due' => $balance,
+            'payment' => $walletPayment ? [
+                'id' => $walletPayment->id,
+                'receipt_number' => $walletPayment->receipt_number,
+                'amount' => round((float) $walletPayment->amount, 2),
+                'payment_method' => $walletPayment->payment_method,
+                'paid_on' => optional($walletPayment->paid_on)->toDateTimeString(),
+            ] : null,
+        ];
     }
 
     /**
@@ -773,7 +802,7 @@ class MeterReadingApiController extends Controller
                     'zero_consumption' => 'water_charges is 0. other_charges is the fixed_charge on the slab where tier_from and tier_to are both 0.',
                     'positive_consumption' => 'Always add that same fixed_charge as other_charges. Also walk the other slabs in tier_from order. A bounded slab covers units from tier_from through tier_to, inclusive. A null tier_to takes every remaining unit. water_charges is units times rate_per_unit.',
                     'total' => 'water_charges + other_charges. The fixed charge is included on every bill.',
-                    'wallet' => 'Do not change water_charges or the fixed charge. wallet_balance is on the customer. wallet_applied is the smaller of that balance and the unpaid amount. amount_due is the unpaid amount minus wallet_applied. The wallet is not reduced until a payment is recorded.',
+                    'wallet' => 'Do not change water_charges or the fixed charge. wallet_balance is on the customer. On POST /meter-reading/submit, available wallet credit is applied immediately so the phone can print the payment receipt. Quotes still estimate wallet_applied / amount_due before save.',
                 ],
                 'tariffs' => $tariffs,
             ],
@@ -904,13 +933,22 @@ class MeterReadingApiController extends Controller
     {
         if ($bill) {
             $charges = $this->billPayload($bill);
+            $customer->refresh();
         } else {
             $charges = $this->chargeSummary($customer->billingCategory(), (float) $reading->consumption, $reading->reading_date);
             $charges = array_merge($charges, $customer->payableAfterWallet((float) $charges['total']));
         }
 
+        $payment = $charges['payment'] ?? null;
+        $readingReceipt = 'MR-' . str_pad((string) $reading->id, 6, '0', STR_PAD_LEFT);
+        $printReceipt = is_array($payment) && !empty($payment['receipt_number'])
+            ? $payment['receipt_number']
+            : $readingReceipt;
+
         return [
-            'receipt_number' => 'MR-' . str_pad($reading->id, 6, '0', STR_PAD_LEFT),
+            'receipt_number' => $printReceipt,
+            'reading_receipt_number' => $readingReceipt,
+            'payment_receipt_number' => is_array($payment) ? ($payment['receipt_number'] ?? null) : null,
             'date' => $reading->reading_date,
             'time' => $reading->created_at->format('h:i:s A'),
             'customer' => [
@@ -940,10 +978,13 @@ class MeterReadingApiController extends Controller
                 'adjustments' => $charges['adjustments'] ?? 0,
                 'other_charges' => $charges['other_charges'],
                 'total' => $charges['total'],
+                'paid_amount' => $charges['paid_amount'] ?? 0,
+                'balance' => $charges['balance'] ?? ($charges['amount_due'] ?? $charges['total']),
                 'wallet_balance' => $charges['wallet_balance'] ?? 0,
                 'wallet_applied' => $charges['wallet_applied'] ?? 0,
                 'amount_due' => $charges['amount_due'] ?? $charges['total'],
             ],
+            'payment' => $payment,
             'reader' => [
                 'name' => $reading->reader_name,
                 'signature_line' => '________________________',

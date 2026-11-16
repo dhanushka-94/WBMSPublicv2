@@ -2,6 +2,15 @@
 
 return [
     [
+        'version' => '2.6.8',
+        'date' => '16 November 2026',
+        'title' => 'Auto-apply wallet when a reading bill is created',
+        'changes' => [
+            'When a reading bill is created from the phone, monthly generate, or a new office bill, available wallet credit is applied immediately and the wallet is reduced.',
+            'The phone submit response includes paid amount, amount due, and the payment receipt so the reader can print it at once. Mobile API docs cover the new wallet and receipt fields.',
+        ],
+    ],
+    [
         'version' => '2.6.7',
         'date' => '15 November 2026',
         'title' => 'Download reader mobile app from the office',

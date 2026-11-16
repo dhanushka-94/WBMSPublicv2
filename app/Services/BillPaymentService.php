@@ -148,6 +148,66 @@ class BillPaymentService
     }
 
     /**
+     * Pay as much of a new/open bill as the customer wallet allows, and reduce the wallet.
+     *
+     * @return array{wallet_used: float, wallet_balance: float, bill_balance: float, payment_id: ?int}
+     */
+    public function applyWalletCredit(Bill $bill, ?int $userId = null, array $options = []): array
+    {
+        return DB::transaction(function () use ($bill, $userId, $options) {
+            $bill = Bill::query()->lockForUpdate()->findOrFail($bill->id);
+            $customer = Customer::query()->lockForUpdate()->findOrFail($bill->customer_id);
+
+            $due = round((float) $bill->balance_amount, 2);
+            $wallet = round(max(0, (float) $customer->wallet_balance), 2);
+            $use = round(min($wallet, $due), 2);
+
+            if ($use <= 0 || in_array($bill->status, ['cancelled', 'draft'], true)) {
+                return [
+                    'wallet_used' => 0.0,
+                    'wallet_balance' => $wallet,
+                    'bill_balance' => $due,
+                    'payment_id' => null,
+                ];
+            }
+
+            $saved = $bill->recordPayment($use, 'wallet', [
+                'paid_on' => $options['paid_on'] ?? now()->toDateTimeString(),
+                'received_by' => $userId,
+                'notes' => $options['notes'] ?? 'Auto-applied wallet credit when the bill was created',
+                'source' => $options['source'] ?? 'wallet_auto_apply',
+                'skip_sms' => array_key_exists('skip_sms', $options) ? (bool) $options['skip_sms'] : true,
+            ]);
+
+            if (!$saved) {
+                throw new InvalidArgumentException('Wallet credit could not be applied to '.$bill->bill_number.'.');
+            }
+
+            $customer->wallet_balance = round($wallet - $use, 2);
+            $customer->save();
+
+            WalletEntry::create([
+                'customer_id' => $customer->id,
+                'bill_id' => $bill->id,
+                'payment_id' => $bill->lastRecordedPayment?->id,
+                'user_id' => $userId,
+                'amount' => round(-1 * $use, 2),
+                'reason' => 'applied',
+                'notes' => 'Auto-applied on '.$bill->bill_number,
+            ]);
+
+            $bill->refresh();
+
+            return [
+                'wallet_used' => $use,
+                'wallet_balance' => (float) $customer->wallet_balance,
+                'bill_balance' => round((float) $bill->balance_amount, 2),
+                'payment_id' => $bill->lastRecordedPayment?->id,
+            ];
+        });
+    }
+
+    /**
      * Update an existing payment and keep the bill / wallet balances in sync.
      */
     public function updatePayment(Payment $payment, array $data, ?int $userId = null): Payment

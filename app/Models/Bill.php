@@ -309,7 +309,9 @@ class Bill extends Model
             'notes' => $details['notes'] ?? null,
         ]);
 
-        $this->lastPaymentSmsSent = $this->sendPaymentConfirmation($amount, $payment);
+        $this->lastPaymentSmsSent = !empty($details['skip_sms'])
+            ? false
+            : $this->sendPaymentConfirmation($amount, $payment);
         $this->lastRecordedPayment = $payment->fresh(['customer', 'bill', 'receiver']);
 
         if (empty($details['skip_activity_log'])) {

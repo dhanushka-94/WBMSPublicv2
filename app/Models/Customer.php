@@ -72,7 +72,7 @@ class Customer extends Model
 
     /**
      * Cash still to collect after this customer's wallet credit.
-     * The wallet balance itself is unchanged until a payment is recorded.
+     * New reading/manual/monthly bills auto-apply wallet; quotes use this before that happens.
      */
     public function payableAfterWallet(float $unpaid): array
     {
