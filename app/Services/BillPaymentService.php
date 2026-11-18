@@ -61,6 +61,8 @@ class BillPaymentService
                 'reference' => $reference,
                 'notes' => $notes,
                 'received_by' => $userId,
+                // SMS is sent once below with the exact cash received (bill + wallet overpayment).
+                'skip_sms' => true,
             ];
 
             foreach ($bills as $bill) {
@@ -73,9 +75,16 @@ class BillPaymentService
             $customer->wallet_balance = round($walletBalance - $walletUse + $walletAdded, 2);
             $customer->save();
 
+            $lastCash = collect($applied)->where('method', '!=', 'wallet')->last();
+            $lastApplied = collect($applied)->last();
+            $primaryPaymentId = $lastCash['payment_id'] ?? ($lastApplied['payment_id'] ?? null);
+            $primaryBillId = $lastCash['bill_id'] ?? ($lastApplied['bill_id'] ?? ((!empty($billIds) ? (int) end($billIds) : null) ?: null));
+
             if ($walletUse > 0) {
                 WalletEntry::create([
                     'customer_id' => $customer->id,
+                    'bill_id' => $primaryBillId,
+                    'payment_id' => $primaryPaymentId,
                     'user_id' => $userId,
                     'amount' => round(-1 * $walletUse, 2),
                     'reason' => 'applied',
@@ -86,6 +95,8 @@ class BillPaymentService
             if ($walletAdded > 0) {
                 WalletEntry::create([
                     'customer_id' => $customer->id,
+                    'bill_id' => $primaryBillId,
+                    'payment_id' => $primaryPaymentId,
                     'user_id' => $userId,
                     'amount' => $walletAdded,
                     'reason' => 'overpayment',
@@ -93,11 +104,36 @@ class BillPaymentService
                 ]);
             }
 
-            $smsSent = collect($applied)->where('sms_sent', true)->count();
-            $smsSkipped = collect($applied)->where('sms_sent', false)->count();
+            $cashOnBills = round((float) collect($applied)->where('method', '!=', 'wallet')->sum('amount'), 2);
+            $exactCashReceived = round($cashOnBills + $walletAdded, 2);
+            $smsSent = 0;
+            $smsSkipped = 0;
+
+            if ($exactCashReceived > 0 && $primaryPaymentId) {
+                $payment = Payment::with(['customer', 'bill', 'receiver'])->find($primaryPaymentId);
+                $billForSms = $payment?->bill ?? ($primaryBillId ? Bill::find($primaryBillId) : null);
+                if ($payment && $billForSms) {
+                    $sent = $billForSms->sendPaymentConfirmation($exactCashReceived, $payment);
+                    $smsSent = $sent ? 1 : 0;
+                    $smsSkipped = $sent ? 0 : 1;
+                } else {
+                    $smsSkipped = 1;
+                }
+            } elseif ($walletUse > 0 && $primaryPaymentId) {
+                $payment = Payment::with(['customer', 'bill', 'receiver'])->find($primaryPaymentId);
+                $billForSms = $payment?->bill;
+                if ($payment && $billForSms) {
+                    $sent = $billForSms->sendPaymentConfirmation($walletUse, $payment);
+                    $smsSent = $sent ? 1 : 0;
+                    $smsSkipped = $sent ? 0 : 1;
+                } else {
+                    $smsSkipped = 1;
+                }
+            }
 
             $result = [
                 'applied' => $applied,
+                'cash_received' => $exactCashReceived,
                 'wallet_used' => $walletUse,
                 'wallet_added' => $walletAdded,
                 'wallet_balance' => (float) $customer->wallet_balance,
@@ -136,6 +172,7 @@ class BillPaymentService
         }
 
         $applied[] = [
+            'bill_id' => $bill->id,
             'bill_number' => $bill->bill_number,
             'amount' => $take,
             'method' => $method,

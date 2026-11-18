@@ -2,6 +2,16 @@
 
 return [
     [
+        'version' => '2.6.9',
+        'date' => '18 November 2026',
+        'title' => 'Exact cash paid, Operations hub, and full Reports update',
+        'changes' => [
+            'Bills, receipts, customer pages, and payments show exact cash paid separately from wallet credit applied to the bill.',
+            'Operations hub groups readings, bills, and payments for day-to-day office work.',
+            'All reports use consistent cash-received and wallet overpayment totals, cleaner unit display, and overdue actions that open SMS or collect instead of stubs.',
+        ],
+    ],
+    [
         'version' => '2.6.8',
         'date' => '16 November 2026',
         'title' => 'Auto-apply wallet when a reading bill is created',

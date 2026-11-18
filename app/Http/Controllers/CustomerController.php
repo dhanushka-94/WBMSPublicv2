@@ -10,6 +10,7 @@ use App\Models\Guarantor;
 use App\Models\WaterMeter;
 use App\Models\Bill;
 use App\Models\MeterReading;
+use App\Models\WalletEntry;
 use App\Traits\LogsActivity;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
@@ -255,13 +256,23 @@ class CustomerController extends Controller
         $outstandingBalance = $customer->getOutstandingBalance();
         $lastBill = $customer->getLastBill();
         $currentReading = $customer->getCurrentReading();
+        $overpaidTotal = (float) WalletEntry::query()
+            ->where('customer_id', $customer->id)
+            ->where('reason', 'overpayment')
+            ->where('amount', '>', 0)
+            ->sum('amount');
         $financialSummary = [
             'billed' => (float) $customer->bills()->sum('total_amount'),
             'paid' => (float) $customer->bills()->sum('paid_amount'),
+            'overpaid' => $overpaidTotal,
+            'received' => round((float) $customer->bills()->sum('paid_amount') + $overpaidTotal, 2),
             'outstanding' => (float) $outstandingBalance,
             'overdue' => (float) $customer->bills()->where('status', 'overdue')->sum('balance_amount'),
             'bills' => $customer->bills()->count(),
             'payments' => $customer->payments()->count(),
+            'readings' => (int) MeterReading::query()
+                ->whereIn('water_meter_id', $customer->waterMeters()->select('id'))
+                ->count(),
             'last_payment' => $customer->payments()->latest('paid_on')->first(),
         ];
         $chartYear = Carbon::now()->year;
@@ -295,7 +306,7 @@ class CustomerController extends Controller
             ->withQueryString();
 
         $customerPayments = $customer->payments()
-            ->with(['bill:id,bill_number', 'receiver:id,name'])
+            ->with(['bill:id,bill_number', 'receiver:id,name', 'overpaymentEntries'])
             ->when($paymentFilters['payment_q'] !== '', function ($query) use ($paymentFilters) {
                 $like = '%'.$paymentFilters['payment_q'].'%';
                 $query->where(function ($search) use ($like) {
@@ -310,6 +321,14 @@ class CustomerController extends Controller
             ->orderByDesc('paid_on')
             ->orderByDesc('id')
             ->paginate(10, ['*'], 'payments_page')
+            ->withQueryString();
+
+        $customerReadings = MeterReading::query()
+            ->whereIn('water_meter_id', $customer->waterMeters()->select('id'))
+            ->with(['waterMeter:id,meter_number'])
+            ->orderByDesc('reading_date')
+            ->orderByDesc('id')
+            ->paginate(12, ['*'], 'readings_page')
             ->withQueryString();
 
         $openBills = $customer->bills()
@@ -330,6 +349,7 @@ class CustomerController extends Controller
             'yearChart',
             'customerBills',
             'customerPayments',
+            'customerReadings',
             'billFilters',
             'paymentFilters',
             'openBills'
@@ -350,6 +370,8 @@ class CustomerController extends Controller
                 'label' => Carbon::create($year, $month, 1)->format('M'),
                 'billed' => 0.0,
                 'collected' => 0.0,
+                'overpaid' => 0.0,
+                'paid' => 0.0,
                 'draft' => 0.0,
                 'units' => 0.0,
                 'readings' => 0,
@@ -382,6 +404,23 @@ class CustomerController extends Controller
 
         foreach ($paymentRows as $row) {
             $months[(int) $row->month_number]['collected'] = round((float) $row->collected, 2);
+        }
+
+        $overpayRows = WalletEntry::query()
+            ->where('customer_id', $customer->id)
+            ->where('reason', 'overpayment')
+            ->where('amount', '>', 0)
+            ->whereBetween('created_at', [$start, $end])
+            ->selectRaw('MONTH(created_at) as month_number, SUM(amount) as overpaid')
+            ->groupByRaw('MONTH(created_at)')
+            ->get();
+
+        foreach ($overpayRows as $row) {
+            $months[(int) $row->month_number]['overpaid'] = round((float) $row->overpaid, 2);
+        }
+
+        foreach ($months as $monthNumber => $month) {
+            $months[$monthNumber]['paid'] = round($month['collected'] + $month['overpaid'], 2);
         }
 
         $readingRows = MeterReading::query()

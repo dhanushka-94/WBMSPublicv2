@@ -32,7 +32,7 @@
         </div>
         <div class="bg-white rounded-lg shadow-md p-5">
             <p class="text-sm text-gray-500">Units recorded</p>
-            <p class="text-2xl font-bold text-gray-900">{{ number_format($totals['consumption'], 2) }}</p>
+            <p class="text-2xl font-bold text-gray-900">@units($totals['consumption'])</p>
         </div>
         <div class="bg-white rounded-lg shadow-md p-5">
             <p class="text-sm text-gray-500">Route covered</p>
@@ -73,7 +73,7 @@
                         <td class="px-4 py-4 text-right text-gray-900">{{ number_format($summary['phone']) }}</td>
                         <td class="px-4 py-4 text-right text-gray-900">{{ number_format($summary['office']) }}</td>
                         <td class="px-4 py-4 text-right text-gray-900">{{ number_format($summary['meters']) }}</td>
-                        <td class="px-4 py-4 text-right text-gray-900">{{ number_format($summary['consumption'], 2) }}</td>
+                        <td class="px-4 py-4 text-right text-gray-900">@units($summary['consumption'])</td>
                         <td class="px-4 py-4 text-right text-gray-900">{{ number_format($summary['billed']) }}</td>
                         <td class="px-4 py-4 text-right {{ $summary['faults'] > 0 ? 'text-amber-700 font-medium' : 'text-gray-900' }}">{{ number_format($summary['faults']) }}</td>
                         <td class="px-4 py-4 text-right">
@@ -112,7 +112,7 @@
                             </div>
                             <div class="w-40 text-right text-sm text-gray-900">
                                 {{ number_format($day->readings) }} readings
-                                <span class="text-gray-500">· {{ number_format($day->consumption, 2) }} units</span>
+                                <span class="text-gray-500">· @units($day->consumption) units</span>
                             </div>
                         </div>
                     @endforeach
@@ -150,8 +150,8 @@
                                 @endif
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-700">{{ $reading->waterMeter->meter_number ?? '—' }}</td>
-                            <td class="px-6 py-4 text-right text-sm text-gray-900">{{ number_format($reading->current_reading, 2) }}</td>
-                            <td class="px-6 py-4 text-right text-sm text-gray-900">{{ number_format($reading->consumption, 2) }}</td>
+                            <td class="px-6 py-4 text-right text-sm text-gray-900">@units($reading->current_reading)</td>
+                            <td class="px-6 py-4 text-right text-sm text-gray-900">@units($reading->consumption)</td>
                             <td class="px-6 py-4 text-sm">
                                 @if($reading->bill)
                                     <a href="{{ route('bills.show', $reading->bill) }}" class="font-medium text-blue-700 hover:text-blue-900">{{ $reading->bill->bill_number }}</a>

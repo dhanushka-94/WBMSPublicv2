@@ -127,7 +127,7 @@
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-700">
                                 @if($row['reading'])
-                                    {{ number_format($row['reading']->current_reading, 2) }}
+                                    @units($row['reading']->current_reading)
                                     · {{ $row['reading']->reader_name ?: 'Unknown reader' }}
                                     @unless($row['by_this_reader'])
                                         <span class="text-amber-700"> (other reader)</span>

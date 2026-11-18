@@ -153,10 +153,15 @@ class PaymentCollectionController extends Controller
     private function message(array $result): string
     {
         $parts = [];
+        $cashReceived = round((float) ($result['cash_received'] ?? 0), 2);
+        if ($cashReceived > 0) {
+            $parts[] = 'Rs. '.number_format($cashReceived, 2).' received';
+        }
+
         $applied = collect($result['applied'])->groupBy('bill_number')->map(fn ($rows) => round($rows->sum('amount'), 2));
 
         foreach ($applied as $number => $amount) {
-            $parts[] = 'Rs. '.number_format($amount, 2).' paid on '.$number;
+            $parts[] = 'Rs. '.number_format($amount, 2).' applied to '.$number;
         }
 
         if ($result['wallet_used'] > 0) {

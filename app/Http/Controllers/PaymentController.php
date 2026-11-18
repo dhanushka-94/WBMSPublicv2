@@ -20,7 +20,12 @@ class PaymentController extends Controller
         $query = trim((string) $request->input('q', ''));
 
         $payments = Payment::query()
-            ->with(['customer:id,account_number,first_name,last_name,title', 'bill:id,bill_number', 'receiver:id,name'])
+            ->with([
+                'customer:id,account_number,first_name,last_name,title',
+                'bill:id,bill_number',
+                'receiver:id,name',
+                'overpaymentEntries',
+            ])
             ->when($query !== '', function ($rows) use ($query) {
                 $like = '%'.$query.'%';
                 $rows->where(function ($search) use ($like) {
@@ -103,7 +108,7 @@ class PaymentController extends Controller
 
     public function print(Request $request, Payment $payment): View
     {
-        $payment->load(['bill', 'customer', 'receiver']);
+        $payment->load(['bill.payments', 'bill.customer', 'customer', 'receiver', 'overpaymentEntries']);
         $language = in_array($request->input('lang'), ['en', 'si', 'ta', 'all'], true)
             ? $request->input('lang')
             : 'all';

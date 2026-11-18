@@ -357,18 +357,23 @@ class PaymentApiController extends Controller
                 $query->whereDate('paid_on', '<=', $request->to_date);
             }
 
-            $payments = $query->orderByDesc('paid_on')
+            $payments = $query->with('overpaymentEntries')
+                ->orderByDesc('paid_on')
                 ->orderByDesc('id')
                 ->limit($request->limit ?? 50)
                 ->get()
                 ->map(function (Payment $payment) {
                     $bill = $payment->bill;
+                    $exactPaid = $payment->exactPaidAmount();
+                    $walletAdded = $payment->walletAddedAmount();
 
                     return [
                         'id' => $payment->id,
                         'receipt_number' => $payment->receipt_number,
                         'bill_number' => $bill?->bill_number,
-                        'payment_amount' => round((float) $payment->amount, 2),
+                        'payment_amount' => $exactPaid,
+                        'applied_to_bill' => round((float) $payment->amount, 2),
+                        'wallet_added' => $walletAdded,
                         'payment_method' => $payment->payment_method,
                         'payment_date' => $payment->paid_on?->format('Y-m-d H:i:s'),
                         'reference' => $payment->reference,

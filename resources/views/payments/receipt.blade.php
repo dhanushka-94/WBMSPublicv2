@@ -223,7 +223,11 @@
         'en' => [
             'scheme' => 'Dunsinane Water Supply Scheme',
             'title' => 'Payment Receipt',
-            'paid' => 'Amount paid',
+            'paid' => 'Applied to this bill',
+            'cash_received' => 'Cash / payment received',
+            'wallet_used' => 'Taken from wallet',
+            'wallet_added' => 'Added to wallet',
+            'wallet_balance' => 'Wallet balance now',
             'confirmed' => 'Payment confirmed',
             'receipt' => 'Receipt number',
             'date' => 'Payment date & time',
@@ -248,7 +252,11 @@
         'si' => [
             'scheme' => 'ඩන්සිනේන් ජල සැපයුම් ව්‍යාපෘතිය',
             'title' => 'ගෙවීම් රිසිට්පත',
-            'paid' => 'ගෙවූ මුදල',
+            'paid' => 'මෙම බිලට යොදන ලද්දේ',
+            'cash_received' => 'ලැබුණු මුදල් / ගෙවීම',
+            'wallet_used' => 'පසුම්බියෙන් ගත්තේ',
+            'wallet_added' => 'පසුම්බියට එකතු කළේ',
+            'wallet_balance' => 'දැන් පසුම්බි ශේෂය',
             'confirmed' => 'ගෙවීම තහවුරුයි',
             'receipt' => 'රිසිට් අංකය',
             'date' => 'ගෙවූ දිනය සහ වේලාව',
@@ -273,7 +281,11 @@
         'ta' => [
             'scheme' => 'டன்சினேன் நீர் வழங்கல் திட்டம்',
             'title' => 'கட்டண ரசீது',
-            'paid' => 'செலுத்திய தொகை',
+            'paid' => 'இந்த பிலில் பயன்படுத்தியது',
+            'cash_received' => 'பெற்ற தொகை',
+            'wallet_used' => 'வாலட்டில் இருந்து',
+            'wallet_added' => 'வாலட்டில் சேர்க்கப்பட்டது',
+            'wallet_balance' => 'தற்போதைய வாலட் இருப்பு',
             'confirmed' => 'கட்டணம் உறுதி',
             'receipt' => 'ரசீது எண்',
             'date' => 'கட்டணத் தேதி & நேரம்',
@@ -298,7 +310,12 @@
     ];
     $languages = $language === 'all' ? ['en', 'si', 'ta'] : [$language];
     $methodKey = $payment->payment_method;
-    $billBalance = $payment->bill?->balance_amount;
+    $settle = $payment->bill?->settlementSummary();
+    $billBalance = $settle['bill_balance'] ?? $payment->bill?->balance_amount;
+    $walletAdded = (float) ($payment->walletAddedAmount() ?: ($settle['wallet_added'] ?? 0));
+    $cashReceived = $payment->exactPaidAmount();
+    $walletUsed = (float) ($settle['wallet_used'] ?? 0);
+    $walletBalance = (float) ($settle['wallet_balance'] ?? ($payment->customer?->wallet_balance ?? 0));
 @endphp
 <body class="{{ $format === 'thermal' ? 'thermal' : '' }}">
 @unless($public)
@@ -329,8 +346,8 @@
             <p class="subtitle">{{ $payment->receipt_number }} · {{ $payment->paidOnDisplay() }}</p>
             <div class="amount-block">
                 <div>
-                    <p class="amount-label">{{ $label['paid'] }}</p>
-                    <p class="amount-value">LKR {{ number_format((float) $payment->amount, 2) }}</p>
+                    <p class="amount-label">{{ $label['cash_received'] }}</p>
+                    <p class="amount-value">LKR {{ number_format($cashReceived, 2) }}</p>
                 </div>
                 <span class="badge">{{ $label['confirmed'] }}</span>
             </div>
@@ -360,6 +377,26 @@
                 <div class="field">
                     <span class="label">{{ $label['method'] }}</span>
                     <div class="value">{{ $methodLabel }}</div>
+                </div>
+                <div class="field">
+                    <span class="label">{{ $label['paid'] }}</span>
+                    <div class="value">LKR {{ number_format((float) $payment->amount, 2) }}</div>
+                </div>
+                @if($walletAdded > 0)
+                <div class="field">
+                    <span class="label">{{ $label['wallet_added'] }}</span>
+                    <div class="value">LKR {{ number_format($walletAdded, 2) }}</div>
+                </div>
+                @endif
+                @if($walletUsed > 0)
+                <div class="field">
+                    <span class="label">{{ $label['wallet_used'] }}</span>
+                    <div class="value">LKR {{ number_format($walletUsed, 2) }}</div>
+                </div>
+                @endif
+                <div class="field">
+                    <span class="label">{{ $label['wallet_balance'] }}</span>
+                    <div class="value">LKR {{ number_format($walletBalance, 2) }}</div>
                 </div>
                 <div class="field">
                     <span class="label">{{ $label['received'] }}</span>

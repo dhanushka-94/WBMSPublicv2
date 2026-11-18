@@ -206,7 +206,7 @@ class BillController extends Controller
      */
     public function show(Bill $bill): View
     {
-        $bill->load(['customer', 'waterMeter', 'meterReading', 'payments.receiver']);
+        $bill->load(['customer', 'waterMeter', 'meterReading', 'payments.receiver', 'payments.overpaymentEntries']);
         
         return view('bills.show', compact('bill'));
     }
@@ -581,7 +581,9 @@ class BillController extends Controller
     public function print(Request $request, Bill $bill): View
     {
         $bill->load(['customer', 'waterMeter', 'meterReading', 'payments']);
-        $language = in_array($request->input('lang'), ['en', 'ta', 'both'], true) ? $request->input('lang') : 'both';
+        $language = in_array($request->input('lang'), ['en', 'si', 'ta', 'both', 'all'], true)
+            ? $request->input('lang')
+            : 'both';
         $format = $request->input('format') === 'thermal' ? 'thermal' : 'a4';
 
         return view('bills.dunsinane', compact('bill', 'language', 'format'));

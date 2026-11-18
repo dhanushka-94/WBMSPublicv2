@@ -254,7 +254,9 @@ class MonthlyActiveReportController extends Controller
                 'Active Meters',
                 'Bills Generated',
                 'Paid Bills',
-                'Water Revenue (Rs.)',
+                'Paid bill totals (Rs.)',
+                'Cash received exact (Rs.)',
+                'Wallet overpaid (Rs.)',
                 'Payment Rate (%)'
             ]);
 
@@ -269,6 +271,8 @@ class MonthlyActiveReportController extends Controller
                     $data['bills_generated'],
                     $data['paid_bills'],
                     number_format($data['revenue'], 2),
+                    number_format($data['cash_collected'] ?? 0, 2),
+                    number_format($data['wallet_overpaid'] ?? 0, 2),
                     number_format($data['payment_rate'], 2)
                 ]);
             }
@@ -322,6 +326,8 @@ class MonthlyActiveReportController extends Controller
                 ')
                 ->first();
 
+            $cash = \App\Support\CollectionTotals::forPeriod($monthStart, $monthEnd);
+
             // Calculate rates
             $connectionRate = $activeCustomers > 0 ? ($activeMeters / max($activeCustomers, 1)) * 100 : 0;
             $paymentRate = $billsData->bills_generated > 0 ? ($billsData->paid_bills / $billsData->bills_generated) * 100 : 0;
@@ -339,6 +345,8 @@ class MonthlyActiveReportController extends Controller
                 'bills_generated' => $billsData->bills_generated ?? 0,
                 'paid_bills' => $billsData->paid_bills ?? 0,
                 'revenue' => $billsData->revenue ?? 0,
+                'cash_collected' => $cash['cash'],
+                'wallet_overpaid' => $cash['overpaid'],
                 'connection_rate' => round($connectionRate, 2),
                 'payment_rate' => round($paymentRate, 2),
                 'system_billing_amount' => $systemBillingAmount,
@@ -404,6 +412,7 @@ class MonthlyActiveReportController extends Controller
                 'avg_active_customers' => 0,
                 'max_active_customers' => 0,
                 'total_revenue' => 0,
+                'total_cash' => 0,
                 'avg_payment_rate' => 0,
                 'growth_rate' => 0,
                 'total_system_billing' => 0,
@@ -414,6 +423,7 @@ class MonthlyActiveReportController extends Controller
         $avgActiveCustomers = round($monthlyData->avg('active_customers'), 0);
         $maxActiveCustomers = $monthlyData->max('active_customers');
         $totalRevenue = $monthlyData->sum('revenue');
+        $totalCash = $monthlyData->sum('cash_collected');
         $avgPaymentRate = round($monthlyData->avg('payment_rate'), 2);
         $totalSystemBilling = $monthlyData->sum('system_billing_amount');
         $avgMonthlyBilling = round($monthlyData->avg('system_billing_amount'), 2);
@@ -431,6 +441,7 @@ class MonthlyActiveReportController extends Controller
             'avg_active_customers' => $avgActiveCustomers,
             'max_active_customers' => $maxActiveCustomers,
             'total_revenue' => $totalRevenue,
+            'total_cash' => $totalCash,
             'avg_payment_rate' => $avgPaymentRate,
             'growth_rate' => $growthRate,
             'total_system_billing' => $totalSystemBilling,

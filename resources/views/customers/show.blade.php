@@ -1,213 +1,220 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="min-h-screen bg-gray-50 py-6">
+@php
+    $displayNotes = trim(preg_replace('/\s*Imported from customer-readings-payments\.xlsx\.\s*Sheet name:.*$/i', '', (string) $customer->notes));
+    $statusClass = match ($customer->status) {
+        'active' => 'bg-emerald-100 text-emerald-800',
+        'suspended' => 'bg-amber-100 text-amber-800',
+        'disconnected' => 'bg-red-100 text-red-800',
+        default => 'bg-gray-100 text-gray-800',
+    };
+@endphp
+<div class="min-h-screen bg-slate-50 py-6">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        <!-- Header Section -->
-        <div class="mb-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h1 class="text-2xl font-semibold text-gray-900">Customer Details</h1>
-                    <p class="mt-1 text-sm text-gray-600">Complete customer profile and account information</p>
-                </div>
-                <div class="flex flex-wrap items-center gap-3">
-                    <a href="#make-payment"
-                       class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-teal-600 hover:bg-teal-700">
-                        <i class="fas fa-hand-holding-usd mr-2"></i>
-                        Make Payment
-                    </a>
-                    <a href="{{ route('customers.edit', $customer) }}" 
-                       class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
-                        <i class="fas fa-edit mr-2"></i>
-                        Edit Customer
-                    </a>
-                    @if(auth()->user()->isSuperAdmin())
-                        <form method="POST" action="{{ route('customers.destroy', $customer) }}">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700">
-                                <i class="fas fa-trash mr-2"></i>
-                                Delete Customer
-                            </button>
-                        </form>
+
+        <div class="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <p class="text-sm text-slate-500">Customer</p>
+                <h1 class="text-2xl font-semibold text-slate-900">{{ $customer->full_name }}</h1>
+                <p class="mt-1 text-sm text-slate-600 font-mono">{{ $customer->account_number }}
+                    @if($customer->meter_number)
+                        · Meter {{ $customer->meter_number }}
                     @endif
-                    <a href="{{ route('customers.index') }}" 
-                       class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                        <i class="fas fa-arrow-left mr-2"></i>
-                        Back to Customers
-                    </a>
-                </div>
+                </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="#make-payment" class="inline-flex items-center rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
+                    <i class="fas fa-hand-holding-usd mr-2"></i>Make Payment
+                </a>
+                <a href="{{ route('customers.edit', $customer) }}" class="inline-flex items-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">
+                    <i class="fas fa-edit mr-2"></i>Edit
+                </a>
+                @if(auth()->user()->isSuperAdmin())
+                    <form method="POST" action="{{ route('customers.destroy', $customer) }}">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="inline-flex items-center rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
+                            <i class="fas fa-trash mr-2"></i>Delete
+                        </button>
+                    </form>
+                @endif
+                <a href="{{ route('customers.index') }}" class="inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                    <i class="fas fa-arrow-left mr-2"></i>Back
+                </a>
             </div>
         </div>
 
         @if(session('success'))
-            <div class="mb-8 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg">
-                {{ session('success') }}
-            </div>
+            <div class="mb-4 rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-green-800">{{ session('success') }}</div>
         @endif
-
         @if(session('error'))
-            <div class="mb-8 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
-                {{ session('error') }}
-            </div>
+            <div class="mb-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-red-800">{{ session('error') }}</div>
         @endif
 
-        <div class="mb-8 bg-white border border-gray-200 rounded-lg p-4">
-            <h2 class="text-sm font-semibold text-gray-900 mb-3">Connection</h2>
-            <p class="text-sm text-gray-600 mb-3">Status: {{ ucfirst($customer->status) }}</p>
-            <form method="POST" action="{{ $customer->status === 'disconnected' ? route('customers.reconnect', $customer) : route('customers.disconnect', $customer) }}" class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-                @csrf
-                <div>
-                    <label class="block text-xs text-gray-500">Date</label>
-                    <input type="date" name="event_date" value="{{ now()->toDateString() }}" class="mt-1 w-full border-gray-300 rounded-md text-sm" required>
-                </div>
-                <div class="md:col-span-2">
-                    <label class="block text-xs text-gray-500">Reason</label>
-                    <input type="text" name="reason" class="mt-1 w-full border-gray-300 rounded-md text-sm" required>
-                </div>
-                <button class="px-4 py-2 rounded-md text-sm text-white {{ $customer->status === 'disconnected' ? 'bg-emerald-600' : 'bg-red-600' }}">
-                    {{ $customer->status === 'disconnected' ? 'Reconnect' : 'Disconnect' }}
-                </button>
-            </form>
-            @if($customer->connectionEvents->isNotEmpty())
-                <ul class="mt-4 text-sm text-gray-700 space-y-1">
-                    @foreach($customer->connectionEvents->take(5) as $event)
-                        <li>{{ $event->event_date->format('Y-m-d') }} — {{ ucfirst($event->action) }} — {{ $event->reason }} — {{ $event->user?->name ?? 'Office' }}</li>
-                    @endforeach
-                </ul>
-            @endif
-        </div>
+        <nav class="mb-6 flex gap-2 overflow-x-auto pb-1 text-sm">
+            <a href="#overview" class="whitespace-nowrap rounded-full bg-white px-3 py-1.5 font-medium text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100">Overview</a>
+            <a href="#charts" class="whitespace-nowrap rounded-full bg-white px-3 py-1.5 font-medium text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100">Charts</a>
+            <a href="#readings" class="whitespace-nowrap rounded-full bg-white px-3 py-1.5 font-medium text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100">Readings</a>
+            <a href="#customer-bills" class="whitespace-nowrap rounded-full bg-white px-3 py-1.5 font-medium text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100">Bills</a>
+            <a href="#customer-payments" class="whitespace-nowrap rounded-full bg-white px-3 py-1.5 font-medium text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100">Payments</a>
+            <a href="#make-payment" class="whitespace-nowrap rounded-full bg-white px-3 py-1.5 font-medium text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100">Pay</a>
+            <a href="#connection" class="whitespace-nowrap rounded-full bg-white px-3 py-1.5 font-medium text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100">Connection</a>
+            <a href="#profile" class="whitespace-nowrap rounded-full bg-white px-3 py-1.5 font-medium text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100">Profile</a>
+        </nav>
 
-        <div class="mb-8 bg-white border border-gray-200 rounded-lg overflow-hidden">
-            <div class="bg-emerald-600 px-6 py-4">
-                <h2 class="text-lg font-semibold text-white">Financial Summary</h2>
-            </div>
-            <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 p-6">
-                <div class="rounded-lg bg-blue-50 p-4">
-                    <p class="text-xs font-medium uppercase text-blue-700">Total billed</p>
-                    <p class="mt-1 text-2xl font-bold text-blue-900">Rs. {{ number_format($financialSummary['billed'], 2) }}</p>
-                    <p class="text-xs text-blue-700">{{ $financialSummary['bills'] }} bills</p>
+        {{-- 1. Overview --}}
+        <section id="overview" class="mb-8 scroll-mt-24 grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div class="lg:col-span-1 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                <div class="bg-slate-800 px-5 py-5 text-white">
+                    <div class="flex items-center gap-4">
+                        @if($customer->profile_photo)
+                            <img class="h-16 w-16 rounded-full object-cover ring-2 ring-white/40 cursor-pointer" src="{{ $customer->profile_photo_url }}" alt="{{ $customer->full_name }}" data-lightbox>
+                        @else
+                            <div class="flex h-16 w-16 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/40">
+                                <i class="fas fa-user text-xl"></i>
+                            </div>
+                        @endif
+                        <div>
+                            <h2 class="text-lg font-semibold">{{ $customer->full_name }}</h2>
+                            <p class="text-slate-300 text-sm">{{ $customer->customerType->name ?? 'Customer' }}</p>
+                            <span class="mt-2 inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold {{ $statusClass }}">{{ ucfirst($customer->status) }}</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="rounded-lg bg-green-50 p-4">
-                    <p class="text-xs font-medium uppercase text-green-700">Total paid</p>
-                    <p class="mt-1 text-2xl font-bold text-green-900">Rs. {{ number_format($financialSummary['paid'], 2) }}</p>
-                    @if($financialSummary['last_payment'])
-                        <p class="text-xs text-green-700">Last payment {{ $financialSummary['last_payment']->paidOnDisplay('M d, Y H:i') }} · Rs. {{ number_format($financialSummary['last_payment']->amount, 2) }}</p>
-                    @else
+                <div class="space-y-3 p-5 text-sm">
+                    <div class="flex justify-between gap-3"><span class="text-slate-500">Division</span><span class="font-medium text-slate-900">{{ $customer->division->name ?? '—' }}</span></div>
+                    <div class="flex justify-between gap-3"><span class="text-slate-500">Phone</span><span class="font-medium text-slate-900">{{ $customer->phone ?: '—' }}</span></div>
+                    <div class="flex justify-between gap-3"><span class="text-slate-500">Last bill</span><span class="font-medium text-slate-900">{{ $lastBill ? 'Rs. '.number_format($lastBill->total_amount, 2) : '—' }}</span></div>
+                    <div class="flex justify-between gap-3"><span class="text-slate-500">Current reading</span><span class="font-medium text-slate-900">@if($currentReading)@units($currentReading->current_reading)@else—@endif</span></div>
+                    <div class="flex justify-between gap-3"><span class="text-slate-500">Wallet</span><span class="font-medium text-teal-700">Rs. {{ number_format($customer->wallet_balance, 2) }}</span></div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-2 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                <div class="border-b border-slate-200 bg-emerald-600 px-6 py-4">
+                    <h2 class="text-lg font-semibold text-white">Financial Summary</h2>
+                    <p class="text-emerald-100 text-sm">Billed vs received, including overpayments added to wallet</p>
+                </div>
+                <div class="grid grid-cols-2 gap-4 p-5 md:grid-cols-3">
+                    <div class="rounded-lg bg-blue-50 p-4">
+                        <p class="text-xs font-medium uppercase text-blue-700">Total billed</p>
+                        <p class="mt-1 text-xl font-bold text-blue-900">Rs. {{ number_format($financialSummary['billed'], 2) }}</p>
+                        <p class="text-xs text-blue-700">{{ $financialSummary['bills'] }} bills</p>
+                    </div>
+                    <div class="rounded-lg bg-green-50 p-4">
+                        <p class="text-xs font-medium uppercase text-green-700">Applied to bills</p>
+                        <p class="mt-1 text-xl font-bold text-green-900">Rs. {{ number_format($financialSummary['paid'], 2) }}</p>
                         <p class="text-xs text-green-700">{{ $financialSummary['payments'] }} receipts</p>
-                    @endif
-                </div>
-                <div class="rounded-lg bg-amber-50 p-4">
-                    <p class="text-xs font-medium uppercase text-amber-700">Outstanding</p>
-                    <p class="mt-1 text-2xl font-bold text-amber-900">Rs. {{ number_format($financialSummary['outstanding'], 2) }}</p>
-                </div>
-                <div class="rounded-lg bg-red-50 p-4">
-                    <p class="text-xs font-medium uppercase text-red-700">Overdue</p>
-                    <p class="mt-1 text-2xl font-bold text-red-900">Rs. {{ number_format($financialSummary['overdue'], 2) }}</p>
-                </div>
-                <div class="rounded-lg bg-teal-50 p-4">
-                    <p class="text-xs font-medium uppercase text-teal-700">Wallet</p>
-                    <p class="mt-1 text-2xl font-bold text-teal-900">Rs. {{ number_format($customer->wallet_balance, 2) }}</p>
-                    <a href="#make-payment" class="text-xs font-medium text-teal-700 hover:text-teal-900">Make payment</a>
+                    </div>
+                    <div class="rounded-lg bg-indigo-50 p-4">
+                        <p class="text-xs font-medium uppercase text-indigo-700">Overpaid to wallet</p>
+                        <p class="mt-1 text-xl font-bold text-indigo-900">Rs. {{ number_format($financialSummary['overpaid'], 2) }}</p>
+                        <p class="text-xs text-indigo-700">Extra cash received</p>
+                    </div>
+                    <div class="rounded-lg bg-cyan-50 p-4">
+                        <p class="text-xs font-medium uppercase text-cyan-700">Total received</p>
+                        <p class="mt-1 text-xl font-bold text-cyan-900">Rs. {{ number_format($financialSummary['received'], 2) }}</p>
+                        @if($financialSummary['last_payment'])
+                            <p class="text-xs text-cyan-700">Last {{ $financialSummary['last_payment']->paidOnDisplay('M d, Y H:i') }}</p>
+                        @endif
+                    </div>
+                    <div class="rounded-lg bg-amber-50 p-4">
+                        <p class="text-xs font-medium uppercase text-amber-700">Outstanding</p>
+                        <p class="mt-1 text-xl font-bold text-amber-900">Rs. {{ number_format($financialSummary['outstanding'], 2) }}</p>
+                        <p class="text-xs text-amber-700">Overdue Rs. {{ number_format($financialSummary['overdue'], 2) }}</p>
+                    </div>
+                    <div class="rounded-lg bg-teal-50 p-4">
+                        <p class="text-xs font-medium uppercase text-teal-700">Wallet now</p>
+                        <p class="mt-1 text-xl font-bold text-teal-900">Rs. {{ number_format($customer->wallet_balance, 2) }}</p>
+                        <a href="#make-payment" class="text-xs font-medium text-teal-700 hover:text-teal-900">Make payment</a>
+                    </div>
                 </div>
             </div>
-        </div>
+        </section>
 
-        <div id="make-payment" class="mb-8 bg-white border border-teal-200 rounded-xl shadow-sm overflow-hidden scroll-mt-24">
-            <div class="bg-teal-600 px-6 py-4 flex flex-wrap items-center justify-between gap-3">
-                <div>
-                    <h2 class="text-lg font-semibold text-white">Make Payment</h2>
-                    <p class="text-teal-100 text-sm">Record a payment for this customer. Date and time are stored on the receipt.</p>
+        {{-- 2. Charts --}}
+        <section id="charts" class="mb-8 scroll-mt-24 grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <div class="overflow-hidden rounded-xl border border-emerald-100 bg-white shadow-sm">
+                <div class="bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-4">
+                    <h3 class="text-lg font-bold text-white"><i class="fas fa-chart-bar mr-2"></i>{{ $chartYear }} bills & payments</h3>
+                    <p class="mt-1 text-sm text-emerald-100">Draft, billed, exact paid (cash), and overpayments to wallet</p>
                 </div>
-                <a href="{{ route('payments.collect', ['customer' => $customer->id]) }}" class="text-sm font-medium text-white/90 hover:text-white underline">Open full collect page</a>
+                <div class="p-6">
+                    <div class="relative h-80">
+                        <canvas id="customerYearMoneyChart"></canvas>
+                    </div>
+                </div>
             </div>
-            <form method="POST" action="{{ route('payments.collect.store') }}" class="p-6 space-y-4">
-                @csrf
-                <input type="hidden" name="customer_id" value="{{ $customer->id }}">
-                <input type="hidden" name="redirect_to" value="customer">
-
-                <div class="overflow-x-auto border border-gray-200 rounded-lg">
-                    <table class="min-w-full text-sm">
-                        <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
-                            <tr>
-                                <th class="px-3 py-2">Pay</th>
-                                <th class="px-3 py-2">Bill</th>
-                                <th class="px-3 py-2">Due</th>
-                                <th class="px-3 py-2 text-right">Balance</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y">
-                            @forelse($openBills as $bill)
-                                <tr>
-                                    <td class="px-3 py-2">
-                                        <input type="checkbox" name="bill_ids[]" value="{{ $bill->id }}" class="customer-bill-pick rounded border-gray-300 text-teal-600" data-balance="{{ $bill->balance_amount }}" checked>
-                                    </td>
-                                    <td class="px-3 py-2">
-                                        <a href="{{ route('bills.show', $bill) }}" class="font-medium text-blue-700 hover:text-blue-900">{{ $bill->bill_number }}</a>
-                                        <div class="text-xs text-gray-500">{{ ucfirst($bill->status) }}</div>
-                                    </td>
-                                    <td class="px-3 py-2 text-gray-700">{{ optional($bill->due_date)->format('Y-m-d') }}</td>
-                                    <td class="px-3 py-2 text-right font-semibold">Rs. {{ number_format($bill->balance_amount, 2) }}</td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="4" class="px-3 py-6 text-center text-gray-500">No open bills. An amount entered below is added to the wallet.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+            <div class="overflow-hidden rounded-xl border border-cyan-100 bg-white shadow-sm">
+                <div class="bg-gradient-to-r from-cyan-500 to-blue-600 px-6 py-4">
+                    <h3 class="text-lg font-bold text-white"><i class="fas fa-chart-line mr-2"></i>{{ $chartYear }} water use</h3>
+                    <p class="mt-1 text-sm text-cyan-100">Units consumed and readings taken</p>
                 </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div>
-                        <label for="customer_pay_amount" class="block text-sm font-medium text-gray-700 mb-1">Amount (Rs.)</label>
-                        <input type="number" name="amount" id="customer_pay_amount" step="0.01" min="0" value="{{ old('amount', $openBills->sum('balance_amount')) }}" class="w-full rounded-md border-gray-300">
-                    </div>
-                    <div>
-                        <label for="customer_pay_method" class="block text-sm font-medium text-gray-700 mb-1">Method</label>
-                        <select name="payment_method" id="customer_pay_method" class="w-full rounded-md border-gray-300" required>
-                            <option value="cash">Cash</option>
-                            <option value="bank_transfer">Bank transfer</option>
-                            <option value="cheque">Cheque</option>
-                            <option value="card">Card</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="customer_pay_date" class="block text-sm font-medium text-gray-700 mb-1">Date &amp; time</label>
-                        <input type="datetime-local" name="payment_date" id="customer_pay_date" value="{{ old('payment_date', now()->format('Y-m-d\TH:i')) }}" required class="w-full rounded-md border-gray-300">
-                    </div>
-                    <div>
-                        <label for="customer_pay_reference" class="block text-sm font-medium text-gray-700 mb-1">Reference</label>
-                        <input type="text" name="reference" id="customer_pay_reference" value="{{ old('reference') }}" class="w-full rounded-md border-gray-300">
+                <div class="p-6">
+                    <div class="relative h-80">
+                        <canvas id="customerYearUsageChart"></canvas>
                     </div>
                 </div>
+            </div>
+        </section>
 
+        {{-- 3. Readings --}}
+        <section id="readings" class="mb-8 scroll-mt-24 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div class="flex flex-wrap items-center justify-between gap-3 bg-violet-600 px-6 py-4">
                 <div>
-                    <label for="customer_pay_notes" class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                    <textarea name="notes" id="customer_pay_notes" rows="2" class="w-full rounded-md border-gray-300">{{ old('notes') }}</textarea>
+                    <h2 class="text-lg font-semibold text-white">Meter Readings</h2>
+                    <p class="text-sm text-violet-100">{{ $financialSummary['readings'] }} total readings for this customer</p>
                 </div>
-
-                @if($customer->wallet_balance > 0)
-                    <label class="inline-flex items-center gap-2 text-sm text-gray-800">
-                        <input type="checkbox" name="use_wallet" value="1" class="rounded border-gray-300 text-teal-600" {{ old('use_wallet') ? 'checked' : '' }}>
-                        Use wallet (Rs. {{ number_format($customer->wallet_balance, 2) }} available)
-                    </label>
+                @if($activeMeters->count() > 0)
+                    <a href="{{ route('customers.meters', $customer) }}" class="rounded-lg bg-white/15 px-3 py-1.5 text-sm font-medium text-white hover:bg-white/25">Manage meters</a>
                 @endif
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+                        <tr>
+                            <th class="px-4 py-3">Date</th>
+                            <th class="px-4 py-3">Meter</th>
+                            <th class="px-4 py-3 text-right">Previous</th>
+                            <th class="px-4 py-3 text-right">Current</th>
+                            <th class="px-4 py-3 text-right">Consumption</th>
+                            <th class="px-4 py-3">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @forelse($customerReadings as $reading)
+                            <tr class="hover:bg-slate-50">
+                                <td class="px-4 py-3 whitespace-nowrap text-slate-800">{{ optional($reading->reading_date)->format('Y-m-d') }}</td>
+                                <td class="px-4 py-3 font-medium text-slate-900">{{ $reading->waterMeter->meter_number ?? '—' }}</td>
+                                <td class="px-4 py-3 text-right tabular-nums">@units($reading->previous_reading)</td>
+                                <td class="px-4 py-3 text-right tabular-nums font-semibold">@units($reading->current_reading)</td>
+                                <td class="px-4 py-3 text-right tabular-nums text-violet-700">@units($reading->consumption)</td>
+                                <td class="px-4 py-3">
+                                    <span class="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">{{ ucfirst($reading->status ?? 'recorded') }}</span>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6" class="px-4 py-10 text-center text-slate-500">No meter readings yet for this customer.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+            @if($customerReadings->hasPages())
+                <div class="border-t border-slate-200 px-4 py-3">{{ $customerReadings->links() }}</div>
+            @endif
+        </section>
 
-                <button type="submit" class="rounded-lg bg-teal-600 px-5 py-2.5 font-semibold text-white hover:bg-teal-700">
-                    <i class="fas fa-check mr-2"></i>Save payment
-                </button>
-            </form>
-        </div>
-
-        <div class="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
-            <div id="customer-bills" class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden scroll-mt-24">
+        {{-- 4. Bills & Payments --}}
+        <div class="mb-8 grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <div id="customer-bills" class="scroll-mt-24 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
                 <div class="bg-orange-500 px-6 py-4">
                     <h2 class="text-lg font-semibold text-white">Bills</h2>
-                    <p class="text-orange-100 text-sm">{{ $financialSummary['bills'] }} total · filter below</p>
+                    <p class="text-sm text-orange-100">{{ $financialSummary['bills'] }} total · filter below</p>
                 </div>
-                <form method="GET" action="{{ route('customers.show', $customer) }}#customer-bills" class="p-4 border-b grid grid-cols-1 md:grid-cols-4 gap-3">
+                <form method="GET" action="{{ route('customers.show', $customer) }}#customer-bills" class="grid grid-cols-1 gap-3 border-b border-slate-200 p-4 md:grid-cols-4">
                     @foreach($paymentFilters as $key => $value)
                         @if($value !== '')
                             <input type="hidden" name="{{ $key }}" value="{{ $value }}">
@@ -216,13 +223,16 @@
                     @if(request('payments_page'))
                         <input type="hidden" name="payments_page" value="{{ request('payments_page') }}">
                     @endif
+                    @if(request('readings_page'))
+                        <input type="hidden" name="readings_page" value="{{ request('readings_page') }}">
+                    @endif
                     <div>
-                        <label class="block text-xs text-gray-500 mb-1">Search</label>
-                        <input type="search" name="bill_q" value="{{ $billFilters['bill_q'] }}" placeholder="Bill number" class="w-full rounded-md border-gray-300 text-sm">
+                        <label class="mb-1 block text-xs text-slate-500">Search</label>
+                        <input type="search" name="bill_q" value="{{ $billFilters['bill_q'] }}" placeholder="Bill number" class="w-full rounded-md border-slate-300 text-sm">
                     </div>
                     <div>
-                        <label class="block text-xs text-gray-500 mb-1">Status</label>
-                        <select name="bill_status" class="w-full rounded-md border-gray-300 text-sm">
+                        <label class="mb-1 block text-xs text-slate-500">Status</label>
+                        <select name="bill_status" class="w-full rounded-md border-slate-300 text-sm">
                             <option value="">All</option>
                             @foreach(['draft','generated','sent','partial','paid','overdue','cancelled'] as $status)
                                 <option value="{{ $status }}" @selected($billFilters['bill_status'] === $status)>{{ ucfirst($status) }}</option>
@@ -230,21 +240,21 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs text-gray-500 mb-1">From</label>
-                        <input type="date" name="bill_from" value="{{ $billFilters['bill_from'] }}" class="w-full rounded-md border-gray-300 text-sm">
+                        <label class="mb-1 block text-xs text-slate-500">From</label>
+                        <input type="date" name="bill_from" value="{{ $billFilters['bill_from'] }}" class="w-full rounded-md border-slate-300 text-sm">
                     </div>
                     <div>
-                        <label class="block text-xs text-gray-500 mb-1">To</label>
-                        <input type="date" name="bill_to" value="{{ $billFilters['bill_to'] }}" class="w-full rounded-md border-gray-300 text-sm">
+                        <label class="mb-1 block text-xs text-slate-500">To</label>
+                        <input type="date" name="bill_to" value="{{ $billFilters['bill_to'] }}" class="w-full rounded-md border-slate-300 text-sm">
                     </div>
                     <div class="md:col-span-4 flex gap-2">
                         <button class="rounded-md bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700">Filter</button>
-                        <a href="{{ route('customers.show', $customer) }}#customer-bills" class="rounded-md bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200">Clear</a>
+                        <a href="{{ route('customers.show', $customer) }}#customer-bills" class="rounded-md bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200">Clear</a>
                     </div>
                 </form>
                 <div class="overflow-x-auto">
                     <table class="min-w-full text-sm">
-                        <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
+                        <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
                             <tr>
                                 <th class="px-4 py-2">Bill</th>
                                 <th class="px-4 py-2">Date</th>
@@ -255,14 +265,11 @@
                         </thead>
                         <tbody class="divide-y">
                             @forelse($customerBills as $bill)
-                                <tr class="hover:bg-gray-50">
+                                <tr class="hover:bg-slate-50">
+                                    <td class="px-4 py-2"><a href="{{ route('bills.show', $bill) }}" class="font-medium text-blue-700 hover:text-blue-900">{{ $bill->bill_number }}</a></td>
+                                    <td class="px-4 py-2 text-slate-700">{{ optional($bill->bill_date)->format('Y-m-d') }}</td>
                                     <td class="px-4 py-2">
-                                        <a href="{{ route('bills.show', $bill) }}" class="font-medium text-blue-700 hover:text-blue-900">{{ $bill->bill_number }}</a>
-                                    </td>
-                                    <td class="px-4 py-2 text-gray-700">{{ optional($bill->bill_date)->format('Y-m-d') }}</td>
-                                    <td class="px-4 py-2">
-                                        <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium
-                                            {{ $bill->status === 'paid' ? 'bg-green-100 text-green-800' : ($bill->status === 'overdue' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800') }}">
+                                        <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium {{ $bill->status === 'paid' ? 'bg-green-100 text-green-800' : ($bill->status === 'overdue' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800') }}">
                                             {{ ucfirst($bill->status) }}
                                         </span>
                                     </td>
@@ -270,24 +277,22 @@
                                     <td class="px-4 py-2 text-right font-semibold">Rs. {{ number_format($bill->balance_amount, 2) }}</td>
                                 </tr>
                             @empty
-                                <tr>
-                                    <td colspan="5" class="px-4 py-8 text-center text-gray-500">No bills match these filters.</td>
-                                </tr>
+                                <tr><td colspan="5" class="px-4 py-8 text-center text-slate-500">No bills match these filters.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
                 </div>
                 @if($customerBills->hasPages())
-                    <div class="px-4 py-3 border-t">{{ $customerBills->links() }}</div>
+                    <div class="border-t px-4 py-3">{{ $customerBills->links() }}</div>
                 @endif
             </div>
 
-            <div id="customer-payments" class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden scroll-mt-24">
+            <div id="customer-payments" class="scroll-mt-24 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
                 <div class="bg-emerald-600 px-6 py-4">
                     <h2 class="text-lg font-semibold text-white">Payments</h2>
-                    <p class="text-emerald-100 text-sm">{{ $financialSummary['payments'] }} receipts · date &amp; time on each</p>
+                    <p class="text-sm text-emerald-100">{{ $financialSummary['payments'] }} receipts · date &amp; time on each</p>
                 </div>
-                <form method="GET" action="{{ route('customers.show', $customer) }}#customer-payments" class="p-4 border-b grid grid-cols-1 md:grid-cols-4 gap-3">
+                <form method="GET" action="{{ route('customers.show', $customer) }}#customer-payments" class="grid grid-cols-1 gap-3 border-b border-slate-200 p-4 md:grid-cols-4">
                     @foreach($billFilters as $key => $value)
                         @if($value !== '')
                             <input type="hidden" name="{{ $key }}" value="{{ $value }}">
@@ -296,13 +301,16 @@
                     @if(request('bills_page'))
                         <input type="hidden" name="bills_page" value="{{ request('bills_page') }}">
                     @endif
+                    @if(request('readings_page'))
+                        <input type="hidden" name="readings_page" value="{{ request('readings_page') }}">
+                    @endif
                     <div>
-                        <label class="block text-xs text-gray-500 mb-1">Search</label>
-                        <input type="search" name="payment_q" value="{{ $paymentFilters['payment_q'] }}" placeholder="Receipt, bill, reference" class="w-full rounded-md border-gray-300 text-sm">
+                        <label class="mb-1 block text-xs text-slate-500">Search</label>
+                        <input type="search" name="payment_q" value="{{ $paymentFilters['payment_q'] }}" placeholder="Receipt, bill, reference" class="w-full rounded-md border-slate-300 text-sm">
                     </div>
                     <div>
-                        <label class="block text-xs text-gray-500 mb-1">Method</label>
-                        <select name="payment_method" class="w-full rounded-md border-gray-300 text-sm">
+                        <label class="mb-1 block text-xs text-slate-500">Method</label>
+                        <select name="payment_method" class="w-full rounded-md border-slate-300 text-sm">
                             <option value="">All</option>
                             @foreach(['cash','bank_transfer','cheque','card','wallet','mobile_payment'] as $method)
                                 <option value="{{ $method }}" @selected($paymentFilters['payment_method'] === $method)>{{ str_replace('_', ' ', ucfirst($method)) }}</option>
@@ -310,21 +318,21 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs text-gray-500 mb-1">From</label>
-                        <input type="date" name="payment_from" value="{{ $paymentFilters['payment_from'] }}" class="w-full rounded-md border-gray-300 text-sm">
+                        <label class="mb-1 block text-xs text-slate-500">From</label>
+                        <input type="date" name="payment_from" value="{{ $paymentFilters['payment_from'] }}" class="w-full rounded-md border-slate-300 text-sm">
                     </div>
                     <div>
-                        <label class="block text-xs text-gray-500 mb-1">To</label>
-                        <input type="date" name="payment_to" value="{{ $paymentFilters['payment_to'] }}" class="w-full rounded-md border-gray-300 text-sm">
+                        <label class="mb-1 block text-xs text-slate-500">To</label>
+                        <input type="date" name="payment_to" value="{{ $paymentFilters['payment_to'] }}" class="w-full rounded-md border-slate-300 text-sm">
                     </div>
                     <div class="md:col-span-4 flex gap-2">
                         <button class="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">Filter</button>
-                        <a href="{{ route('customers.show', $customer) }}#customer-payments" class="rounded-md bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200">Clear</a>
+                        <a href="{{ route('customers.show', $customer) }}#customer-payments" class="rounded-md bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200">Clear</a>
                     </div>
                 </form>
                 <div class="overflow-x-auto">
                     <table class="min-w-full text-sm">
-                        <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
+                        <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
                             <tr>
                                 <th class="px-4 py-2">Receipt</th>
                                 <th class="px-4 py-2">Date &amp; time</th>
@@ -336,9 +344,9 @@
                         </thead>
                         <tbody class="divide-y">
                             @forelse($customerPayments as $payment)
-                                <tr class="hover:bg-gray-50">
-                                    <td class="px-4 py-2 font-medium text-gray-900">{{ $payment->receipt_number }}</td>
-                                    <td class="px-4 py-2 text-gray-700 whitespace-nowrap">{{ $payment->paidOnDisplay() }}</td>
+                                <tr class="hover:bg-slate-50">
+                                    <td class="px-4 py-2 font-medium text-slate-900">{{ $payment->receipt_number }}</td>
+                                    <td class="px-4 py-2 whitespace-nowrap text-slate-700">{{ $payment->paidOnDisplay() }}</td>
                                     <td class="px-4 py-2">
                                         @if($payment->bill)
                                             <a href="{{ route('bills.show', $payment->bill) }}" class="text-blue-700 hover:text-blue-900">{{ $payment->bill->bill_number }}</a>
@@ -346,396 +354,296 @@
                                             —
                                         @endif
                                     </td>
-                                    <td class="px-4 py-2 text-gray-700">{{ str_replace('_', ' ', $payment->payment_method) }}</td>
-                                    <td class="px-4 py-2 text-right font-semibold">Rs. {{ number_format($payment->amount, 2) }}</td>
+                                    <td class="px-4 py-2 text-slate-700">{{ str_replace('_', ' ', $payment->payment_method) }}</td>
+                                    <td class="px-4 py-2 text-right font-semibold">
+                                        Rs. {{ number_format($payment->exactPaidAmount(), 2) }}
+                                        @if($payment->walletAddedAmount() > 0)
+                                            <div class="text-xs font-normal text-indigo-600">Bill Rs. {{ number_format($payment->amount, 2) }} · Wallet +Rs. {{ number_format($payment->walletAddedAmount(), 2) }}</div>
+                                        @endif
+                                    </td>
                                     <td class="px-4 py-2 text-right">
-                                        <a href="{{ route('payments.receipt', $payment) }}" target="_blank" class="text-xs font-medium text-gray-700 hover:text-gray-900">Receipt</a>
+                                        <a href="{{ route('payments.receipt', $payment) }}" target="_blank" class="text-xs font-medium text-slate-700 hover:text-slate-900">Receipt</a>
                                     </td>
                                 </tr>
                             @empty
-                                <tr>
-                                    <td colspan="6" class="px-4 py-8 text-center text-gray-500">No payments match these filters.</td>
-                                </tr>
+                                <tr><td colspan="6" class="px-4 py-8 text-center text-slate-500">No payments match these filters.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
                 </div>
                 @if($customerPayments->hasPages())
-                    <div class="px-4 py-3 border-t">{{ $customerPayments->links() }}</div>
+                    <div class="border-t px-4 py-3">{{ $customerPayments->links() }}</div>
                 @endif
             </div>
         </div>
 
-        <div class="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
-            <div class="bg-white overflow-hidden shadow-sm rounded-xl border border-emerald-100">
-                <div class="bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-4">
-                    <h3 class="text-lg font-bold text-white">
-                        <i class="fas fa-chart-bar mr-2"></i>{{ $chartYear }} bills by month
-                    </h3>
-                    <p class="text-emerald-100 text-sm mt-1">Draft, billed, and collected amounts</p>
+        {{-- 5. Make Payment --}}
+        <section id="make-payment" class="mb-8 scroll-mt-24 overflow-hidden rounded-xl border border-teal-200 bg-white shadow-sm">
+            <div class="flex flex-wrap items-center justify-between gap-3 bg-teal-600 px-6 py-4">
+                <div>
+                    <h2 class="text-lg font-semibold text-white">Make Payment</h2>
+                    <p class="text-sm text-teal-100">Record a payment. Extra cash is added to the wallet.</p>
                 </div>
-                <div class="p-6">
-                    <div class="relative h-80">
-                        <canvas id="customerYearMoneyChart"></canvas>
-                    </div>
-                </div>
+                <a href="{{ route('payments.collect', ['customer' => $customer->id]) }}" class="text-sm font-medium text-white/90 underline hover:text-white">Open full collect page</a>
             </div>
+            <form method="POST" action="{{ route('payments.collect.store') }}" class="space-y-4 p-6">
+                @csrf
+                <input type="hidden" name="customer_id" value="{{ $customer->id }}">
+                <input type="hidden" name="redirect_to" value="customer">
 
-            <div class="bg-white overflow-hidden shadow-sm rounded-xl border border-cyan-100">
-                <div class="bg-gradient-to-r from-cyan-500 to-blue-600 px-6 py-4">
-                    <h3 class="text-lg font-bold text-white">
-                        <i class="fas fa-chart-line mr-2"></i>{{ $chartYear }} water use by month
-                    </h3>
-                    <p class="text-cyan-100 text-sm mt-1">Units consumed and readings taken</p>
+                <div class="overflow-x-auto rounded-lg border border-slate-200">
+                    <table class="min-w-full text-sm">
+                        <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+                            <tr>
+                                <th class="px-3 py-2">Pay</th>
+                                <th class="px-3 py-2">Bill</th>
+                                <th class="px-3 py-2">Due</th>
+                                <th class="px-3 py-2 text-right">Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                            @forelse($openBills as $bill)
+                                <tr>
+                                    <td class="px-3 py-2">
+                                        <input type="checkbox" name="bill_ids[]" value="{{ $bill->id }}" class="customer-bill-pick rounded border-slate-300 text-teal-600" data-balance="{{ $bill->balance_amount }}" checked>
+                                    </td>
+                                    <td class="px-3 py-2">
+                                        <a href="{{ route('bills.show', $bill) }}" class="font-medium text-blue-700 hover:text-blue-900">{{ $bill->bill_number }}</a>
+                                        <div class="text-xs text-slate-500">{{ ucfirst($bill->status) }}</div>
+                                    </td>
+                                    <td class="px-3 py-2 text-slate-700">{{ optional($bill->due_date)->format('Y-m-d') }}</td>
+                                    <td class="px-3 py-2 text-right font-semibold">Rs. {{ number_format($bill->balance_amount, 2) }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="4" class="px-3 py-6 text-center text-slate-500">No open bills. An amount entered below is added to the wallet.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
-                <div class="p-6">
-                    <div class="relative h-80">
-                        <canvas id="customerYearUsageChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            <!-- Left Column - Customer Info -->
-            <div class="lg:col-span-2 space-y-8">
-                
-                <!-- Customer Profile Card -->
-                <div class="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200">
-                    <div class="bg-blue-600 p-6">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                @if($customer->profile_photo)
-                                    <img class="h-20 w-20 rounded-full object-cover border-4 border-white shadow-lg cursor-pointer hover:opacity-90 transition-opacity" 
-                                         src="{{ $customer->profile_photo_url }}" 
-                                         alt="{{ $customer->full_name }}"
-                                         data-lightbox
-                                         title="View photo">
-                                @else
-                                    <div class="h-20 w-20 rounded-full bg-white bg-opacity-20 flex items-center justify-center border-4 border-white shadow-lg">
-                                        <i class="fas fa-user text-white text-2xl"></i>
-                                    </div>
-                                @endif
-                            </div>
-                            <div class="ml-6">
-                                <h2 class="text-2xl font-bold text-white">{{ $customer->full_name }}</h2>
-                                <p class="text-blue-100 text-lg">{{ $customer->customerType->name ?? 'N/A' }} Customer</p>
-                                <div class="mt-2 flex items-center space-x-4">
-                                    @if($customer->status === 'active')
-                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                                            🟢 Active
-                                        </span>
-                                    @elseif($customer->status === 'suspended')
-                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
-                                            🟡 Suspended
-                                        </span>
-                                    @else
-                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
-                                            🔴 Inactive
-                                        </span>
-                                    @endif
-                                    @if($customer->connection_date)
-                                    <span class="text-blue-100 text-sm">
-                                        Member since {{ $customer->connection_date->format('M Y') }}
-                                    </span>
-                                    @endif
-                                </div>
-                            </div>
-                        </div>
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <div>
+                        <label for="customer_pay_amount" class="mb-1 block text-sm font-medium text-slate-700">Amount (Rs.)</label>
+                        <input type="number" name="amount" id="customer_pay_amount" step="0.01" min="0" value="{{ old('amount', $openBills->sum('balance_amount')) }}" class="w-full rounded-md border-slate-300">
                     </div>
-                    
-                    <!-- Account Information -->
-                    <div class="p-6">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                            <i class="fas fa-id-card text-blue-500 mr-2"></i>
-                            Account Information
-                        </h3>
-                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-500">Account Number</label>
-                                <p class="mt-1 text-lg font-bold text-blue-600">{{ $customer->account_number }}</p>
-                            </div>
-                            @if($customer->reference_number)
-                            <div>
-                                <label class="block text-sm font-medium text-gray-500">Reference Number</label>
-                                <p class="mt-1 text-sm text-gray-900">{{ $customer->reference_number }}</p>
-                            </div>
-                            @endif
-                            @if($customer->meter_number)
-                            <div>
-                                <label class="block text-sm font-medium text-gray-500">Meter Number</label>
-                                <p class="mt-1 text-sm text-gray-900">{{ $customer->meter_number }}</p>
-                            </div>
-                            @endif
-                            <div>
-                                <label class="block text-sm font-medium text-gray-500">Division</label>
-                                <p class="mt-1 text-sm text-gray-900">{{ $customer->division->name ?? 'N/A' }}</p>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-500">Connection Date</label>
-                                <p class="mt-1 text-sm text-gray-900">{{ $customer->connection_date?->format('M d, Y') ?? 'Not set' }}</p>
-                            </div>
-                            @if($customer->deposit_amount > 0)
-                            <div>
-                                <label class="block text-sm font-medium text-gray-500">Deposit Amount</label>
-                                <p class="mt-1 text-sm text-gray-900">Rs. {{ number_format($customer->deposit_amount, 2) }}</p>
-                            </div>
-                            @endif
-                        </div>
+                    <div>
+                        <label for="customer_pay_method" class="mb-1 block text-sm font-medium text-slate-700">Method</label>
+                        <select name="payment_method" id="customer_pay_method" class="w-full rounded-md border-slate-300" required>
+                            <option value="cash">Cash</option>
+                            <option value="bank_transfer">Bank transfer</option>
+                            <option value="cheque">Cheque</option>
+                            <option value="card">Card</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="customer_pay_date" class="mb-1 block text-sm font-medium text-slate-700">Date &amp; time</label>
+                        <input type="datetime-local" name="payment_date" id="customer_pay_date" value="{{ old('payment_date', now()->format('Y-m-d\TH:i')) }}" required class="w-full rounded-md border-slate-300">
+                    </div>
+                    <div>
+                        <label for="customer_pay_reference" class="mb-1 block text-sm font-medium text-slate-700">Reference</label>
+                        <input type="text" name="reference" id="customer_pay_reference" value="{{ old('reference') }}" class="w-full rounded-md border-slate-300">
                     </div>
                 </div>
 
-                <!-- Personal Information -->
-                <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
-                    <div class="bg-gradient-to-r from-emerald-500 to-teal-600 p-4">
-                        <h3 class="text-lg font-semibold text-white flex items-center">
-                            <i class="fas fa-user-circle mr-2"></i>
-                            Personal Information
-                        </h3>
+                <div>
+                    <label for="customer_pay_notes" class="mb-1 block text-sm font-medium text-slate-700">Notes</label>
+                    <textarea name="notes" id="customer_pay_notes" rows="2" class="w-full rounded-md border-slate-300">{{ old('notes') }}</textarea>
+                </div>
+
+                @if($customer->wallet_balance > 0)
+                    <label class="inline-flex items-center gap-2 text-sm text-slate-800">
+                        <input type="checkbox" name="use_wallet" value="1" class="rounded border-slate-300 text-teal-600" {{ old('use_wallet') ? 'checked' : '' }}>
+                        Use wallet (Rs. {{ number_format($customer->wallet_balance, 2) }} available)
+                    </label>
+                @endif
+
+                <button type="submit" class="rounded-lg bg-teal-600 px-5 py-2.5 font-semibold text-white hover:bg-teal-700">
+                    <i class="fas fa-check mr-2"></i>Save payment
+                </button>
+            </form>
+        </section>
+
+        {{-- 6. Connection --}}
+        <section id="connection" class="mb-8 scroll-mt-24 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 class="mb-1 text-lg font-semibold text-slate-900">Connection</h2>
+            <p class="mb-4 text-sm text-slate-600">Status: <span class="font-medium">{{ ucfirst($customer->status) }}</span></p>
+            <form method="POST" action="{{ $customer->status === 'disconnected' ? route('customers.reconnect', $customer) : route('customers.disconnect', $customer) }}" class="grid grid-cols-1 items-end gap-3 md:grid-cols-4">
+                @csrf
+                <div>
+                    <label class="block text-xs text-slate-500">Date</label>
+                    <input type="date" name="event_date" value="{{ now()->toDateString() }}" class="mt-1 w-full rounded-md border-slate-300 text-sm" required>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-xs text-slate-500">Reason</label>
+                    <input type="text" name="reason" class="mt-1 w-full rounded-md border-slate-300 text-sm" required>
+                </div>
+                <button class="rounded-md px-4 py-2 text-sm text-white {{ $customer->status === 'disconnected' ? 'bg-emerald-600' : 'bg-red-600' }}">
+                    {{ $customer->status === 'disconnected' ? 'Reconnect' : 'Disconnect' }}
+                </button>
+            </form>
+            @if($customer->connectionEvents->isNotEmpty())
+                <ul class="mt-4 space-y-1 text-sm text-slate-700">
+                    @foreach($customer->connectionEvents->take(5) as $event)
+                        <li>{{ $event->event_date->format('Y-m-d') }} — {{ ucfirst($event->action) }} — {{ $event->reason }} — {{ $event->user?->name ?? 'Office' }}</li>
+                    @endforeach
+                </ul>
+            @endif
+        </section>
+
+        {{-- 7. Profile details --}}
+        <section id="profile" class="scroll-mt-24 grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div class="space-y-6 lg:col-span-2">
+                <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                    <div class="bg-slate-700 px-5 py-3">
+                        <h3 class="font-semibold text-white"><i class="fas fa-id-card mr-2"></i>Account &amp; personal</h3>
                     </div>
-                    <div class="p-6">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            @if($customer->email)
-                            <div>
-                                <label class="block text-sm font-medium text-gray-500">Email Address</label>
-                                <p class="mt-1 text-sm text-gray-900 flex items-center">
-                                    <i class="fas fa-envelope text-gray-400 mr-2"></i>
-                                    {{ $customer->email }}
-                                </p>
-                            </div>
-                            @endif
-                            <div>
-                                <label class="block text-sm font-medium text-gray-500">Phone Number</label>
-                                <p class="mt-1 text-sm text-gray-900 flex items-center">
-                                    <i class="fas fa-phone text-gray-400 mr-2"></i>
-                                    {{ $customer->phone }}
-                                </p>
-                            </div>
-                            @if($customer->phone_two)
-                            <div>
-                                <label class="block text-sm font-medium text-gray-500">Phone Number (Secondary)</label>
-                                <p class="mt-1 text-sm text-gray-900 flex items-center">
-                                    <i class="fas fa-phone text-gray-400 mr-2"></i>
-                                    {{ $customer->phone_two }}
-                                </p>
-                            </div>
-                            @endif
-                            @if($customer->nic)
-                            <div>
-                                <label class="block text-sm font-medium text-gray-500">NIC Number</label>
-                                <p class="mt-1 text-sm text-gray-900">{{ $customer->nic }}</p>
-                            </div>
-                            @endif
-                            @if($customer->epf_number)
-                            <div>
-                                <label class="block text-sm font-medium text-gray-500">EPF Number</label>
-                                <p class="mt-1 text-sm text-gray-900">{{ $customer->epf_number }}</p>
-                            </div>
-                            @endif
+                    <div class="grid grid-cols-1 gap-5 p-5 md:grid-cols-2">
+                        <div>
+                            <p class="text-xs uppercase text-slate-500">Account number</p>
+                            <p class="mt-1 font-semibold text-blue-700">{{ $customer->account_number }}</p>
                         </div>
-                        
+                        @if($customer->reference_number)
+                        <div>
+                            <p class="text-xs uppercase text-slate-500">Reference</p>
+                            <p class="mt-1 text-slate-900">{{ $customer->reference_number }}</p>
+                        </div>
+                        @endif
+                        @if($customer->meter_number)
+                        <div>
+                            <p class="text-xs uppercase text-slate-500">Meter number</p>
+                            <p class="mt-1 text-slate-900">{{ $customer->meter_number }}</p>
+                        </div>
+                        @endif
+                        <div>
+                            <p class="text-xs uppercase text-slate-500">Connection date</p>
+                            <p class="mt-1 text-slate-900">{{ $customer->connection_date?->format('M d, Y') ?? 'Not set' }}</p>
+                        </div>
+                        @if($customer->email)
+                        <div>
+                            <p class="text-xs uppercase text-slate-500">Email</p>
+                            <p class="mt-1 text-slate-900">{{ $customer->email }}</p>
+                        </div>
+                        @endif
+                        <div>
+                            <p class="text-xs uppercase text-slate-500">Phone</p>
+                            <p class="mt-1 text-slate-900">{{ $customer->phone ?: '—' }}</p>
+                        </div>
+                        @if($customer->phone_two)
+                        <div>
+                            <p class="text-xs uppercase text-slate-500">Phone (secondary)</p>
+                            <p class="mt-1 text-slate-900">{{ $customer->phone_two }}</p>
+                        </div>
+                        @endif
+                        @if($customer->nic)
+                        <div>
+                            <p class="text-xs uppercase text-slate-500">NIC</p>
+                            <p class="mt-1 text-slate-900">{{ $customer->nic }}</p>
+                        </div>
+                        @endif
+                        @if($customer->epf_number)
+                        <div>
+                            <p class="text-xs uppercase text-slate-500">EPF</p>
+                            <p class="mt-1 text-slate-900">{{ $customer->epf_number }}</p>
+                        </div>
+                        @endif
+                        @if($customer->deposit_amount > 0)
+                        <div>
+                            <p class="text-xs uppercase text-slate-500">Deposit</p>
+                            <p class="mt-1 text-slate-900">Rs. {{ number_format($customer->deposit_amount, 2) }}</p>
+                        </div>
+                        @endif
                         @if($customer->address)
-                        <div class="mt-6">
-                            <label class="block text-sm font-medium text-gray-500">Address</label>
-                            <p class="mt-1 text-sm text-gray-900 flex items-start">
-                                <i class="fas fa-map-marker-alt text-gray-400 mr-2 mt-1"></i>
-                                <span>
-                                    {{ $customer->address }}
-                                    @if($customer->city), {{ $customer->city }}@endif
-                                    @if($customer->postal_code) {{ $customer->postal_code }}@endif
-                                </span>
+                        <div class="md:col-span-2">
+                            <p class="text-xs uppercase text-slate-500">Address</p>
+                            <p class="mt-1 text-slate-900">
+                                {{ $customer->address }}
+                                @if($customer->city), {{ $customer->city }}@endif
+                                @if($customer->postal_code) {{ $customer->postal_code }}@endif
                             </p>
                         </div>
                         @endif
-
                         @if($customer->guarantor)
-                        <div class="mt-6 pt-6 border-t border-gray-200">
-                            <label class="block text-sm font-medium text-gray-500">Guarantor</label>
-                            <p class="mt-1 text-sm text-gray-900 flex items-center">
-                                <i class="fas fa-user-shield text-gray-400 mr-2"></i>
-                                {{ $customer->guarantor->full_name }} ({{ $customer->guarantor->relationship }})
-                            </p>
+                        <div class="md:col-span-2">
+                            <p class="text-xs uppercase text-slate-500">Guarantor</p>
+                            <p class="mt-1 text-slate-900">{{ $customer->guarantor->full_name }} ({{ $customer->guarantor->relationship }})</p>
                         </div>
                         @endif
-
-                        @php
-                            $displayNotes = trim(preg_replace('/\s*Imported from customer-readings-payments\.xlsx\.\s*Sheet name:.*$/i', '', (string) $customer->notes));
-                        @endphp
                         @if($displayNotes !== '')
-                        <div class="mt-6 pt-6 border-t border-gray-200">
-                            <label class="block text-sm font-medium text-gray-500">Notes</label>
-                            <p class="mt-1 text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">{{ $displayNotes }}</p>
+                        <div class="md:col-span-2">
+                            <p class="text-xs uppercase text-slate-500">Notes</p>
+                            <p class="mt-1 rounded-lg bg-slate-50 p-3 text-sm text-slate-700">{{ $displayNotes }}</p>
                         </div>
                         @endif
                     </div>
                 </div>
 
-                <!-- Water Meters Section -->
                 @if($activeMeters->count() > 0)
-                <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
-                    <div class="bg-gradient-to-r from-purple-500 to-indigo-600 p-4">
-                        <h3 class="text-lg font-semibold text-white flex items-center">
-                            <i class="fas fa-tachometer-alt mr-2"></i>
-                            Water Meters ({{ $activeMeters->count() }})
-                        </h3>
+                <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                    <div class="bg-violet-600 px-5 py-3">
+                        <h3 class="font-semibold text-white"><i class="fas fa-tachometer-alt mr-2"></i>Water meters ({{ $activeMeters->count() }})</h3>
                     </div>
-                    <div class="p-6">
-                        <div class="space-y-4">
-                            @foreach($activeMeters as $meter)
-                            <div class="border border-gray-200 rounded-lg p-4 hover:border-purple-300 transition-colors">
-                                <div class="flex items-center justify-between gap-4">
-                                    <div class="flex items-center gap-4">
-                                        @if($customer->qr_code_url && $customer->meter_number === $meter->meter_number)
-                                        <img src="{{ $customer->qr_code_url }}" alt="QR code for {{ $customer->full_name }}" class="h-20 w-20 rounded border border-gray-200 bg-white">
-                                        @endif
-                                        <div>
-                                        <h4 class="font-medium text-gray-900">{{ $meter->meter_number }}</h4>
-                                        <p class="text-sm text-gray-500">
-                                            {{ $meter->meter_brand }} {{ $meter->meter_model }} 
-                                            ({{ $meter->meter_size }}mm {{ ucfirst($meter->meter_type) }})
-                                        </p>
-                                        </div>
-                                    </div>
-                                    <div class="text-right">
-                                        <p class="text-lg font-bold text-purple-600">{{ number_format($meter->current_reading, 2) }}</p>
-                                        <p class="text-sm text-gray-500">Current Reading</p>
-                                    </div>
+                    <div class="space-y-3 p-5">
+                        @foreach($activeMeters as $meter)
+                            <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-4">
+                                <div>
+                                    <p class="font-medium text-slate-900">{{ $meter->meter_number }}</p>
+                                    <p class="text-sm text-slate-500">
+                                        {{ $meter->meter_brand }} {{ $meter->meter_model }}
+                                        ({{ $meter->meter_size }}mm {{ ucfirst($meter->meter_type) }})
+                                    </p>
+                                    @if($meter->location_notes)
+                                        <p class="mt-1 text-sm text-slate-600">{{ $meter->location_notes }}</p>
+                                    @endif
                                 </div>
-                                @if($meter->location_notes)
-                                <p class="mt-2 text-sm text-gray-600">
-                                    <i class="fas fa-map-marker-alt text-gray-400 mr-1"></i>
-                                    {{ $meter->location_notes }}
-                                </p>
-                                @endif
+                                <div class="text-right">
+                                    <p class="text-lg font-bold text-violet-700">@units($meter->current_reading)</p>
+                                    <p class="text-xs text-slate-500">Current reading</p>
+                                </div>
                             </div>
-                            @endforeach
-                        </div>
+                        @endforeach
                     </div>
                 </div>
                 @endif
-
             </div>
 
-            <!-- Right Column - Quick Stats & Recent Activity -->
-            <div class="space-y-8">
-
+            <div class="space-y-6">
                 @if($customer->qr_code_url)
-                <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
-                    <div class="bg-gradient-to-r from-indigo-500 to-blue-600 p-4">
-                        <h3 class="text-lg font-semibold text-white flex items-center">
-                            <i class="fas fa-qrcode mr-2"></i>
-                            Customer QR Code
-                        </h3>
+                <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                    <div class="bg-indigo-600 px-5 py-3">
+                        <h3 class="font-semibold text-white"><i class="fas fa-qrcode mr-2"></i>QR code</h3>
                     </div>
-                    <div class="p-6 text-center">
-                        <img src="{{ $customer->qr_code_url }}" alt="QR code for {{ $customer->account_number }}" class="mx-auto h-48 w-48 rounded-lg border border-gray-200 bg-white">
-                        <p class="mt-4 font-mono text-sm text-blue-800">{{ $customer->meter_number }}</p>
-                        <p class="text-xs text-gray-500">{{ $customer->account_number }}</p>
+                    <div class="p-5 text-center">
+                        <img src="{{ $customer->qr_code_url }}" alt="QR code for {{ $customer->account_number }}" class="mx-auto h-44 w-44 rounded-lg border border-slate-200 bg-white">
+                        <p class="mt-3 font-mono text-sm text-blue-800">{{ $customer->meter_number }}</p>
+                        <p class="text-xs text-slate-500">{{ $customer->account_number }}</p>
                         @if($activeMeters->first())
-                        <a href="{{ route('meters.qr-code.download', $activeMeters->first()) }}"
-                           class="mt-4 inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-                            <i class="fas fa-download mr-2"></i>
-                            Download QR
-                        </a>
+                            <a href="{{ route('meters.qr-code.download', $activeMeters->first()) }}" class="mt-4 inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700">
+                                <i class="fas fa-download mr-2"></i>Download QR
+                            </a>
                         @endif
                     </div>
                 </div>
                 @endif
-                
-                <!-- Quick Stats -->
-                <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
-                    <div class="bg-gradient-to-r from-green-500 to-emerald-600 p-4">
-                        <h3 class="text-lg font-semibold text-white flex items-center">
-                            <i class="fas fa-chart-line mr-2"></i>
-                            Account Summary
-                        </h3>
-                    </div>
-                    <div class="p-6 space-y-4">
-                        <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                            <div>
-                                <p class="text-sm font-medium text-green-800">Outstanding Balance</p>
-                                <p class="text-2xl font-bold text-green-600">Rs. {{ number_format($outstandingBalance, 2) }}</p>
-                            </div>
-                            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                                <i class="fas fa-dollar-sign text-green-600 text-xl"></i>
-                            </div>
-                        </div>
-                        
-                        @if($lastBill)
-                        <div class="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                            <div>
-                                <p class="text-sm font-medium text-blue-800">Last Bill Amount</p>
-                                <p class="text-xl font-bold text-blue-600">Rs. {{ number_format($lastBill->total_amount, 2) }}</p>
-                                <p class="text-xs text-blue-600">{{ $lastBill->bill_date->format('M d, Y') }}</p>
-                            </div>
-                            <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                                <i class="fas fa-file-invoice text-blue-600 text-xl"></i>
-                            </div>
-                        </div>
-                        @endif
 
-                        @if($currentReading)
-                        <div class="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
-                            <div>
-                                <p class="text-sm font-medium text-purple-800">Current Reading</p>
-                                <p class="text-xl font-bold text-purple-600">{{ number_format($currentReading->current_reading, 2) }}</p>
-                                <p class="text-xs text-purple-600">{{ $currentReading->reading_date->format('M d, Y') }}</p>
-                            </div>
-                            <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                                <i class="fas fa-tachometer-alt text-purple-600 text-xl"></i>
-                            </div>
-                        </div>
-                        @endif
+                <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                    <div class="bg-slate-700 px-5 py-3">
+                        <h3 class="font-semibold text-white"><i class="fas fa-bolt mr-2"></i>Quick actions</h3>
                     </div>
-                </div>
-
-                <!-- Quick Actions -->
-                <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
-                    <div class="bg-gradient-to-r from-gray-500 to-gray-700 p-4">
-                        <h3 class="text-lg font-semibold text-white flex items-center">
-                            <i class="fas fa-bolt mr-2"></i>
-                            Quick Actions
-                        </h3>
-                    </div>
-                    <div class="p-6 space-y-3">
-                        <a href="#make-payment"
-                           class="w-full flex items-center justify-center px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors">
-                            <i class="fas fa-hand-holding-usd mr-2"></i>
-                            Make Payment
-                        </a>
-                        <a href="{{ route('customers.edit', $customer) }}" 
-                           class="w-full flex items-center justify-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
-                            <i class="fas fa-edit mr-2"></i>
-                            Edit Customer
-                        </a>
-                        <a href="#customer-bills"
-                           class="w-full flex items-center justify-center px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
-                            <i class="fas fa-file-invoice-dollar mr-2"></i>
-                            View Bills ({{ $financialSummary['bills'] }})
-                        </a>
-                        <a href="#customer-payments"
-                           class="w-full flex items-center justify-center px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors">
-                            <i class="fas fa-receipt mr-2"></i>
-                            View Payments ({{ $financialSummary['payments'] }})
-                        </a>
+                    <div class="space-y-2 p-4">
+                        <a href="#make-payment" class="flex w-full items-center justify-center rounded-lg bg-teal-600 px-4 py-2 text-white hover:bg-teal-700"><i class="fas fa-hand-holding-usd mr-2"></i>Make Payment</a>
+                        <a href="#readings" class="flex w-full items-center justify-center rounded-lg bg-violet-600 px-4 py-2 text-white hover:bg-violet-700"><i class="fas fa-tachometer-alt mr-2"></i>Readings ({{ $financialSummary['readings'] }})</a>
+                        <a href="#customer-bills" class="flex w-full items-center justify-center rounded-lg bg-orange-500 px-4 py-2 text-white hover:bg-orange-600"><i class="fas fa-file-invoice-dollar mr-2"></i>Bills ({{ $financialSummary['bills'] }})</a>
+                        <a href="#customer-payments" class="flex w-full items-center justify-center rounded-lg bg-emerald-500 px-4 py-2 text-white hover:bg-emerald-600"><i class="fas fa-receipt mr-2"></i>Payments ({{ $financialSummary['payments'] }})</a>
                         @if($activeMeters->count() > 0)
-                        <a href="{{ route('customers.meters', $customer) }}" 
-                           class="w-full flex items-center justify-center px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors">
-                            <i class="fas fa-tachometer-alt mr-2"></i>
-                            Manage Meters
-                        </a>
+                            <a href="{{ route('customers.meters', $customer) }}" class="flex w-full items-center justify-center rounded-lg bg-indigo-500 px-4 py-2 text-white hover:bg-indigo-600"><i class="fas fa-cog mr-2"></i>Manage meters</a>
                         @endif
-                        <button onclick="window.print()" 
-                                class="w-full flex items-center justify-center px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
-                            <i class="fas fa-print mr-2"></i>
-                            Print Details
-                        </button>
+                        <a href="{{ route('customers.edit', $customer) }}" class="flex w-full items-center justify-center rounded-lg bg-slate-600 px-4 py-2 text-white hover:bg-slate-700"><i class="fas fa-edit mr-2"></i>Edit customer</a>
                     </div>
                 </div>
-
             </div>
-        </div>
+        </section>
     </div>
 </div>
 
@@ -762,7 +670,8 @@ document.addEventListener('DOMContentLoaded', function () {
             datasets: [
                 { label: 'Draft', data: months.map(month => month.draft), backgroundColor: '#F59E0B' },
                 { label: 'Billed', data: months.map(month => month.billed), backgroundColor: '#10B981' },
-                { label: 'Collected', data: months.map(month => month.collected), backgroundColor: '#3B82F6' }
+                { label: 'Paid (exact)', data: months.map(month => month.paid ?? (month.collected + (month.overpaid || 0))), backgroundColor: '#3B82F6' },
+                { label: 'Overpaid to wallet', data: months.map(month => month.overpaid), backgroundColor: '#8B5CF6' }
             ]
         },
         options: {
@@ -811,4 +720,4 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 </script>
-@endsection 
+@endsection

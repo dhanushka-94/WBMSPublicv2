@@ -19,9 +19,9 @@
                     <button onclick="exportReport()" class="bg-yellow-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-yellow-600 transition duration-200">
                         <i class="fas fa-download mr-2"></i>Export CSV
                     </button>
-                    <button onclick="generateDemandLetters()" class="bg-blue-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-600 transition duration-200">
-                        <i class="fas fa-envelope mr-2"></i>Generate Demand Letters
-                    </button>
+                    <a href="{{ route('sms.bulk') }}" class="bg-blue-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-600 transition duration-200 inline-flex items-center">
+                        <i class="fas fa-sms mr-2"></i>Send bulk SMS
+                    </a>
                 </div>
             </div>
         </div>
@@ -219,7 +219,11 @@
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-lg font-bold text-red-600">LKR {{ number_format($bill->balance_amount, 2) }}</div>
                                         <div class="text-sm text-gray-500">Total: LKR {{ number_format($bill->total_amount, 2) }}</div>
-                                        <div class="text-sm text-gray-500">Paid: LKR {{ number_format($bill->paid_amount, 2) }}</div>
+                                        @php $overdueSettle = $bill->settlementSummary(); @endphp
+                                        <div class="text-sm text-gray-500">Paid: LKR {{ number_format($overdueSettle['cash_received'] > 0 ? $overdueSettle['cash_received'] : $bill->paid_amount, 2) }}</div>
+                                        @if($overdueSettle['wallet_added'] > 0)
+                                            <div class="text-xs text-indigo-600">Bill LKR {{ number_format($bill->paid_amount, 2) }} · Wallet +LKR {{ number_format($overdueSettle['wallet_added'], 2) }}</div>
+                                        @endif
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-lg font-bold text-gray-900">{{ $daysOverdue }}</div>
@@ -227,10 +231,10 @@
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-sm text-gray-900">
-                                            @if($bill->customer->phone_number)
+                                            @if($bill->customer->phone)
                                                 <div class="flex items-center mb-1">
                                                     <i class="fas fa-phone text-green-600 mr-2"></i>
-                                                    <a href="tel:{{ $bill->customer->phone_number }}" class="text-blue-600 hover:text-blue-800">{{ $bill->customer->phone_number }}</a>
+                                                    <a href="tel:{{ $bill->customer->phone }}" class="text-blue-600 hover:text-blue-800">{{ $bill->customer->phone }}</a>
                                                 </div>
                                             @endif
                                             @if($bill->customer->email)
@@ -239,7 +243,7 @@
                                                     <a href="mailto:{{ $bill->customer->email }}" class="text-blue-600 hover:text-blue-800 text-xs">{{ $bill->customer->email }}</a>
                                                 </div>
                                             @endif
-                                            @if(!$bill->customer->phone_number && !$bill->customer->email)
+                                            @if(!$bill->customer->phone && !$bill->customer->email)
                                                 <span class="text-gray-400 text-sm">No contact info</span>
                                             @endif
                                         </div>
@@ -265,14 +269,14 @@
                                             <a href="{{ route('customers.show', $bill->customer) }}" class="text-green-600 hover:text-green-900" title="View Customer">
                                                 <i class="fas fa-user"></i>
                                             </a>
-                                            @if($bill->customer->phone_number)
-                                                <a href="tel:{{ $bill->customer->phone_number }}" class="text-purple-600 hover:text-purple-900" title="Call Customer">
+                                            @if($bill->customer->phone)
+                                                <a href="tel:{{ $bill->customer->phone }}" class="text-purple-600 hover:text-purple-900" title="Call Customer">
                                                     <i class="fas fa-phone"></i>
                                                 </a>
                                             @endif
-                                            <button onclick="sendReminder({{ $bill->id }})" class="text-yellow-600 hover:text-yellow-900" title="Send Reminder">
-                                                <i class="fas fa-bell"></i>
-                                            </button>
+                                            <a href="{{ route('customers.show', $bill->customer) }}#make-payment" class="text-yellow-600 hover:text-yellow-900" title="Collect payment">
+                                                <i class="fas fa-hand-holding-usd"></i>
+                                            </a>
                                         </div>
                                     </td>
                                 </tr>
@@ -381,21 +385,5 @@ function exportReport() {
     document.body.removeChild(a);
 }
 
-function generateDemandLetters() {
-    const selectedBills = Array.from(document.querySelectorAll('.bill-checkbox:checked')).map(cb => cb.value);
-    
-    if (selectedBills.length === 0) {
-        alert('Please select bills to generate demand letters for.');
-        return;
-    }
-    
-    // Here you would implement the demand letter generation logic
-    alert(`Generating demand letters for ${selectedBills.length} selected bills...`);
-}
-
-function sendReminder(billId) {
-    // Here you would implement the reminder sending logic
-    alert(`Sending reminder for bill ID: ${billId}`);
-}
 </script>
 @endsection 

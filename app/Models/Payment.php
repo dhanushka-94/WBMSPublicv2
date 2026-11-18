@@ -5,6 +5,7 @@ namespace App\Models;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Payment extends Model
 {
@@ -38,6 +39,61 @@ class Payment extends Model
     public function receiver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'received_by');
+    }
+
+    public function walletEntries(): HasMany
+    {
+        return $this->hasMany(WalletEntry::class);
+    }
+
+    public function overpaymentEntries(): HasMany
+    {
+        return $this->hasMany(WalletEntry::class)
+            ->where('reason', 'overpayment')
+            ->where('amount', '>', 0);
+    }
+
+    /**
+     * Extra cash from this payment that was credited to the customer wallet.
+     */
+    public function walletAddedAmount(): float
+    {
+        if ($this->payment_method === 'wallet') {
+            return 0.0;
+        }
+
+        $linked = (float) ($this->relationLoaded('overpaymentEntries')
+            ? $this->overpaymentEntries->sum('amount')
+            : $this->overpaymentEntries()->sum('amount'));
+
+        if ($linked > 0) {
+            return round($linked, 2);
+        }
+
+        if (!$this->customer_id || !$this->created_at) {
+            return 0.0;
+        }
+
+        return round((float) WalletEntry::query()
+            ->where('customer_id', $this->customer_id)
+            ->where('reason', 'overpayment')
+            ->where('amount', '>', 0)
+            ->where(function ($query) {
+                $query->whereNull('payment_id')->orWhere('payment_id', $this->id);
+            })
+            ->whereBetween('created_at', [
+                $this->created_at->copy()->subSeconds(2),
+                $this->created_at->copy()->addSeconds(2),
+            ])
+            ->sum('amount'), 2);
+    }
+
+    /**
+     * Exact cash/payment received for this receipt (bill portion + wallet overpayment).
+     */
+    public function exactPaidAmount(): float
+    {
+        return round((float) $this->amount + $this->walletAddedAmount(), 2);
     }
 
     public function paidOnDisplay(string $format = 'Y-m-d H:i'): string

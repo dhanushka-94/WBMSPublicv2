@@ -274,6 +274,72 @@ class Bill extends Model
         return $this;
     }
 
+    /**
+     * Cash/wallet settlement shown on the bill print/receipt.
+     *
+     * @return array{
+     *   bill_total: float,
+     *   applied_to_bill: float,
+     *   cash_received: float,
+     *   wallet_used: float,
+     *   wallet_added: float,
+     *   bill_balance: float,
+     *   wallet_balance: float,
+     *   receipts: string
+     * }
+     */
+    public function settlementSummary(): array
+    {
+        $this->loadMissing(['payments', 'customer']);
+
+        $payments = $this->payments;
+        $appliedToBill = round((float) $payments->sum('amount'), 2);
+        $walletUsed = round((float) $payments->where('payment_method', 'wallet')->sum('amount'), 2);
+        $cashOnBill = round((float) $payments->where('payment_method', '!=', 'wallet')->sum('amount'), 2);
+
+        $paymentIds = $payments->pluck('id')->filter()->all();
+        $walletAdded = 0.0;
+
+        if ($this->customer_id) {
+            $query = WalletEntry::query()
+                ->where('customer_id', $this->customer_id)
+                ->where('reason', 'overpayment')
+                ->where('amount', '>', 0);
+
+            $query->where(function ($q) use ($paymentIds) {
+                $q->where('bill_id', $this->id);
+                if ($paymentIds !== []) {
+                    $q->orWhereIn('payment_id', $paymentIds);
+                }
+                foreach ($this->payments as $payment) {
+                    if (!$payment->created_at) {
+                        continue;
+                    }
+                    $from = $payment->created_at->copy()->subSeconds(2);
+                    $to = $payment->created_at->copy()->addSeconds(2);
+                    $q->orWhere(function ($inner) use ($from, $to) {
+                        $inner->whereNull('bill_id')
+                            ->whereNull('payment_id')
+                            ->whereBetween('created_at', [$from, $to]);
+                    });
+                }
+            });
+
+            $walletAdded = round((float) $query->sum('amount'), 2);
+        }
+
+        return [
+            'bill_total' => round((float) $this->total_amount, 2),
+            'applied_to_bill' => $appliedToBill,
+            'cash_received' => round($cashOnBill + $walletAdded, 2),
+            'wallet_used' => $walletUsed,
+            'wallet_added' => $walletAdded,
+            'bill_balance' => round((float) $this->balance_amount, 2),
+            'wallet_balance' => round((float) ($this->customer?->wallet_balance ?? 0), 2),
+            'receipts' => $payments->pluck('receipt_number')->filter()->implode(', '),
+        ];
+    }
+
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);

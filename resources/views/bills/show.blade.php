@@ -49,7 +49,7 @@
                 @foreach($bill->payments as $payment)
                     <div class="flex flex-wrap items-center justify-between gap-2 text-sm">
                         <a href="{{ route('payments.receipt', $payment) }}" target="_blank" class="text-blue-700 hover:text-blue-900">
-                            {{ $payment->receipt_number }} — LKR {{ number_format($payment->amount, 2) }} — {{ $payment->paidOnDisplay() }}
+                            {{ $payment->receipt_number }} — LKR {{ number_format($payment->exactPaidAmount(), 2) }} — {{ $payment->paidOnDisplay() }}
                         </a>
                         <div class="flex gap-2">
                             @if(auth()->user()->isSuperAdmin())
@@ -89,6 +89,7 @@
                             </span>
                         </div>
 
+                        @php $settle = $bill->settlementSummary(); @endphp
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                             <div>
                                 <p class="text-gray-600">Bill Date</p>
@@ -102,13 +103,35 @@
                             </div>
                             <div>
                                 <p class="text-gray-600">Total Amount</p>
-                                <p class="font-medium text-lg">@lkr($bill->total_amount)</p>
+                                <p class="font-medium text-lg">@lkr($settle['bill_total'])</p>
                             </div>
                             <div>
                                 <p class="text-gray-600">Balance</p>
-                                <p class="font-medium text-lg {{ $bill->balance_amount > 0 ? 'text-red-600' : 'text-green-600' }}">
-                                    @lkr($bill->balance_amount)
+                                <p class="font-medium text-lg {{ $settle['bill_balance'] > 0 ? 'text-red-600' : 'text-green-600' }}">
+                                    @lkr($settle['bill_balance'])
                                 </p>
+                            </div>
+                            @if($settle['cash_received'] > 0)
+                            <div>
+                                <p class="text-gray-600">Cash / payment received</p>
+                                <p class="font-medium text-lg text-cyan-700">@lkr($settle['cash_received'])</p>
+                            </div>
+                            @endif
+                            @if($settle['applied_to_bill'] > 0)
+                            <div>
+                                <p class="text-gray-600">Applied to this bill</p>
+                                <p class="font-medium text-lg text-green-600">@lkr($settle['applied_to_bill'])</p>
+                            </div>
+                            @endif
+                            @if($settle['wallet_added'] > 0)
+                            <div>
+                                <p class="text-gray-600">Added to wallet</p>
+                                <p class="font-medium text-lg text-indigo-600">@lkr($settle['wallet_added'])</p>
+                            </div>
+                            @endif
+                            <div>
+                                <p class="text-gray-600">Wallet balance now</p>
+                                <p class="font-medium text-lg">@lkr($settle['wallet_balance'])</p>
                             </div>
                         </div>
 
@@ -301,23 +324,51 @@
                                     </span>
                                 </div>
                             @endif
-                            <div class="border-t pt-3">
+                            <div class="border-t pt-3 space-y-2">
                                 <div class="flex justify-between">
                                     <span class="text-lg font-semibold">Total Amount</span>
-                                    <span class="text-lg font-bold text-blue-600">@lkr($bill->total_amount)</span>
+                                    <span class="text-lg font-bold text-blue-600">@lkr($settle['bill_total'])</span>
                                 </div>
-                            </div>
-                            @if($bill->paid_amount > 0)
+                                @if($settle['cash_received'] > 0)
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Cash / payment received</span>
+                                        <span class="font-medium text-cyan-700">@lkr($settle['cash_received'])</span>
+                                    </div>
+                                @endif
+                                @if($settle['applied_to_bill'] > 0)
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Applied to this bill</span>
+                                        <span class="font-medium text-green-600">@lkr($settle['applied_to_bill'])</span>
+                                    </div>
+                                @endif
+                                @if($settle['wallet_used'] > 0)
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Taken from wallet</span>
+                                        <span class="font-medium text-amber-700">@lkr($settle['wallet_used'])</span>
+                                    </div>
+                                @endif
+                                @if($settle['wallet_added'] > 0)
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Added to wallet</span>
+                                        <span class="font-medium text-indigo-600">@lkr($settle['wallet_added'])</span>
+                                    </div>
+                                @endif
                                 <div class="flex justify-between">
-                                    <span class="text-gray-600">Paid Amount</span>
-                                    <span class="font-medium text-green-600">@lkr($bill->paid_amount)</span>
+                                    <span class="text-gray-600">Wallet balance now</span>
+                                    <span class="font-medium">@lkr($settle['wallet_balance'])</span>
                                 </div>
-                            @endif
-                            <div class="flex justify-between">
-                                <span class="text-lg font-semibold">Balance Amount</span>
-                                <span class="text-lg font-bold {{ $bill->balance_amount > 0 ? 'text-red-600' : 'text-green-600' }}">
-                                    @lkr($bill->balance_amount)
-                                </span>
+                                @if($settle['receipts'] !== '')
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Receipt number(s)</span>
+                                        <span class="font-medium">{{ $settle['receipts'] }}</span>
+                                    </div>
+                                @endif
+                                <div class="flex justify-between pt-1">
+                                    <span class="text-lg font-semibold">Outstanding on this bill</span>
+                                    <span class="text-lg font-bold {{ $settle['bill_balance'] > 0 ? 'text-red-600' : 'text-green-600' }}">
+                                        @lkr($settle['bill_balance'])
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     </div>

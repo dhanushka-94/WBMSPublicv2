@@ -88,8 +88,9 @@
                     </div>
                     <div class="ml-5 w-0 flex-1">
                         <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Paid Revenue</dt>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Cash received (exact)</dt>
                             <dd class="text-2xl font-semibold text-gray-900">LKR {{ number_format($paidRevenue, 2) }}</dd>
+                            <dd class="text-xs text-gray-500 mt-1">Applied LKR {{ number_format($billApplied ?? 0, 2) }} · Wallet +LKR {{ number_format($walletOverpaid ?? 0, 2) }}</dd>
                         </dl>
                     </div>
                 </div>
@@ -147,7 +148,7 @@
                                     <span class="text-sm font-medium">LKR {{ number_format($type->total_revenue, 2) }}</span>
                                 </div>
                                 <div class="flex justify-between">
-                                    <span class="text-sm text-gray-600">Paid:</span>
+                                    <span class="text-sm text-gray-600">Applied to bills:</span>
                                     <span class="text-sm font-medium text-green-600">LKR {{ number_format($type->paid_revenue, 2) }}</span>
                                 </div>
                                 <div class="flex justify-between">
@@ -194,7 +195,7 @@
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bill #</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Amount</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paid Amount</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cash received</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Balance</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
@@ -230,7 +231,11 @@
                                         <span class="text-sm font-medium text-gray-900">LKR {{ number_format($bill->total_amount, 2) }}</span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="text-sm font-medium text-green-600">LKR {{ number_format($bill->paid_amount, 2) }}</span>
+                                        @php $revSettle = $bill->settlementSummary(); @endphp
+                                        <span class="text-sm font-medium text-green-600">LKR {{ number_format($revSettle['cash_received'], 2) }}</span>
+                                        @if($revSettle['wallet_added'] > 0)
+                                            <div class="text-xs text-indigo-600">Bill LKR {{ number_format($bill->paid_amount, 2) }} · Wallet +LKR {{ number_format($revSettle['wallet_added'], 2) }}</div>
+                                        @endif
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <span class="text-sm font-medium {{ $bill->balance_amount > 0 ? 'text-red-600' : 'text-green-600' }}">

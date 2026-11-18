@@ -19,6 +19,7 @@
     $onCustomers = request()->routeIs('customers.*', 'guarantors.*');
     $onMeters = request()->routeIs('meters.*', 'readings.*');
     $onBilling = request()->routeIs('bills.*', 'payments.*', 'settings.rates.*');
+    $onOperations = request()->routeIs('operations.*');
     $onReports = request()->routeIs('reports.*');
     $onSms = request()->routeIs('sms.*');
     $onSystem = request()->routeIs('users.*', 'reader-routes.*', 'activity-logs.*', 'mobile-api.*', 'about', 'changelog')
@@ -27,6 +28,7 @@
         $onCustomers => 'customers',
         $onMeters => 'meters',
         $onBilling => 'billing',
+        $onOperations => 'operations',
         $onReports => 'reports',
         $onSms => 'sms',
         $onSystem => 'system',
@@ -126,6 +128,10 @@
         <div class="flex flex-wrap items-center gap-1 px-4 py-1.5 sm:px-6 lg:px-8" @click.outside="menu = null">
             <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? $barOn : $bar }}">
                 <i class="fas fa-tachometer-alt"></i> Dashboard
+            </a>
+
+            <a href="{{ route('operations.index') }}" class="{{ $onOperations ? $barOn : $bar }}">
+                <i class="fas fa-layer-group"></i> Operations
             </a>
 
             <div class="relative">
@@ -250,6 +256,9 @@
         <div class="space-y-1 px-3 py-3">
             <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? $mobileOn : $mobileLink }}">
                 <i class="fas fa-tachometer-alt w-4"></i> Dashboard
+            </a>
+            <a href="{{ route('operations.index') }}" class="{{ $onOperations ? $mobileOn : $mobileLink }}">
+                <i class="fas fa-layer-group w-4"></i> Operations
             </a>
 
             @foreach([

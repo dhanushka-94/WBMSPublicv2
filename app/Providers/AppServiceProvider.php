@@ -47,6 +47,11 @@ class AppServiceProvider extends ServiceProvider
             return "<?php echo 'Rs. ' . number_format($expression, 2); ?>";
         });
 
+        // Meter readings / units: whole numbers without trailing .00
+        Blade::directive('units', function ($expression) {
+            return "<?php \$__units = (float) ($expression); echo fmod(abs(\$__units), 1.0) < 0.00001 ? number_format(\$__units, 0) : rtrim(rtrim(number_format(\$__units, 2, '.', ','), '0'), '.'); ?>";
+        });
+
         // Helper functions are now available through Blade directives above
         // Global functions removed to prevent redeclaration issues
     }

@@ -8,6 +8,8 @@ use App\Models\MeterReading;
 use App\Models\Bill;
 use App\Models\Payment;
 use App\Models\Rate;
+use App\Models\WalletEntry;
+use App\Support\CollectionTotals;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Carbon\Carbon;
@@ -53,9 +55,16 @@ class DashboardController extends Controller
             ->whereYear('bill_date', Carbon::now()->year)
             ->where('status', '!=', 'cancelled')
             ->sum('total_amount');
-        $monthlyCollected = \App\Models\Payment::whereMonth('paid_on', Carbon::now()->month)
+        $monthlyCollected = (float) Payment::whereMonth('paid_on', Carbon::now()->month)
             ->whereYear('paid_on', Carbon::now()->year)
             ->sum('amount');
+        $monthlyOverpaid = (float) WalletEntry::query()
+            ->where('reason', 'overpayment')
+            ->where('amount', '>', 0)
+            ->whereMonth('created_at', Carbon::now()->month)
+            ->whereYear('created_at', Carbon::now()->year)
+            ->sum('amount');
+        $monthlyCollected = round($monthlyCollected + $monthlyOverpaid, 2);
         $collectionPercent = $monthlyBilled > 0 ? round(($monthlyCollected / $monthlyBilled) * 100, 1) : 0;
         $disconnectedCustomers = Customer::where('status', 'disconnected')->count();
 
@@ -171,17 +180,24 @@ class DashboardController extends Controller
         $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
         $endDate = $request->input('end_date', Carbon::now()->endOfMonth()->format('Y-m-d'));
 
-        $bills = Bill::with(['customer.customerType'])
+        $bills = Bill::with(['customer.customerType', 'payments.overpaymentEntries'])
             ->whereBetween('bill_date', [$startDate, $endDate])
             ->orderBy('bill_date', 'desc')
             ->paginate(25);
 
         $totalRevenue = Bill::whereBetween('bill_date', [$startDate, $endDate])
+            ->where('status', '!=', 'cancelled')
             ->sum('total_amount');
 
-        $paidRevenue = Bill::paid()
-            ->whereBetween('bill_date', [$startDate, $endDate])
-            ->sum('total_amount');
+        $billApplied = Bill::whereBetween('bill_date', [$startDate, $endDate])
+            ->where('status', '!=', 'cancelled')
+            ->sum('paid_amount');
+
+        $periodStart = Carbon::parse($startDate)->startOfDay();
+        $periodEnd = Carbon::parse($endDate)->endOfDay();
+        $cash = CollectionTotals::forPeriod($periodStart, $periodEnd);
+        $paidRevenue = $cash['cash'];
+        $walletOverpaid = $cash['overpaid'];
 
         $unpaidRevenue = Bill::unpaid()
             ->whereBetween('bill_date', [$startDate, $endDate])
@@ -192,6 +208,7 @@ class DashboardController extends Controller
             ->join('customers', 'bills.customer_id', '=', 'customers.id')
             ->join('customer_types', 'customers.customer_type_id', '=', 'customer_types.id')
             ->whereBetween('bills.bill_date', [$startDate, $endDate])
+            ->where('bills.status', '!=', 'cancelled')
             ->groupBy('customer_types.id', 'customer_types.name')
             ->select(
                 'customer_types.name as customer_type',
@@ -206,6 +223,8 @@ class DashboardController extends Controller
             'bills',
             'totalRevenue',
             'paidRevenue',
+            'billApplied',
+            'walletOverpaid',
             'unpaidRevenue',
             'revenueByType',
             'startDate',
@@ -219,7 +238,7 @@ class DashboardController extends Controller
     public function overdueReport(): View
     {
         $overdueBills = Bill::overdue()
-            ->with(['customer', 'waterMeter'])
+            ->with(['customer', 'waterMeter', 'payments.overpaymentEntries'])
             ->orderBy('due_date', 'asc')
             ->paginate(25);
 
@@ -298,6 +317,19 @@ class DashboardController extends Controller
         foreach ($paymentRows as $row) {
             $months[(int) $row->month_number]['collected'] = round((float) $row->collected, 2);
             $months[(int) $row->month_number]['payments'] = (int) $row->payment_count;
+        }
+
+        $overpayRows = WalletEntry::query()
+            ->where('reason', 'overpayment')
+            ->where('amount', '>', 0)
+            ->whereBetween('created_at', [$start, $end])
+            ->selectRaw('MONTH(created_at) as month_number, SUM(amount) as overpaid')
+            ->groupByRaw('MONTH(created_at)')
+            ->get();
+
+        foreach ($overpayRows as $row) {
+            $month = (int) $row->month_number;
+            $months[$month]['collected'] = round($months[$month]['collected'] + (float) $row->overpaid, 2);
         }
 
         $readingRows = MeterReading::query()

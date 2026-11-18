@@ -213,7 +213,7 @@
                         <h3 class="text-lg font-bold text-white">
                             <i class="fas fa-hand-holding-usd mr-2"></i>{{ $chartYear }} payments by month
                         </h3>
-                        <p class="text-violet-100 text-sm mt-1">Collected amount and receipt count</p>
+                        <p class="text-violet-100 text-sm mt-1">Exact paid amount (cash + overpayment) and receipt count</p>
                     </div>
                     <div class="p-6">
                         <div class="relative h-72">
@@ -547,7 +547,7 @@ document.addEventListener('DOMContentLoaded', function () {
             labels: labels,
             datasets: [
                 {
-                    label: 'Collected (Rs.)',
+                    label: 'Paid exact (Rs.)',
                     data: months.map(month => month.collected),
                     backgroundColor: '#8B5CF6',
                     yAxisID: 'amount'

@@ -25,6 +25,7 @@ use App\Http\Controllers\SmsSettingsController;
 use App\Http\Controllers\SmsTemplateController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PaymentCollectionController;
+use App\Http\Controllers\OperationsController;
 use App\Http\Controllers\SystemControlController;
 use App\Http\Controllers\MobileAppDownloadController;
 
@@ -66,6 +67,7 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth', 'verified'])->group(function () {
     // Dashboard (always accessible)
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/operations', [OperationsController::class, 'index'])->name('operations.index');
     
     // Profile (always accessible)
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

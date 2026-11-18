@@ -73,7 +73,7 @@
                     <div class="ml-5 w-0 flex-1">
                         <dl>
                             <dt class="text-sm font-medium text-gray-500 truncate">Total Consumption</dt>
-                            <dd class="text-2xl font-semibold text-gray-900">{{ number_format($totalConsumption) }} L</dd>
+                            <dd class="text-2xl font-semibold text-gray-900">@units($totalConsumption) units</dd>
                         </dl>
                     </div>
                 </div>
@@ -89,7 +89,7 @@
                     <div class="ml-5 w-0 flex-1">
                         <dl>
                             <dt class="text-sm font-medium text-gray-500 truncate">Average Consumption</dt>
-                            <dd class="text-2xl font-semibold text-gray-900">{{ number_format($averageConsumption, 1) }} L</dd>
+                            <dd class="text-2xl font-semibold text-gray-900">@units($averageConsumption) units</dd>
                         </dl>
                     </div>
                 </div>
@@ -128,11 +128,11 @@
                             <div class="space-y-1">
                                 <div class="flex justify-between">
                                     <span class="text-sm text-gray-600">Total:</span>
-                                    <span class="text-sm font-medium">{{ number_format($type->total_consumption) }} L</span>
+                                    <span class="text-sm font-medium">@units($type->total_consumption) units</span>
                                 </div>
                                 <div class="flex justify-between">
                                     <span class="text-sm text-gray-600">Average:</span>
-                                    <span class="text-sm font-medium">{{ number_format($type->avg_consumption, 1) }} L</span>
+                                    <span class="text-sm font-medium">@units($type->avg_consumption) units</span>
                                 </div>
                                 <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
                                     <div class="bg-purple-600 h-2 rounded-full" style="width: {{ $totalConsumption > 0 ? ($type->total_consumption / $totalConsumption) * 100 : 0 }}%"></div>
@@ -210,11 +210,11 @@
                                         <span class="text-sm text-gray-900">{{ $reading->waterMeter->meter_number }}</span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="text-sm font-medium text-gray-900">{{ number_format($reading->current_reading) }}</span>
+                                        <span class="text-sm font-medium text-gray-900">@units($reading->current_reading)</span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="flex items-center">
-                                            <span class="text-sm font-medium text-gray-900 mr-2">{{ number_format($reading->consumption) }} L</span>
+                                            <span class="text-sm font-medium text-gray-900 mr-2">@units($reading->consumption) units</span>
                                             @if($reading->consumption > $averageConsumption * 1.5)
                                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
                                                     High
@@ -294,7 +294,7 @@ function exportReport() {
             cells[1].querySelector('.text-sm.text-gray-500').textContent.trim(),
             cells[2].textContent.trim(),
             cells[3].textContent.trim(),
-            cells[4].querySelector('.text-sm.font-medium').textContent.trim().replace(' L', ''),
+            cells[4].querySelector('.text-sm.font-medium').textContent.trim().replace(' units', ''),
             cells[5].textContent.trim(),
             cells[6].querySelector('span').textContent.trim()
         ];

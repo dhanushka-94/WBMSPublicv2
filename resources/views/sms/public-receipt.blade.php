@@ -13,7 +13,10 @@
         <p class="mt-1 text-sm text-slate-600">{{ $payment->customer->full_name }} · {{ $payment->customer->account_number }}</p>
         <section class="mt-4 bg-white rounded-lg shadow p-4 space-y-2">
             <p class="text-sm text-slate-500">Receipt {{ $payment->receipt_number }}</p>
-            <p class="text-3xl font-bold">Rs. {{ number_format($payment->amount, 2) }}</p>
+            <p class="text-3xl font-bold">Rs. {{ number_format($payment->exactPaidAmount(), 2) }}</p>
+            @if($payment->walletAddedAmount() > 0)
+                <p class="text-sm text-slate-600">Applied to bill Rs. {{ number_format($payment->amount, 2) }} · Added to wallet Rs. {{ number_format($payment->walletAddedAmount(), 2) }}</p>
+            @endif
             <p class="text-sm">Paid on {{ $payment->paid_on->format('M d, Y') }}</p>
             <p class="text-sm">Bill {{ $payment->bill->bill_number ?? '—' }}</p>
             <p class="text-sm">Method: {{ ucfirst($payment->payment_method) }}</p>

@@ -69,7 +69,12 @@
                                 @endif
                             </td>
                             <td class="px-4 py-3 text-gray-700">{{ str_replace('_', ' ', $payment->payment_method) }}</td>
-                            <td class="px-4 py-3 text-right font-semibold text-gray-900">Rs. {{ number_format($payment->amount, 2) }}</td>
+                            <td class="px-4 py-3 text-right font-semibold text-gray-900">
+                                Rs. {{ number_format($payment->exactPaidAmount(), 2) }}
+                                @if($payment->walletAddedAmount() > 0)
+                                    <div class="text-xs font-normal text-indigo-600">Bill Rs. {{ number_format($payment->amount, 2) }} · Wallet +Rs. {{ number_format($payment->walletAddedAmount(), 2) }}</div>
+                                @endif
+                            </td>
                             <td class="px-4 py-3">
                                 <div class="flex justify-end gap-2">
                                     <a href="{{ route('payments.receipt', $payment) }}" target="_blank" class="rounded bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200">Receipt</a>

@@ -109,8 +109,8 @@
                     </div>
                     <div class="bg-white border border-gray-200 rounded-lg p-4 text-center">
                         <i class="fas fa-money-bill-wave text-2xl text-yellow-500 mb-2"></i>
-                        <div class="text-2xl font-bold text-gray-900">Rs. {{ number_format($summaryStats['total_revenue']) }}</div>
-                        <div class="text-sm text-gray-600">Water Bill Revenue</div>
+                        <div class="text-2xl font-bold text-gray-900">Rs. {{ number_format($summaryStats['total_cash'] ?? $summaryStats['total_revenue']) }}</div>
+                        <div class="text-sm text-gray-600">Cash received (exact)</div>
                     </div>
                     <div class="bg-white border border-gray-200 rounded-lg p-4 text-center">
                         <i class="fas fa-credit-card text-2xl text-purple-500 mb-2"></i>
@@ -149,7 +149,8 @@
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Active Meters</th>
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bills Generated</th>
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paid Bills</th>
-                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Water Revenue</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paid bill totals</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cash received</th>
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Rate</th>
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                 </tr>
@@ -182,6 +183,12 @@
                                         <td class="px-4 py-4 text-sm text-gray-900">{{ number_format($data['paid_bills']) }}</td>
                                         <td class="px-4 py-4 text-sm text-gray-900">
                                             <span class="font-medium">Rs. {{ number_format($data['revenue'], 2) }}</span>
+                                        </td>
+                                        <td class="px-4 py-4 text-sm text-gray-900">
+                                            <span class="font-medium text-teal-700">Rs. {{ number_format($data['cash_collected'] ?? 0, 2) }}</span>
+                                            @if(($data['wallet_overpaid'] ?? 0) > 0)
+                                                <div class="text-xs text-indigo-600">Wallet +Rs. {{ number_format($data['wallet_overpaid'], 2) }}</div>
+                                            @endif
                                         </td>
                                         <td class="px-4 py-4 text-sm text-gray-900">
                                             <div class="flex items-center">

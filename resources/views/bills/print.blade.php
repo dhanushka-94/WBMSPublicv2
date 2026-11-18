@@ -408,11 +408,22 @@
                 <td class="label">TOTAL AMOUNT</td>
                 <td class="amount">Rs. {{ number_format($bill->total_amount, 2) }}</td>
             </tr>
-            @if($bill->paid_amount > 0)
+            @php $settlePrint = $bill->settlementSummary(); @endphp
+            @if($settlePrint['cash_received'] > 0 || $settlePrint['applied_to_bill'] > 0)
             <tr>
-                <td class="label">Paid Amount</td>
-                <td class="amount" style="color: #10b981;">Rs. {{ number_format($bill->paid_amount, 2) }}</td>
+                <td class="label">Cash / payment received</td>
+                <td class="amount" style="color: #0e7490;">Rs. {{ number_format($settlePrint['cash_received'], 2) }}</td>
             </tr>
+            <tr>
+                <td class="label">Applied to this bill</td>
+                <td class="amount" style="color: #10b981;">Rs. {{ number_format($settlePrint['applied_to_bill'], 2) }}</td>
+            </tr>
+            @if($settlePrint['wallet_added'] > 0)
+            <tr>
+                <td class="label">Added to wallet</td>
+                <td class="amount" style="color: #6366f1;">Rs. {{ number_format($settlePrint['wallet_added'], 2) }}</td>
+            </tr>
+            @endif
             @endif
             <tr class="total-row">
                 <td class="label">BALANCE AMOUNT</td>

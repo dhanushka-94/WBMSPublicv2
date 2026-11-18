@@ -6,7 +6,9 @@ use App\Models\Bill;
 use App\Models\Customer;
 use App\Models\MeterReading;
 use App\Models\Payment;
+use App\Models\WalletEntry;
 use App\Models\WaterMeter;
+use App\Support\CollectionTotals;
 use App\Support\TablePage;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -36,6 +38,14 @@ class OfficeReportController extends Controller
             default => abort(404),
         };
 
+        $usesMonth = in_array($report, [
+            'new-connections',
+            'billing-summary',
+            'monthly-collection',
+            'collection-efficiency',
+        ], true);
+        $usesDate = $report === 'daily-collection';
+
         return view('reports.office', [
             'report' => $report,
             'title' => $data['title'],
@@ -44,6 +54,8 @@ class OfficeReportController extends Controller
             'month' => $month,
             'date' => $date,
             'notes' => $data['notes'] ?? null,
+            'usesMonth' => $usesMonth,
+            'usesDate' => $usesDate,
         ]);
     }
 
@@ -97,16 +109,24 @@ class OfficeReportController extends Controller
                 $event?->event_date?->format('Y-m-d'),
                 $event?->reason,
                 'LKR '.number_format($customer->getOutstandingBalance(), 2),
+                'LKR '.number_format((float) $customer->wallet_balance, 2),
             ];
         });
 
-        return ['title' => 'Disconnected Customers', 'columns' => ['Account', 'Name', 'Disconnected', 'Reason', 'Outstanding'], 'rows' => $rows];
+        return [
+            'title' => 'Disconnected Customers',
+            'columns' => ['Account', 'Name', 'Disconnected', 'Reason', 'Outstanding', 'Wallet'],
+            'rows' => $rows,
+        ];
     }
 
     private function usageAlerts(): array
     {
         $rows = [];
-        $customers = Customer::with(['waterMeters.meterReadings' => fn ($query) => $query->orderByDesc('reading_date')->limit(4)])->orderBy('account_number')->get();
+        $customers = Customer::with(['waterMeters.meterReadings' => fn ($query) => $query->orderByDesc('reading_date')->limit(4)])
+            ->whereHas('waterMeters.meterReadings', fn ($query) => $query->where('reading_date', '>=', now()->subMonths(6)))
+            ->orderBy('account_number')
+            ->get();
 
         foreach ($customers as $customer) {
             foreach ($customer->waterMeters as $meter) {
@@ -125,24 +145,43 @@ class OfficeReportController extends Controller
                     $reason = 'Possible leak or fault';
                 }
                 if ($reason) {
-                    $rows[] = [$customer->account_number, $this->customerLink($customer), $meter->meter_number, $latest->consumption, $reason];
+                    $rows[] = [
+                        $customer->account_number,
+                        $this->customerLink($customer),
+                        $meter->meter_number,
+                        $this->formatUnits($latest->consumption),
+                        $reason,
+                    ];
                 }
             }
         }
 
-        return ['title' => 'Usage Alerts', 'columns' => ['Account', 'Name', 'Meter', 'Latest units', 'Alert'], 'rows' => TablePage::collection(collect($rows)), 'notes' => 'A sudden high reading is more than double the average of the previous readings.'];
+        return [
+            'title' => 'Usage Alerts',
+            'columns' => ['Account', 'Name', 'Meter', 'Latest units', 'Alert'],
+            'rows' => TablePage::collection(collect($rows)),
+            'notes' => 'A sudden high reading is more than double the average of the previous readings.',
+        ];
     }
 
     private function meterFaults(): array
     {
-        $rows = WaterMeter::with('customer')->whereIn('status', ['faulty', 'replaced'])->orWhereHas('meterReadings', function ($query) {
-            $query->whereIn('meter_condition', ['damaged', 'needs_repair', 'leaking']);
-        })->orderBy('meter_number')->paginate(25)->withQueryString()->through(fn ($meter) => [
-            $meter->meter_number,
-            $this->customerLink($meter->customer),
-            $meter->status,
-            $meter->meterReadings()->latest('reading_date')->value('meter_condition'),
-        ]);
+        $rows = WaterMeter::with('customer')
+            ->where(function ($query) {
+                $query->whereIn('status', ['faulty', 'replaced'])
+                    ->orWhereHas('meterReadings', function ($readings) {
+                        $readings->whereIn('meter_condition', ['damaged', 'needs_repair', 'leaking']);
+                    });
+            })
+            ->orderBy('meter_number')
+            ->paginate(25)
+            ->withQueryString()
+            ->through(fn ($meter) => [
+                $meter->meter_number,
+                $this->customerLink($meter->customer),
+                $meter->status,
+                $meter->meterReadings()->latest('reading_date')->value('meter_condition'),
+            ]);
 
         return ['title' => 'Meter Faults', 'columns' => ['Meter', 'Customer', 'Meter status', 'Latest condition'], 'rows' => $rows];
     }
@@ -151,7 +190,7 @@ class OfficeReportController extends Controller
     {
         $bills = Bill::whereBetween('bill_date', [$start, $end])->where('status', '!=', 'cancelled');
         $billed = (clone $bills)->sum('total_amount');
-        $collected = Payment::whereBetween('paid_on', [$start, $end])->sum('amount');
+        $cash = CollectionTotals::forPeriod($start, $end);
 
         return [
             'title' => 'Billing Summary',
@@ -159,52 +198,96 @@ class OfficeReportController extends Controller
             'rows' => [
                 ['Bills', (clone $bills)->count()],
                 ['Billed', 'LKR '.number_format($billed, 2)],
-                ['Collected', 'LKR '.number_format($collected, 2)],
+                ['Cash received (exact)', 'LKR '.number_format($cash['cash'], 2)],
+                ['Applied to bills', 'LKR '.number_format($cash['applied'], 2)],
+                ['Overpaid to wallet', 'LKR '.number_format($cash['overpaid'], 2)],
                 ['Still outstanding', 'LKR '.number_format((clone $bills)->sum('balance_amount'), 2)],
             ],
+            'notes' => 'Cash received includes bill payments plus overpayments added to wallets.',
         ];
     }
 
     private function dailyCollection(string $date): array
     {
-        $rows = Payment::with(['customer', 'bill', 'receiver'])->whereDate('paid_on', $date)->orderBy('id')->paginate(25)->withQueryString()->through(fn ($payment) => [
-            $payment->receipt_number,
-            $this->customerLink($payment->customer),
-            $this->billLink($payment->bill),
-            'LKR '.number_format($payment->amount, 2),
-            str_replace('_', ' ', $payment->payment_method),
-            $payment->receiver?->name,
-        ]);
+        $cash = CollectionTotals::forDate($date);
+        $rows = Payment::with(['customer', 'bill', 'receiver', 'overpaymentEntries'])
+            ->whereDate('paid_on', $date)
+            ->orderBy('id')
+            ->paginate(25)
+            ->withQueryString()
+            ->through(fn ($payment) => [
+                $payment->receipt_number,
+                $this->customerLink($payment->customer),
+                $this->billLink($payment->bill),
+                'LKR '.number_format($payment->exactPaidAmount(), 2),
+                'LKR '.number_format((float) $payment->amount, 2),
+                'LKR '.number_format($payment->walletAddedAmount(), 2),
+                str_replace('_', ' ', $payment->payment_method),
+                $payment->receiver?->name,
+            ]);
 
-        return ['title' => 'Daily Collection', 'columns' => ['Receipt', 'Customer', 'Bill', 'Amount', 'Method', 'Received by'], 'rows' => $rows];
+        return [
+            'title' => 'Daily Collection',
+            'columns' => ['Receipt', 'Customer', 'Bill', 'Cash received', 'Applied to bill', 'Wallet added', 'Method', 'Received by'],
+            'rows' => $rows,
+            'notes' => 'Day total cash received: LKR '.number_format($cash['cash'], 2)
+                .' (applied LKR '.number_format($cash['applied'], 2)
+                .' · wallet LKR '.number_format($cash['overpaid'], 2)
+                .' · '.$cash['receipts'].' receipts).',
+        ];
     }
 
     private function monthlyCollection(Carbon $start, Carbon $end): array
     {
-        $rows = Payment::whereBetween('paid_on', [$start, $end])
+        $methodRows = Payment::whereBetween('paid_on', [$start, $end])
             ->selectRaw('payment_method, COUNT(*) as receipts, SUM(amount) as total')
             ->groupBy('payment_method')
             ->get()
-            ->map(fn ($row) => [str_replace('_', ' ', $row->payment_method), $row->receipts, 'LKR '.number_format($row->total, 2)])
+            ->map(fn ($row) => [
+                str_replace('_', ' ', $row->payment_method),
+                $row->receipts,
+                'LKR '.number_format((float) $row->total, 2),
+            ])
             ->all();
 
-        return ['title' => 'Monthly Collection', 'columns' => ['Method', 'Receipts', 'Total'], 'rows' => $rows];
+        $overpaid = (float) WalletEntry::query()
+            ->where('reason', 'overpayment')
+            ->where('amount', '>', 0)
+            ->whereBetween('created_at', [$start, $end])
+            ->sum('amount');
+
+        if ($overpaid > 0) {
+            $methodRows[] = ['wallet overpayment', '—', 'LKR '.number_format($overpaid, 2)];
+        }
+
+        $cash = CollectionTotals::forPeriod($start, $end);
+        $methodRows[] = ['TOTAL CASH RECEIVED', $cash['receipts'], 'LKR '.number_format($cash['cash'], 2)];
+
+        return [
+            'title' => 'Monthly Collection',
+            'columns' => ['Method', 'Receipts', 'Total'],
+            'rows' => $methodRows,
+            'notes' => 'Method totals are amounts applied on receipts. Wallet overpayment and TOTAL CASH RECEIVED include exact cash.',
+        ];
     }
 
     private function collectionEfficiency(Carbon $start, Carbon $end): array
     {
         $billed = (float) Bill::whereBetween('bill_date', [$start, $end])->where('status', '!=', 'cancelled')->sum('total_amount');
-        $collected = (float) Payment::whereBetween('paid_on', [$start, $end])->sum('amount');
-        $percent = $billed > 0 ? round(($collected / $billed) * 100, 1) : 0;
+        $cash = CollectionTotals::forPeriod($start, $end);
+        $percent = $billed > 0 ? round(($cash['cash'] / $billed) * 100, 1) : 0;
 
         return [
             'title' => 'Collection Efficiency',
             'columns' => ['Item', 'Value'],
             'rows' => [
                 ['Billed', 'LKR '.number_format($billed, 2)],
-                ['Collected', 'LKR '.number_format($collected, 2)],
+                ['Cash received (exact)', 'LKR '.number_format($cash['cash'], 2)],
+                ['Applied to bills', 'LKR '.number_format($cash['applied'], 2)],
+                ['Overpaid to wallet', 'LKR '.number_format($cash['overpaid'], 2)],
                 ['Efficiency', $percent.'%'],
             ],
+            'notes' => 'Efficiency uses exact cash received (bill payments + wallet overpayments) ÷ billed.',
         ];
     }
 
@@ -228,6 +311,15 @@ class OfficeReportController extends Controller
         }
 
         return ['title' => 'Outstanding Age Analysis', 'columns' => ['Age from due date', 'Balance'], 'rows' => $rows];
+    }
+
+    private function formatUnits(mixed $value): string
+    {
+        $units = (float) $value;
+
+        return fmod(abs($units), 1.0) < 0.00001
+            ? number_format($units, 0)
+            : rtrim(rtrim(number_format($units, 2, '.', ','), '0'), '.');
     }
 
     private function customerLink(?Customer $customer): array|string
