@@ -2,6 +2,15 @@
 
 return [
     [
+        'version' => '2.6.10',
+        'date' => '20 November 2026',
+        'title' => 'Fix payment delete so bill and wallet overpayment reverse fully',
+        'changes' => [
+            'Deleting a payment restores the bill paid and balance, and also reverses any overpayment that was added to the customer wallet.',
+            'The bill page no longer keeps showing cash received from orphan wallet overpayment rows after the payment is deleted.',
+        ],
+    ],
+    [
         'version' => '2.6.9',
         'date' => '18 November 2026',
         'title' => 'Exact cash paid, Operations hub, and full Reports update',

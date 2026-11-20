@@ -364,13 +364,36 @@ class BillPaymentService
             $amount = round((float) $payment->amount, 2);
             $snapshot = ActivityLog::paymentSnapshot($payment->loadMissing(['customer', 'bill']));
 
+            // Capture linked wallet rows before delete — payment_id is nullOnDelete.
+            $walletEntries = WalletEntry::query()
+                ->where('payment_id', $payment->id)
+                ->lockForUpdate()
+                ->get();
+
+            $overpayment = round((float) $walletEntries
+                ->where('reason', 'overpayment')
+                ->where('amount', '>', 0)
+                ->sum('amount'), 2);
+
+            if ($overpayment > 0 && (float) $customer->wallet_balance + 0.001 < $overpayment) {
+                throw new InvalidArgumentException(
+                    'Cannot delete this payment because Rs. '.number_format($overpayment, 2)
+                    .' was added to the wallet as overpayment and only Rs. '
+                    .number_format((float) $customer->wallet_balance, 2)
+                    .' remains. Restore or adjust the wallet first.'
+                );
+            }
+
             $bill->deferPaymentSms = true;
             $bill->paid_amount = round(max(0, (float) $bill->paid_amount - $amount), 2);
             $bill->save();
 
+            $walletRestored = 0.0;
+            $walletOverpaymentReversed = 0.0;
+
             if ($payment->payment_method === 'wallet') {
                 $customer->wallet_balance = round((float) $customer->wallet_balance + $amount, 2);
-                $customer->save();
+                $walletRestored = $amount;
 
                 WalletEntry::create([
                     'customer_id' => $customer->id,
@@ -383,12 +406,39 @@ class BillPaymentService
                 ]);
             }
 
+            if ($overpayment > 0) {
+                $customer->wallet_balance = round((float) $customer->wallet_balance - $overpayment, 2);
+                $walletOverpaymentReversed = $overpayment;
+
+                WalletEntry::create([
+                    'customer_id' => $customer->id,
+                    'bill_id' => $bill->id,
+                    'payment_id' => $payment->id,
+                    'user_id' => $userId,
+                    'amount' => round(-1 * $overpayment, 2),
+                    'reason' => 'payment_reversed',
+                    'notes' => 'Reversed overpayment from '.$payment->receipt_number,
+                ]);
+
+                // Drop the original overpayment rows so the bill no longer shows cash received.
+                WalletEntry::query()
+                    ->where('payment_id', $payment->id)
+                    ->where('reason', 'overpayment')
+                    ->where('amount', '>', 0)
+                    ->delete();
+            }
+
+            if ($walletRestored > 0 || $walletOverpaymentReversed > 0) {
+                $customer->save();
+            }
+
             $payment->delete();
 
             try {
                 ActivityLog::logPaymentDeleted($payment, $snapshot, [
                     'deleted_by' => $userId,
-                    'wallet_restored' => $snapshot['payment_method'] === 'wallet',
+                    'wallet_restored' => $walletRestored > 0,
+                    'wallet_overpayment_reversed' => $walletOverpaymentReversed,
                     'bill_balance_after' => (float) $bill->fresh()->balance_amount,
                 ]);
             } catch (\Throwable $exception) {
