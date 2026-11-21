@@ -555,6 +555,8 @@ class MeterReadingController extends Controller
             'previous_reading' => $dial,
             'current_reading' => $dial,
             'consumption' => 0,
+            // Opening dues are stored as adjustments (not tariff water/fixed charges).
+            // The typed amount is the full starting outstanding for that connection.
             'water_charges' => 0,
             'fixed_charges' => 0,
             'service_charges' => 0,
@@ -566,6 +568,18 @@ class MeterReadingController extends Controller
             'balance_amount' => $balance,
             'status' => $balance > 0 ? 'generated' : 'paid',
             'notes' => 'Opening balance',
+            'rate_breakdown' => [
+                [
+                    'tier_name' => 'Opening balance',
+                    'tier_from' => 0,
+                    'tier_to' => 0,
+                    'consumption' => 0,
+                    'rate_per_unit' => 0,
+                    'charge' => 0,
+                    'fixed_charge' => 0,
+                    'opening_amount' => $amount,
+                ],
+            ],
         ];
 
         Bill::withoutEvents(function () use ($existing, $attributes, $today) {

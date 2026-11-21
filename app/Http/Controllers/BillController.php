@@ -622,6 +622,11 @@ class BillController extends Controller
             return redirect()->route('bills.show', $bill)->with('error', 'A paid bill cannot be recalculated.');
         }
 
+        if ($bill->isOpeningBalance()) {
+            return redirect()->route('bills.show', $bill)
+                ->with('error', 'Opening balance bills keep the typed starting amount and cannot be recalculated from the tariff.');
+        }
+
         $bill->rebill();
 
         return redirect()->route('bills.show', $bill)->with('success', 'Bill recalculated from the current tariff.');

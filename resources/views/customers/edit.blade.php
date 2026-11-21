@@ -319,20 +319,25 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <!-- Phone Number One -->
                         <div class="space-y-2">
-                            <label class="block text-sm font-semibold text-gray-700">
-                                Phone Number One
+                            <label for="phone" class="block text-sm font-semibold text-gray-700">
+                                Contact Number One
                             </label>
                             <div class="relative">
-                                <input 
-                                    type="text" 
-                                    name="phone" 
+                                <input
+                                    id="phone"
+                                    type="tel"
+                                    inputmode="tel"
+                                    name="phone"
                                     value="{{ old('phone', $customer->phone) }}"
-                                    placeholder="Primary phone number"
+                                    placeholder="07XXXXXXXX"
+                                    maxlength="20"
+                                    autocomplete="tel"
                                     class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none transition-colors @error('phone') border-red-300 @enderror">
                                 <div class="absolute inset-y-0 right-0 flex items-center pr-3">
                                     <i class="fas fa-phone text-gray-400"></i>
                                 </div>
                             </div>
+                            <p class="text-xs text-gray-500">Primary mobile used for SMS notices.</p>
                             @error('phone')
                                 <p class="text-xs text-red-600 flex items-center"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p>
                             @enderror
@@ -340,13 +345,17 @@
 
                         <!-- Phone Number Two -->
                         <div class="space-y-2">
-                            <label class="block text-sm font-semibold text-gray-700">Phone Number Two</label>
+                            <label for="phone_two" class="block text-sm font-semibold text-gray-700">Contact Number Two</label>
                             <div class="relative">
-                                <input 
-                                    type="text" 
-                                    name="phone_two" 
+                                <input
+                                    id="phone_two"
+                                    type="tel"
+                                    inputmode="tel"
+                                    name="phone_two"
                                     value="{{ old('phone_two', $customer->phone_two) }}"
-                                    placeholder="Secondary phone number"
+                                    placeholder="Optional second number"
+                                    maxlength="20"
+                                    autocomplete="tel"
                                     class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none transition-colors @error('phone_two') border-red-300 @enderror">
                                 <div class="absolute inset-y-0 right-0 flex items-center pr-3">
                                     <i class="fas fa-mobile-alt text-gray-400"></i>

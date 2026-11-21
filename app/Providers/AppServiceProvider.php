@@ -6,6 +6,7 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Auth\Events\Failed;
@@ -31,6 +32,11 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->runPendingMigrations();
         ActivityLog::maintainArchive();
+
+        $appUrl = rtrim((string) config('app.url'), '/');
+        if ($appUrl !== '') {
+            URL::forceRootUrl($appUrl);
+        }
 
         // Register authentication event listeners for activity logging
         Event::listen(Login::class, LoginListener::class);

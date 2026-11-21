@@ -2,6 +2,17 @@
 
 return [
     [
+        'version' => '2.6.12',
+        'date' => '21 November 2026',
+        'title' => 'SMS public pages, template updates, and safer opening bills',
+        'changes' => [
+            'Customer SMS bill, receipt, and due links use a water-themed public page with WaSSIP branding, project hotline, and olexto credits.',
+            'SMS templates updated (Tamil labels on new bills; maintenance English + Tamil; Sinhala maintenance line removed).',
+            'Signed SMS links accept localhost and 127.0.0.1 host differences; opening-balance bills are protected from tariff recalculate.',
+            'Reports hub at /reports, safer customer contact save with empty last name, and production SQL for sms_templates bodies.',
+        ],
+    ],
+    [
         'version' => '2.6.11',
         'date' => '21 November 2026',
         'title' => 'Full meter-reading chain sync when a bill is edited',

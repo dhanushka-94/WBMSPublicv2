@@ -19,7 +19,7 @@
                     <a href="{{ route('bills.print', $bill) }}" target="_blank" class="bg-green-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-600 transition duration-200">
                         <i class="fas fa-print mr-2"></i>Print Bill
                     </a>
-                    @if($bill->status !== 'paid')
+                    @if($bill->status !== 'paid' && ! $bill->isOpeningBalance())
                     <form method="POST" action="{{ route('bills.rebill', $bill) }}" class="inline">
                         @csrf
                         <button class="bg-amber-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-amber-600">Recalculate</button>
@@ -84,10 +84,22 @@
                                     'overdue' => 'bg-red-100 text-red-800'
                                 ];
                             @endphp
-                            <span class="inline-flex px-3 py-1 text-sm font-semibold rounded-full {{ $statusColors[$bill->status] ?? 'bg-gray-100 text-gray-800' }}">
-                                {{ ucfirst($bill->status) }}
-                            </span>
+                            <div class="flex items-center gap-2">
+                                @if($bill->isOpeningBalance())
+                                    <span class="inline-flex px-3 py-1 text-sm font-semibold rounded-full bg-amber-100 text-amber-800">
+                                        Opening balance
+                                    </span>
+                                @endif
+                                <span class="inline-flex px-3 py-1 text-sm font-semibold rounded-full {{ $statusColors[$bill->status] ?? 'bg-gray-100 text-gray-800' }}">
+                                    {{ ucfirst($bill->status) }}
+                                </span>
+                            </div>
                         </div>
+                        @if($bill->isOpeningBalance())
+                            <p class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                                This is a starting outstanding amount, not a tariff consumption bill. Water and fixed charges stay at zero; the due amount is kept under adjustments.
+                            </p>
+                        @endif
 
                         @php $settle = $bill->settlementSummary(); @endphp
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">

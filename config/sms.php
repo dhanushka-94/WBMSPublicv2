@@ -55,24 +55,24 @@ return [
     */
 
     'templates' => [
-        'new_bill' => 'Dunsinane Water: Dear {customer_name}, bill {bill_number} ({billing_period}) is Rs.{bill_amount}. Due {due_date}. Account {account_number}. View: {bill_link}',
+        'new_bill' => "Dunsinane Water Project: Dear {customer_name}, bill {bill_number} ({billing_period}) is (இம்மாத கட்டணம் ரூ) Rs.{bill_amount}. Due {due_date}. Account {account_number} total Outstanding (மொத்த நிலுவை) Rs.{outstanding_amount}.\nView: {bill_link}",
 
-        'due_reminder' => 'Dunsinane Water: Dear {customer_name}, bill {bill_number} of Rs.{outstanding_amount} is due on {due_date}. Account {account_number}. Pay: {payment_link}',
+        'due_reminder' => 'Dunsinane Water Project: Dear {customer_name}, bill {bill_number} of Rs.{outstanding_amount} is due on {due_date}. Account {account_number}. Pay: {payment_link}',
 
-        'overdue_alert' => 'Dunsinane Water: URGENT - Dear {customer_name}, bill {bill_number} is overdue ({days_overdue} days). Outstanding Rs.{outstanding_amount}. Pay now: {payment_link}',
+        'overdue_alert' => 'Dunsinane Water Project: URGENT - Dear {customer_name}, bill {bill_number} is overdue ({days_overdue} days). Outstanding Rs.{outstanding_amount}. Pay now: {payment_link}',
 
-        'payment_confirmation' => 'Dunsinane Water: Dear {customer_name}, payment Rs.{paid_amount} received on {payment_date}. Receipt {receipt_number}, bill {bill_number}. Balance Rs.{balance}. View: {receipt_link}',
+        'payment_confirmation' => "Dunsinane Water Project: Dear {customer_name}, payment Rs.{paid_amount} received on {payment_date}. Receipt {receipt_number}, bill {bill_number}. Balance Rs.{balance}.\n\n\nView: {receipt_link}",
 
-        'late_fee_notice' => 'Dunsinane Water: Late fee Rs.{late_fee} added to bill {bill_number}. Outstanding now Rs.{outstanding_amount}. Pay: {payment_link}',
+        'late_fee_notice' => 'Dunsinane Water Project: Late fee Rs.{late_fee} added to bill {bill_number}. Outstanding now Rs.{outstanding_amount}. Pay: {payment_link}',
 
-        'service_disconnection' => 'Dunsinane Water: Dear {customer_name}, account {account_number} may be disconnected on {disconnection_date}. Outstanding Rs.{outstanding_amount}. Pay: {payment_link}',
+        'service_disconnection' => 'Dunsinane Water Project: Dear {customer_name}, account {account_number} may be disconnected on {disconnection_date}. Outstanding Rs.{outstanding_amount}. Pay: {payment_link}',
 
-        'reconnection' => 'Dunsinane Water: Dear {customer_name}, account {account_number} has been reconnected. Thank you.',
+        'reconnection' => 'Dunsinane Water Project: Dear {customer_name}, account {account_number} has been reconnected. Thank you.',
 
-        'meter_reading_reminder' => 'Dunsinane Water: Dear {customer_name}, meter reading for account {account_number} is scheduled on {date} ({day}) between {time_range}. Please keep the meter accessible.',
+        'meter_reading_reminder' => 'Dunsinane Water Project: Dear {customer_name}, meter reading for account {account_number} is scheduled on {date} ({day}) between {time_range}. Please keep the meter accessible.',
 
-        'maintenance_notice' => 'Dunsinane Water: Water supply interruption in {area} on {date} ({day}) from {start_time} to {end_time}. Reason: {reason}.',
+        'maintenance_notice' => "Dunsinane Water Project: Water supply interruption in {area} on {date} ({day}) from {start_time} to {end_time}. Reason: {reason}.\nடன்சினன் நீர் திட்டம்: அறிவித்தல்! {area} {date_ta} {day_ta} காலை {start_time_ta} மணி முதல் {end_time_ta} மணி வரை நீர் விநியோகம் தடைப்படும். காரணம்: {reason_ta}. தயவு செய்து நீரை சேமித்து வைக்கவும்.",
 
-        'custom' => 'Dunsinane Water: Dear {customer_name}, account {account_number}: ',
+        'custom' => 'Dunsinane Water Project: Dear {customer_name}, account {account_number}: ',
     ],
 ]; 

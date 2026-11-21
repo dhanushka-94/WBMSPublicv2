@@ -183,6 +183,7 @@
                     <div class="grid grid-cols-2 gap-x-2">
                         <div>
                             <p class="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Connections</p>
+                            <a href="{{ route('reports.index') }}" class="{{ $link }}"><i class="fas fa-th-large w-4 text-slate-600"></i>All Reports</a>
                             <a href="{{ route('reports.monthly-active') }}" class="{{ $link }}"><i class="fas fa-users-cog w-4 text-green-600"></i>Monthly Active</a>
                             @foreach(['customer-register', 'contacts', 'new-connections', 'disconnected'] as $key)
                                 @php [$label, $icon, $color] = $officeReports[$key]; @endphp
@@ -291,6 +292,7 @@
                         <a href="{{ route('payments.index') }}" class="{{ $mobileLink }}"><i class="fas fa-receipt w-4"></i>Payments</a>
                         <a href="{{ route('settings.rates.index') }}" class="{{ $mobileLink }}"><i class="fas fa-dollar-sign w-4"></i>Rates</a>
                     @elseif($key === 'reports')
+                        <a href="{{ route('reports.index') }}" class="{{ $mobileLink }}"><i class="fas fa-th-large w-4"></i>All Reports</a>
                         <a href="{{ route('reports.consumption') }}" class="{{ $mobileLink }}"><i class="fas fa-chart-line w-4"></i>Consumption</a>
                         <a href="{{ route('reports.revenue') }}" class="{{ $mobileLink }}"><i class="fas fa-chart-bar w-4"></i>Revenue</a>
                         <a href="{{ route('reports.overdue') }}" class="{{ $mobileLink }}"><i class="fas fa-exclamation-triangle w-4"></i>Overdue</a>

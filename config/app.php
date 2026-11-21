@@ -64,10 +64,17 @@ return [
     |
     */
 
+    'project' => [
+        'name' => 'Dunsinane Water Supply Scheme',
+        'hotline' => '076 76 96 404',
+        'hotline_tel' => '0767696404',
+    ],
+
     'developer' => [
         'name' => 'olexto Digital Solutions (Pvt) Ltd',
         'email' => 'info@olexto.com',
         'website' => 'https://www.olexto.com',
+        'phone' => '0741965192',
         'description' => 'Professional software development and digital transformation solutions',
     ],
 

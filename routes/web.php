@@ -19,6 +19,7 @@ use App\Http\Controllers\MonthlyActiveReportController;
 use App\Http\Controllers\ReaderRouteReportController;
 use App\Http\Controllers\ReaderStatisticsController;
 use App\Http\Controllers\OfficeReportController;
+use App\Http\Controllers\ReportHubController;
 use App\Http\Controllers\BulkSmsController;
 use App\Http\Controllers\SmsLinkController;
 use App\Http\Controllers\SmsSettingsController;
@@ -39,7 +40,7 @@ Route::get('/about', function () {
     return view('about');
 })->name('about');
 
-Route::middleware('signed')->group(function () {
+Route::middleware('signed.flexible')->group(function () {
     Route::get('/sms-link/bills/{bill}', [SmsLinkController::class, 'bill'])->name('sms.bill');
     Route::get('/sms-link/receipts/{payment}', [SmsLinkController::class, 'receipt'])->name('sms.receipt');
     Route::get('/sms-link/customers/{customer}/due', [SmsLinkController::class, 'due'])->name('sms.due');
@@ -219,6 +220,7 @@ Route::middleware(['auth', 'verified', 'system.check'])->group(function () {
     Route::post('sms/overdue-alerts', [SmsNotificationController::class, 'sendOverdueAlerts'])->name('sms.overdue-alerts');
     
     // Reports (RESTRICTED)
+    Route::get('reports', [ReportHubController::class, 'index'])->name('reports.index');
     Route::get('reports/consumption', [DashboardController::class, 'consumptionReport'])->name('reports.consumption');
     Route::get('reports/revenue', [DashboardController::class, 'revenueReport'])->name('reports.revenue');
     Route::get('reports/overdue', [DashboardController::class, 'overdueReport'])->name('reports.overdue');

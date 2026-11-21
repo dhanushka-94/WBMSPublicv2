@@ -193,6 +193,11 @@ class BillReadingChainService
         float $current,
         float $consumption
     ): void {
+        // Opening dues stay as typed adjustments; do not overwrite with tariff slabs.
+        if ($bill->isOpeningBalance()) {
+            return;
+        }
+
         $customer = Customer::query()->find($bill->customer_id);
         if (!$customer) {
             return;

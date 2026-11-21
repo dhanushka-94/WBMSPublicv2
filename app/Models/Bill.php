@@ -397,8 +397,27 @@ class Bill extends Model
         return true;
     }
 
+    public function isOpeningBalance(): bool
+    {
+        $notes = strtolower(trim((string) $this->notes));
+
+        if ($notes === 'opening balance' || str_starts_with($notes, 'opening balance')) {
+            return true;
+        }
+
+        // Imported / initial dues: amount stored only in adjustments, no consumption charges
+        return (float) $this->consumption <= 0
+            && (float) $this->water_charges <= 0
+            && (float) $this->fixed_charges <= 0
+            && (float) $this->adjustments > 0;
+    }
+
     public function rebill(): void
     {
+        if ($this->isOpeningBalance()) {
+            throw new \RuntimeException('Opening balance bills cannot be recalculated from the tariff.');
+        }
+
         $customer = $this->customer;
         $charges = Rate::calculateCharges(
             $customer->billingCategory(),

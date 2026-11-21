@@ -156,8 +156,8 @@ class CustomerController extends Controller
             'last_name' => 'nullable|string|max:255', // Optional
             'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg|max:1024|dimensions:ratio=1/1',
             'email' => 'nullable|email|max:255',
-            'phone' => 'nullable|string|max:20',
-            'phone_two' => 'nullable|string|max:20',
+            'phone' => ['nullable', 'string', 'max:20', 'regex:/^[0-9+\s\-()]*$/'],
+            'phone_two' => ['nullable', 'string', 'max:20', 'regex:/^[0-9+\s\-()]*$/'],
             'nic' => 'nullable|string|unique:customers,nic|max:12',
             'epf_number' => 'nullable|string|unique:customers,epf_number|max:20',
             'address' => 'nullable|string', // Optional
@@ -186,6 +186,8 @@ class CustomerController extends Controller
                 }
             ]
         ]);
+
+        $validated = $this->normalizeCustomerPayload($validated);
 
         try {
             DB::beginTransaction();
@@ -473,8 +475,8 @@ class CustomerController extends Controller
             'last_name' => 'nullable|string|max:255', // Optional
             'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg|max:1024|dimensions:ratio=1/1',
             'email' => 'nullable|email|max:255',
-            'phone' => 'nullable|string|max:20',
-            'phone_two' => 'nullable|string|max:20',
+            'phone' => ['nullable', 'string', 'max:20', 'regex:/^[0-9+\s\-()]*$/'],
+            'phone_two' => ['nullable', 'string', 'max:20', 'regex:/^[0-9+\s\-()]*$/'],
             'nic' => [
                 'nullable',
                 'string',
@@ -501,6 +503,8 @@ class CustomerController extends Controller
             'billing_day' => 'nullable|integer|min:1|max:31',
             'auto_billing_enabled' => 'boolean'
         ]);
+
+        $validated = $this->normalizeCustomerPayload($validated);
 
         // Handle profile photo upload
         if ($request->hasFile('profile_photo')) {
@@ -633,5 +637,29 @@ class CustomerController extends Controller
         return view('customers.bills', compact('customer', 'bills', 'totalOutstanding'));
     }
 
-    // Removed generateAccountNumber method - now handled in Customer model
+    /**
+     * Normalize optional customer fields for MySQL NOT NULL / nullable columns.
+     */
+    private function normalizeCustomerPayload(array $validated): array
+    {
+        // These columns allow NULL — empty form values become null
+        foreach (['phone', 'phone_two', 'email', 'nic', 'epf_number', 'postal_code', 'notes', 'reference_number', 'meter_number'] as $nullableField) {
+            if (! array_key_exists($nullableField, $validated)) {
+                continue;
+            }
+            $value = is_string($validated[$nullableField]) ? trim($validated[$nullableField]) : $validated[$nullableField];
+            $validated[$nullableField] = $value === '' || $value === null ? null : $value;
+        }
+
+        // These columns are NOT NULL — empty form values must be empty string, not null
+        foreach (['last_name', 'address', 'city'] as $requiredStringField) {
+            if (! array_key_exists($requiredStringField, $validated)) {
+                continue;
+            }
+            $value = is_string($validated[$requiredStringField]) ? trim($validated[$requiredStringField]) : $validated[$requiredStringField];
+            $validated[$requiredStringField] = $value === null ? '' : $value;
+        }
+
+        return $validated;
+    }
 }

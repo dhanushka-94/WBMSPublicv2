@@ -28,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'system.check' => \App\Http\Middleware\CheckSystemStatus::class,
             'mobile.maintenance' => \App\Http\Middleware\EnsureMobileAppIsAvailable::class,
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
+            'signed.flexible' => \App\Http\Middleware\ValidateFlexibleSignedUrl::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

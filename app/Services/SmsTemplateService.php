@@ -112,6 +112,11 @@ class SmsTemplateService
             'start_time' => $startTime,
             'end_time' => $endTime,
             'reason' => $reason,
+            'date_ta' => $date->format('d.m.Y'),
+            'day_ta' => $this->tamilWeekday($date),
+            'start_time_ta' => $this->tamilClockTime($startTime),
+            'end_time_ta' => $this->tamilClockTime($endTime),
+            'reason_ta' => $this->tamilMaintenanceReason($reason),
         ]);
     }
 
@@ -156,12 +161,12 @@ class SmsTemplateService
 
     public function billLink(Bill $bill): string
     {
-        return URL::signedRoute('sms.bill', ['bill' => $bill->id]);
+        return $this->signedPublicUrl('sms.bill', ['bill' => $bill->id]);
     }
 
     public function receiptLink(Payment $payment): string
     {
-        return URL::signedRoute('sms.receipt', ['payment' => $payment->id]);
+        return $this->signedPublicUrl('sms.receipt', ['payment' => $payment->id]);
     }
 
     public function customerDueLink(Customer $customer): string
@@ -172,7 +177,17 @@ class SmsTemplateService
             ->orderByDesc('balance_amount')
             ->first();
 
-        return $bill ? $this->billLink($bill) : URL::signedRoute('sms.due', ['customer' => $customer->id]);
+        return $bill ? $this->billLink($bill) : $this->signedPublicUrl('sms.due', ['customer' => $customer->id]);
+    }
+
+    /**
+     * Always sign SMS links against APP_URL so the host is stable for customers.
+     */
+    private function signedPublicUrl(string $route, array $parameters): string
+    {
+        URL::forceRootUrl(rtrim((string) config('app.url'), '/'));
+
+        return URL::signedRoute($route, $parameters);
     }
 
     /**
@@ -198,7 +213,7 @@ class SmsTemplateService
             'new_bill' => [
                 'name' => 'Bill Created',
                 'template' => config('sms.templates.new_bill'),
-                'variables' => ['{customer_name}', '{account_number}', '{bill_number}', '{billing_period}', '{bill_amount}', '{due_date}', '{bill_link}'],
+                'variables' => ['{customer_name}', '{account_number}', '{bill_number}', '{billing_period}', '{bill_amount}', '{outstanding_amount}', '{due_date}', '{bill_link}'],
             ],
             'due_reminder' => [
                 'name' => 'Due Reminder',
@@ -238,7 +253,7 @@ class SmsTemplateService
             'maintenance_notice' => [
                 'name' => 'Maintenance Notice',
                 'template' => config('sms.templates.maintenance_notice'),
-                'variables' => ['{area}', '{date}', '{day}', '{start_time}', '{end_time}', '{reason}'],
+                'variables' => ['{area}', '{date}', '{day}', '{start_time}', '{end_time}', '{reason}', '{date_ta}', '{day_ta}', '{start_time_ta}', '{end_time_ta}', '{reason_ta}'],
             ],
             'custom' => [
                 'name' => 'Custom SMS',
@@ -271,6 +286,11 @@ class SmsTemplateService
             'start_time' => '6:00 AM',
             'end_time' => '2:00 PM',
             'reason' => 'routine maintenance',
+            'date_ta' => '30.07.2024',
+            'day_ta' => 'செவ்வாய்க்கிழமை',
+            'start_time_ta' => '6.00',
+            'end_time_ta' => '14.00',
+            'reason_ta' => 'வழமையான பராமரிப்பு பணி',
             'payment_link' => 'https://example.com/bills/1',
             'bill_link' => 'https://example.com/bills/1',
             'receipt_link' => 'https://example.com/receipts/1',
@@ -286,5 +306,38 @@ class SmsTemplateService
         $template = SmsTemplate::bodyFor($templateType, (string) config("sms.templates.{$templateType}", ''));
 
         return $this->replaceVariables($template, $variables);
+    }
+
+    private function tamilWeekday(Carbon $date): string
+    {
+        return [
+            'Sunday' => 'ஞாயிற்றுக்கிழமை',
+            'Monday' => 'திங்கட்கிழமை',
+            'Tuesday' => 'செவ்வாய்க்கிழமை',
+            'Wednesday' => 'புதன்கிழமை',
+            'Thursday' => 'வியாழக்கிழமை',
+            'Friday' => 'வெள்ளிக்கிழமை',
+            'Saturday' => 'சனிக்கிழமை',
+        ][$date->format('l')] ?? $date->format('l');
+    }
+
+    private function tamilClockTime(string $time): string
+    {
+        $trimmed = trim($time);
+        try {
+            return Carbon::parse($trimmed)->format('g.i');
+        } catch (\Throwable) {
+            return preg_replace('/\s*(AM|PM)\s*/i', '', str_replace(':', '.', $trimmed)) ?: $trimmed;
+        }
+    }
+
+    private function tamilMaintenanceReason(string $reason): string
+    {
+        $normalized = strtolower(trim($reason));
+
+        return match ($normalized) {
+            'routine maintenance', 'routine maintenance.', 'வழமையான பராமரிப்பு பணி' => 'வழமையான பராமரிப்பு பணி',
+            default => $reason,
+        };
     }
 } 
