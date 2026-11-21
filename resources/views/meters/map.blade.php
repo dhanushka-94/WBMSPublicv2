@@ -123,6 +123,24 @@
 </div>
 
 @if(\App\Models\SystemConfiguration::googleMapsKey() !== '')
+<script>
+window.gm_authFailure = function () {
+    const el = document.getElementById('map');
+    if (!el) return;
+    el.innerHTML = `
+        <div class="flex h-full items-center justify-center p-6 bg-amber-50">
+            <div class="max-w-lg rounded-lg border border-amber-300 bg-white p-4 text-sm text-amber-950 shadow">
+                <p class="font-semibold">Google Maps rejected this API key</p>
+                <p class="mt-2">In Google Cloud Console, enable <strong>Maps JavaScript API</strong>, turn on billing, and allow these HTTP referrers:</p>
+                <ul class="mt-2 list-disc pl-5 space-y-1">
+                    <li><code>http://127.0.0.1:8000/*</code></li>
+                    <li><code>http://localhost:8000/*</code></li>
+                    <li><code>https://erp.dunwassip.com/*</code></li>
+                </ul>
+            </div>
+        </div>`;
+};
+</script>
 <script src="https://maps.googleapis.com/maps/api/js?key={{ \App\Models\SystemConfiguration::googleMapsKey() }}&callback=initMap" async defer></script>
 @endif
 

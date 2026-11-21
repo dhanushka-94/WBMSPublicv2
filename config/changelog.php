@@ -2,6 +2,14 @@
 
 return [
     [
+        'version' => '2.6.15',
+        'date' => '21 November 2026',
+        'title' => 'Clearer Google Maps API key failure on Meter Map',
+        'changes' => [
+            'If Google rejects the Maps API key, the Meter Map shows setup steps instead of a blank grey map.',
+        ],
+    ],
+    [
         'version' => '2.6.14',
         'date' => '21 November 2026',
         'title' => 'Meter map upgrade and Google Maps key for mobile',
