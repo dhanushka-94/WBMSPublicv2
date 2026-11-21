@@ -49,9 +49,17 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 xl:grid-cols-12">
-                <div class="xl:col-span-9 relative">
-                    <div id="map" class="w-full h-[70vh] min-h-[520px] xl:h-[calc(100vh-11rem)]"></div>
+            {{-- Inline heights: production CSS may lag Vite rebuild; map must never collapse to 0px. --}}
+            <div class="meter-map-layout" style="display:grid;grid-template-columns:minmax(0,1fr);gap:0;">
+                <style>
+                    @media (min-width: 1280px) {
+                        .meter-map-layout { grid-template-columns: minmax(0, 3fr) minmax(280px, 1fr) !important; }
+                        .meter-map-side { border-top: 0 !important; border-left: 1px solid #e5e7eb; max-height: calc(100vh - 11rem) !important; }
+                        .meter-map-canvas { height: calc(100vh - 11rem) !important; }
+                    }
+                </style>
+                <div class="relative">
+                    <div id="map" class="meter-map-canvas w-full" style="width:100%;height:70vh;min-height:520px;"></div>
                     @if(\App\Models\SystemConfiguration::googleMapsKey() === '')
                         <div class="absolute inset-0 flex items-center justify-center bg-amber-50/95 p-6">
                             <div class="max-w-md rounded-lg border border-amber-300 bg-white p-4 text-sm text-amber-900 shadow">
@@ -61,7 +69,7 @@
                     @endif
                 </div>
 
-                <div class="xl:col-span-3 border-t xl:border-t-0 xl:border-l border-gray-200 flex flex-col max-h-[70vh] xl:max-h-[calc(100vh-11rem)]">
+                <div class="meter-map-side border-t border-gray-200 flex flex-col" style="max-height:70vh;">
                     <div class="p-3 border-b border-gray-100 space-y-2">
                         <label for="meterSearch" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide">Search meters</label>
                         <div class="relative">

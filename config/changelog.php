@@ -2,6 +2,15 @@
 
 return [
     [
+        'version' => '2.6.16',
+        'date' => '21 November 2026',
+        'title' => 'Fix live Meter Map height collapsing to blank',
+        'changes' => [
+            'Production Meter Map no longer collapses to 0px height when Vite CSS has not yet included new Tailwind size classes.',
+            'Map canvas uses inline height styles so pins and tiles show on the live server the same as localhost.',
+        ],
+    ],
+    [
         'version' => '2.6.15',
         'date' => '21 November 2026',
         'title' => 'Clearer Google Maps API key failure on Meter Map',
