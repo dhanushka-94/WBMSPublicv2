@@ -24,9 +24,10 @@ class CollectionTotals
             ->whereBetween('paid_on', [$start, $end])
             ->count();
 
+        // Only living payment-linked overpayments. Orphans from deleted receipts must not
+        // keep reversed cash visible in daily/monthly collection.
         $overpaid = (float) WalletEntry::query()
-            ->where('reason', 'overpayment')
-            ->where('amount', '>', 0)
+            ->livingOverpayments()
             ->whereBetween('created_at', [$start, $end])
             ->sum('amount');
 

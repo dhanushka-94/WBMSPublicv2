@@ -18,6 +18,72 @@ class BillReadingChainService
     }
 
     /**
+     * After a billed meter reading is edited from Readings, push dials into the linked
+     * unpaid bill, cascade later readings/bills, refresh meter dial, and reconcile money.
+     *
+     * @return array{bill_synced: bool, later_readings: int, later_bills: int, wallet_credited: float, wallet_applied: float, meter_dial: ?float}
+     */
+    public function syncAfterReadingUpdate(MeterReading $reading, ?int $userId = null): array
+    {
+        $reading = MeterReading::query()->lockForUpdate()->findOrFail($reading->id);
+
+        $previous = round((float) $reading->previous_reading, 2);
+        $current = round((float) $reading->current_reading, 2);
+        $consumption = round(max(0, $current - $previous), 2);
+
+        MeterReading::withoutEvents(function () use ($reading, $consumption) {
+            $reading->forceFill(['consumption' => $consumption])->save();
+        });
+
+        $bill = Bill::query()
+            ->where(function ($query) use ($reading) {
+                $query->where('meter_reading_id', $reading->id)
+                    ->orWhere(function ($sameMeter) use ($reading) {
+                        $sameMeter->where('water_meter_id', $reading->water_meter_id)
+                            ->whereDate('billing_period_to', $reading->reading_date);
+                    });
+            })
+            ->whereNotIn('status', ['paid', 'cancelled', 'draft'])
+            ->orderByDesc('id')
+            ->lockForUpdate()
+            ->first();
+
+        $billSynced = false;
+        if ($bill) {
+            $this->repriceBillFromReading($bill, $previous, $current, $consumption);
+            if ((int) $bill->meter_reading_id !== (int) $reading->id) {
+                $bill->meter_reading_id = $reading->id;
+                $bill->save();
+            }
+            $billSynced = true;
+        }
+
+        $cascade = $this->cascadeLaterReadings($reading->fresh());
+
+        $meterDial = null;
+        if ($reading->water_meter_id) {
+            $meter = WaterMeter::query()->lockForUpdate()->find($reading->water_meter_id);
+            if ($meter) {
+                $meterDial = $meter->refreshDialFromLatestReading();
+            }
+        }
+
+        $money = ['wallet_credited' => 0.0, 'wallet_applied' => 0.0];
+        if ($bill) {
+            $money = $this->reconcileMoney($bill->fresh(), $userId);
+        }
+
+        return [
+            'bill_synced' => $billSynced,
+            'later_readings' => $cascade['later_readings'],
+            'later_bills' => $cascade['later_bills'],
+            'wallet_credited' => $money['wallet_credited'],
+            'wallet_applied' => $money['wallet_applied'],
+            'meter_dial' => $meterDial,
+        ];
+    }
+
+    /**
      * After a bill's dials/charges are saved, sync the meter reading ledger,
      * later readings (+ unpaid later bills), meter dial, and wallet vs paid amount.
      *

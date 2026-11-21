@@ -16,7 +16,7 @@
                     <a href="{{ route('readings.index') }}" class="bg-white text-blue-600 px-4 py-2 rounded-lg font-medium hover:bg-blue-50 transition duration-200">
                         <i class="fas fa-arrow-left mr-2"></i>Back to Readings
                     </a>
-                    @if($reading && $reading->id && $reading->status !== 'billed')
+                    @if($reading && $reading->id)
                         <a href="{{ route('readings.edit', $reading) }}" class="bg-yellow-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-yellow-600 transition duration-200">
                             <i class="fas fa-edit mr-2"></i>Edit Reading
                         </a>

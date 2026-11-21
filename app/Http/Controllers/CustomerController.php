@@ -260,8 +260,7 @@ class CustomerController extends Controller
         $currentReading = $customer->getCurrentReading();
         $overpaidTotal = (float) WalletEntry::query()
             ->where('customer_id', $customer->id)
-            ->where('reason', 'overpayment')
-            ->where('amount', '>', 0)
+            ->livingOverpayments()
             ->sum('amount');
         $financialSummary = [
             'billed' => (float) $customer->bills()->sum('total_amount'),
@@ -410,8 +409,7 @@ class CustomerController extends Controller
 
         $overpayRows = WalletEntry::query()
             ->where('customer_id', $customer->id)
-            ->where('reason', 'overpayment')
-            ->where('amount', '>', 0)
+            ->livingOverpayments()
             ->whereBetween('created_at', [$start, $end])
             ->selectRaw('MONTH(created_at) as month_number, SUM(amount) as overpaid')
             ->groupByRaw('MONTH(created_at)')

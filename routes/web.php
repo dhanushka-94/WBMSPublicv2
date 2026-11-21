@@ -162,13 +162,21 @@ Route::middleware(['auth', 'verified', 'system.check'])->group(function () {
     Route::resource('guarantors', GuarantorController::class);
     
     // Water Meter Management (RESTRICTED)
-    Route::resource('water-meters', WaterMeterController::class)->names('meters');
+    // Static /meters/* paths must be registered before the resource {water_meter} routes.
     Route::get('meters/map-view', [WaterMeterController::class, 'mapView'])->name('meters.map');
-    Route::post('meters/{meter}/maintenance', [WaterMeterController::class, 'recordMaintenance'])->name('meters.maintenance');
+    Route::get('api/check-meter-number', [WaterMeterController::class, 'checkMeterNumber'])->name('check.meter.number');
+    Route::post('meters/{water_meter}/maintenance', [WaterMeterController::class, 'recordMaintenance'])->name('meters.maintenance');
     Route::get('meters/{water_meter}/qr-code', [WaterMeterController::class, 'showQRCode'])->name('meters.qr-code');
     Route::get('meters/{water_meter}/qr-code/download', [WaterMeterController::class, 'downloadQRCode'])->name('meters.qr-code.download');
     Route::post('meters/{water_meter}/qr-code/regenerate', [WaterMeterController::class, 'regenerateQrCode'])->name('meters.qr-code.regenerate');
-    Route::get('api/check-meter-number', [WaterMeterController::class, 'checkMeterNumber'])->name('check.meter.number');
+    Route::resource('meters', WaterMeterController::class)
+        ->parameters(['meters' => 'water_meter']);
+
+    // Keep old /water-meters URLs working (bookmarks / older links).
+    Route::redirect('water-meters', '/meters', 301);
+    Route::get('water-meters/create', fn () => redirect()->route('meters.create', [], 301));
+    Route::get('water-meters/{water_meter}/edit', fn (\App\Models\WaterMeter $water_meter) => redirect()->route('meters.edit', $water_meter, 301));
+    Route::get('water-meters/{water_meter}', fn (\App\Models\WaterMeter $water_meter) => redirect()->route('meters.show', $water_meter, 301));
     
     // Bill Management (create/edit/delete - RESTRICTED)
     Route::get('/bills/create', [BillController::class, 'create'])->name('bills.create');
@@ -226,6 +234,8 @@ Route::middleware(['auth', 'verified', 'system.check'])->group(function () {
     Route::get('reports/overdue', [DashboardController::class, 'overdueReport'])->name('reports.overdue');
     Route::get('reports/reader-routes', [ReaderRouteReportController::class, 'index'])->name('reports.reader-routes');
     Route::get('reports/reader-statistics', [ReaderStatisticsController::class, 'index'])->name('reports.reader-statistics');
+    Route::get('reports/office/daily-collection/export', [OfficeReportController::class, 'exportDailyCollection'])
+        ->name('reports.office.daily-collection.export');
     Route::get('reports/office/{report}', [OfficeReportController::class, 'show'])->name('reports.office');
     Route::get('reports/monthly-active', [MonthlyActiveReportController::class, 'index'])->name('reports.monthly-active');
     Route::get('reports/monthly-active/export', [MonthlyActiveReportController::class, 'export'])->name('reports.monthly-active.export');

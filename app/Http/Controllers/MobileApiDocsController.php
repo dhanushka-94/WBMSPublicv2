@@ -34,9 +34,9 @@ class MobileApiDocsController extends Controller
                 'summary' => 'App name, API version, and feature flags',
                 'params' => [],
                 'body' => null,
-                'response' => ['app_name', 'version', 'api_version', 'mobile_app_maintenance', 'features.offline_mode', 'features.photo_capture', 'features.gps_tracking', 'features.receipt_printing', 'features.auto_sync', 'contact'],
+                'response' => ['app_name', 'version', 'api_version', 'mobile_app_maintenance', 'google_maps_api_key', 'features.offline_mode', 'features.photo_capture', 'features.gps_tracking', 'features.receipt_printing', 'features.auto_sync', 'features.maps', 'contact'],
                 'statuses' => ['200 AquaBill Mobile'],
-                'notes' => 'No auth required. Read mobile_app_maintenance before opening the reader screens. true means the Super Admin maintenance switch is on.',
+                'notes' => 'No auth required. Read mobile_app_maintenance before opening the reader screens. true means the Super Admin maintenance switch is on. google_maps_api_key is the Maps key from System Settings (empty string when not set). Use it to load Google Maps in the reader app. features.maps is true when a key is present.',
             ],
             [
                 'group' => 'Authentication',
@@ -51,9 +51,9 @@ class MobileApiDocsController extends Controller
                     'device_name' => 'required string. Logging in again with the same device name replaces that device token',
                     'device_info' => 'optional object (brand, model, os)',
                 ],
-                'response' => ['data.token', 'data.user.id', 'data.user.name', 'data.user.email', 'data.user.role', 'data.user.profile_photo_url', 'data.user.permissions', 'data.app_config', 'data.app_config.mobile_app_maintenance', 'data.expires_at'],
+                'response' => ['data.token', 'data.user.id', 'data.user.name', 'data.user.email', 'data.user.role', 'data.user.profile_photo_url', 'data.user.permissions', 'data.app_config', 'data.app_config.mobile_app_maintenance', 'data.app_config.google_maps_api_key', 'data.app_config.settings.google_maps_api_key', 'data.expires_at'],
                 'statuses' => ['200 Login successful', '401 Invalid credentials', '403 Role is not allowed', '422 Validation failed'],
-                'notes' => 'Allowed roles: super_admin, admin, meter_reader, supervisor. Manager and staff are rejected. Token ability is meter-reading. expires_at is 30 days from login and is informational unless Sanctum expiration is enabled on the server. Store data.token and send it as Authorization: Bearer {token}. data.user.profile_photo_url is an absolute image URL when the user has a photo, otherwise null. data.app_config.settings includes profile_photo_max_size 1024, profile_photo_mimes, and profile_photo_ratio 1:1. data.app_config.mobile_app_maintenance is the Super Admin reader-app switch. When it is true, stop reading and payment work and show the maintenance message. Login still succeeds so the phone can read the switch.',
+                'notes' => 'Allowed roles: super_admin, admin, meter_reader, supervisor. Manager and staff are rejected. Token ability is meter-reading. expires_at is 30 days from login and is informational unless Sanctum expiration is enabled on the server. Store data.token and send it as Authorization: Bearer {token}. data.user.profile_photo_url is an absolute image URL when the user has a photo, otherwise null. data.app_config.settings includes profile_photo_max_size 1024, profile_photo_mimes, and profile_photo_ratio 1:1. data.app_config.google_maps_api_key (also under settings.google_maps_api_key) is the Google Maps key from System Settings for in-app maps. data.app_config.mobile_app_maintenance is the Super Admin reader-app switch. When it is true, stop reading and payment work and show the maintenance message. Login still succeeds so the phone can read the switch.',
             ],
             [
                 'group' => 'Authentication',

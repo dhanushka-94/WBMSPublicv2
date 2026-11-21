@@ -55,16 +55,10 @@ class DashboardController extends Controller
             ->whereYear('bill_date', Carbon::now()->year)
             ->where('status', '!=', 'cancelled')
             ->sum('total_amount');
-        $monthlyCollected = (float) Payment::whereMonth('paid_on', Carbon::now()->month)
-            ->whereYear('paid_on', Carbon::now()->year)
-            ->sum('amount');
-        $monthlyOverpaid = (float) WalletEntry::query()
-            ->where('reason', 'overpayment')
-            ->where('amount', '>', 0)
-            ->whereMonth('created_at', Carbon::now()->month)
-            ->whereYear('created_at', Carbon::now()->year)
-            ->sum('amount');
-        $monthlyCollected = round($monthlyCollected + $monthlyOverpaid, 2);
+        $monthlyCollected = CollectionTotals::forPeriod(
+            Carbon::now()->startOfMonth(),
+            Carbon::now()->endOfMonth()
+        )['cash'];
         $collectionPercent = $monthlyBilled > 0 ? round(($monthlyCollected / $monthlyBilled) * 100, 1) : 0;
         $disconnectedCustomers = Customer::where('status', 'disconnected')->count();
 
@@ -320,8 +314,7 @@ class DashboardController extends Controller
         }
 
         $overpayRows = WalletEntry::query()
-            ->where('reason', 'overpayment')
-            ->where('amount', '>', 0)
+            ->livingOverpayments()
             ->whereBetween('created_at', [$start, $end])
             ->selectRaw('MONTH(created_at) as month_number, SUM(amount) as overpaid')
             ->groupByRaw('MONTH(created_at)')

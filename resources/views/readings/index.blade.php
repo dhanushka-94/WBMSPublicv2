@@ -280,7 +280,7 @@
                                             <i class="fas fa-eye"></i>
                                         </a>
                                         @endif
-                                        @if($reading && $reading->id && $reading->status !== 'billed')
+                                        @if($reading && $reading->id)
                                             <a href="{{ route('readings.edit', $reading) }}" class="text-indigo-600 hover:text-indigo-900" title="Edit">
                                                 <i class="fas fa-edit"></i>
                                             </a>

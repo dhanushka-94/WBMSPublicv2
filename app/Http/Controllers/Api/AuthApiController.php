@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\SystemConfiguration;
 use App\Models\User;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
@@ -401,13 +402,15 @@ class AuthApiController extends Controller
                 'auto_sync_interval' => 300, // seconds
                 'offline_storage_limit' => 1000, // readings
                 'gps_accuracy_threshold' => 10, // meters
+                'google_maps_api_key' => SystemConfiguration::googleMapsKey(),
             ],
+            'google_maps_api_key' => SystemConfiguration::googleMapsKey(),
             'server_info' => [
                 'timezone' => config('app.timezone'),
                 'datetime_format' => 'Y-m-d h:i:s A',
                 'currency' => 'LKR', // Sri Lankan Rupees
             ],
-            'mobile_app_maintenance' => \App\Models\SystemConfiguration::mobileAppMaintenance(),
+            'mobile_app_maintenance' => SystemConfiguration::mobileAppMaintenance(),
         ];
     }
 
@@ -429,7 +432,8 @@ class AuthApiController extends Controller
                     'abilities' => $token->abilities,
                     'last_used_at' => $token->last_used_at,
                     'expires_at' => $token->expires_at,
-                    'mobile_app_maintenance' => \App\Models\SystemConfiguration::mobileAppMaintenance(),
+                    'mobile_app_maintenance' => SystemConfiguration::mobileAppMaintenance(),
+                    'google_maps_api_key' => SystemConfiguration::googleMapsKey(),
                 ]
             ]);
 

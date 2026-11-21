@@ -8,6 +8,7 @@ use App\Models\WaterMeter;
 use App\Models\Customer;
 use App\Models\Division;
 use App\Models\Rate;
+use App\Services\BillReadingChainService;
 use App\Support\TablePage;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -193,26 +194,45 @@ class MeterReadingController extends Controller
     /**
      * Show the form for editing the specified meter reading.
      */
-    public function edit(MeterReading $reading): View
+    public function edit(MeterReading $reading): View|RedirectResponse
     {
-        if ($reading->status === 'billed') {
+        $linkedBill = $this->linkedBillForReading($reading);
+        if ($reading->status === 'billed' && $linkedBill && in_array($linkedBill->status, ['paid', 'cancelled'], true)) {
             return redirect()->route('readings.show', $reading)
-                ->with('error', 'Cannot edit billed readings.');
+                ->with('error', 'This reading is locked to a '.$linkedBill->status.' bill and cannot be edited.');
         }
 
         $waterMeters = WaterMeter::active()->with('customer')->orderBy('meter_number')->get();
-        
-        return view('readings.edit', compact('reading', 'waterMeters'));
+        $canEditBilled = $reading->status !== 'billed'
+            || ($linkedBill && ! in_array($linkedBill->status, ['paid', 'cancelled', 'draft'], true))
+            || auth()->user()?->isSuperAdmin()
+            || auth()->user()?->isAdmin();
+
+        return view('readings.edit', compact('reading', 'waterMeters', 'linkedBill', 'canEditBilled'));
     }
 
     /**
      * Update the specified meter reading in storage.
      */
-    public function update(Request $request, MeterReading $reading): RedirectResponse
+    public function update(Request $request, MeterReading $reading, BillReadingChainService $chain): RedirectResponse
     {
-        if ($reading->status === 'billed') {
-            return redirect()->route('readings.show', $reading)
-                ->with('error', 'Cannot update billed readings.');
+        $linkedBill = $this->linkedBillForReading($reading);
+        $editingBilled = $reading->status === 'billed';
+
+        if ($editingBilled) {
+            $allowed = ($linkedBill && ! in_array($linkedBill->status, ['paid', 'cancelled', 'draft'], true))
+                || auth()->user()?->isSuperAdmin()
+                || auth()->user()?->isAdmin();
+
+            if (! $allowed) {
+                return redirect()->route('readings.show', $reading)
+                    ->with('error', 'Cannot update billed readings that are locked to a paid bill.');
+            }
+
+            if ($linkedBill && in_array($linkedBill->status, ['paid', 'cancelled'], true)) {
+                return redirect()->route('readings.show', $reading)
+                    ->with('error', 'Cannot update a reading locked to a '.$linkedBill->status.' bill.');
+            }
         }
 
         $request->validate([
@@ -238,6 +258,7 @@ class MeterReadingController extends Controller
                 ->first();
 
             if ($lastReading && $request->current_reading < $lastReading->current_reading) {
+                DB::rollBack();
                 return back()->withErrors([
                     'current_reading' => 'Current reading cannot be less than the previous reading (' . $lastReading->current_reading . ')'
                 ])->withInput();
@@ -250,6 +271,7 @@ class MeterReadingController extends Controller
                 ->first();
 
             if ($existingReading) {
+                DB::rollBack();
                 return back()->withErrors([
                     'reading_date' => 'A reading already exists for this meter on this date.'
                 ])->withInput();
@@ -261,26 +283,69 @@ class MeterReadingController extends Controller
                 return back()->withErrors(['reading_date' => $monthlyLimit])->withInput();
             }
 
+            $previous = $lastReading
+                ? (float) $lastReading->current_reading
+                : (float) ($waterMeter->initial_reading ?? $reading->previous_reading);
+
             // Update the reading
             $reading->update([
                 'water_meter_id' => $request->water_meter_id,
                 'reading_date' => $request->reading_date,
+                'previous_reading' => $previous,
                 'current_reading' => $request->current_reading,
+                'consumption' => max(0, (float) $request->current_reading - $previous),
                 'reading_type' => $request->reading_type,
                 'reader_name' => $request->reader_name,
-                'notes' => $request->notes
+                'notes' => $request->notes,
+                'status' => $editingBilled ? 'billed' : (
+                    $reading->status === 'verified' ? 'pending' : $reading->status
+                ),
             ]);
+
+            $syncMessage = 'Meter reading updated successfully.';
+            if ($editingBilled) {
+                $sync = $chain->syncAfterReadingUpdate($reading->fresh(), $request->user()?->id);
+                $parts = ['Meter reading updated.'];
+                if ($sync['bill_synced']) {
+                    $parts[] = 'Linked unpaid bill recalculated.';
+                }
+                if ($sync['later_readings'] > 0) {
+                    $parts[] = $sync['later_readings'].' later reading(s) adjusted.';
+                }
+                if ($sync['later_bills'] > 0) {
+                    $parts[] = $sync['later_bills'].' later unpaid bill(s) recalculated.';
+                }
+                $syncMessage = implode(' ', $parts);
+            }
 
             DB::commit();
 
             return redirect()->route('readings.show', $reading)
-                ->with('success', 'Meter reading updated successfully.');
+                ->with('success', $syncMessage);
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error updating meter reading: ' . $e->getMessage());
             return back()->with('error', 'Failed to update meter reading. Please try again.')
                 ->withInput();
         }
+    }
+
+    private function linkedBillForReading(MeterReading $reading): ?Bill
+    {
+        if ($reading->relationLoaded('bill') && $reading->bill) {
+            return $reading->bill;
+        }
+
+        return Bill::query()
+            ->where(function ($query) use ($reading) {
+                $query->where('meter_reading_id', $reading->id)
+                    ->orWhere(function ($sameMeter) use ($reading) {
+                        $sameMeter->where('water_meter_id', $reading->water_meter_id)
+                            ->whereDate('billing_period_to', $reading->reading_date);
+                    });
+            })
+            ->orderByDesc('id')
+            ->first();
     }
 
     /**

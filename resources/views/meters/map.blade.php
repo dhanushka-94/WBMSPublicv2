@@ -2,107 +2,119 @@
 
 @section('content')
 <div class="w-full">
-    <!-- Header Section -->
-    <div class="bg-gradient-to-r from-purple-50 to-indigo-50 border-b border-purple-100 px-6 py-6">
-        <div class="flex flex-col md:flex-row md:items-center justify-between">
+    <div class="bg-gradient-to-r from-emerald-50 to-cyan-50 border-b border-emerald-100 px-4 sm:px-6 py-4">
+        <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
             <div>
                 <h1 class="font-bold text-2xl text-gray-800 leading-tight">
-                    <i class="fas fa-map-marked-alt text-purple-600 mr-2"></i>
+                    <i class="fas fa-map-marked-alt text-emerald-600 mr-2"></i>
                     Water Meters Map View
                 </h1>
-                <p class="text-purple-600 font-medium">Interactive map showing all water meter locations</p>
-                <p class="text-gray-600 text-sm mt-1">{{ $meters->count() }} meters with location data</p>
+                <p class="text-emerald-700 font-medium text-sm mt-1">
+                    {{ $meters->count() }} meters with location · pin colour = customer outstanding
+                </p>
             </div>
-            <div class="mt-4 md:mt-0 flex space-x-3">
-                <a href="{{ route('meters.create') }}" 
-                   class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                    <i class="fas fa-plus mr-2"></i>
-                    Add New Meter
+            <div class="flex flex-wrap gap-2">
+                <a href="{{ route('meters.create') }}"
+                   class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 px-4 rounded-lg text-sm">
+                    <i class="fas fa-plus mr-1"></i>Add Meter
                 </a>
-                <a href="{{ route('meters.index') }}" 
-                   class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                    <i class="fas fa-list mr-2"></i>
-                    List View
+                <a href="{{ route('meters.index') }}"
+                   class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg text-sm">
+                    <i class="fas fa-list mr-1"></i>List View
                 </a>
             </div>
         </div>
     </div>
 
-    <div class="py-4 bg-gray-50 min-h-screen">
-        <div class="w-full px-6 lg:px-8">
-            
-            <!-- Map Container -->
-            <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-                <div class="bg-gradient-to-r from-blue-500 to-cyan-600 px-6 py-4">
-                    <h3 class="text-lg font-bold text-white">
-                        <i class="fas fa-map mr-2"></i>All Water Meters
-                    </h3>
-                    <p class="text-blue-100 text-sm">Click on markers to view meter details</p>
+    <div class="px-3 sm:px-4 lg:px-6 py-3 bg-slate-100">
+        <div class="bg-white rounded-xl shadow border border-gray-200 overflow-hidden">
+            <div class="px-4 py-3 border-b border-gray-100 flex flex-col lg:flex-row lg:items-center gap-3 justify-between">
+                <div class="flex flex-wrap items-center gap-3 text-xs text-gray-600">
+                    @foreach($legend as $item)
+                        <span class="inline-flex items-center gap-1.5">
+                            <img src="https://maps.google.com/mapfiles/ms/icons/{{ $item['pin'] }}-dot.png" alt="" class="h-4 w-4">
+                            {{ $item['label'] }}
+                        </span>
+                    @endforeach
                 </div>
-                
-                <div class="p-6">
-                    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                        <!-- Map -->
-                        <div class="lg:col-span-3">
-                            <div id="map" class="w-full h-96 border-2 border-gray-200 rounded-lg"></div>
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" onclick="showAllMeters()"
+                            class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded-lg text-sm">
+                        <i class="fas fa-expand mr-1"></i>Show all
+                    </button>
+                    <button type="button" onclick="getCurrentLocation()"
+                            class="bg-teal-600 hover:bg-teal-700 text-white py-2 px-3 rounded-lg text-sm">
+                        <i class="fas fa-location-arrow mr-1"></i>My location
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-12">
+                <div class="xl:col-span-9 relative">
+                    <div id="map" class="w-full h-[70vh] min-h-[520px] xl:h-[calc(100vh-11rem)]"></div>
+                    @if(\App\Models\SystemConfiguration::googleMapsKey() === '')
+                        <div class="absolute inset-0 flex items-center justify-center bg-amber-50/95 p-6">
+                            <div class="max-w-md rounded-lg border border-amber-300 bg-white p-4 text-sm text-amber-900 shadow">
+                                Add the Google Maps API key in System Settings to show this map.
+                            </div>
                         </div>
-                        
-                        <!-- Meter List -->
-                        <div class="space-y-4">
-                            <h4 class="font-semibold text-gray-800 flex items-center">
-                                <i class="fas fa-list mr-2"></i>Meters with Location
-                            </h4>
-                            
-                            <div class="max-h-96 overflow-y-auto space-y-2">
-                                @foreach($meters as $meter)
-                                <div class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 cursor-pointer" 
-                                     onclick="focusOnMeter({{ $meter->id }})">
-                                    <div class="p-3">
-                                        <div class="flex items-center">
-                                            <div class="flex-shrink-0">
-                                                @if($meter->customer)
-                                                    <img class="h-10 w-10 rounded-full object-cover cursor-pointer hover:opacity-90 transition-opacity" 
-                                                         src="{{ $meter->customer->profile_photo_url }}" 
-                                                         alt="{{ $meter->customer->full_name }}"
-                                                         data-lightbox
-                                                         title="View photo">
-                                                @else
-                                                    <div class="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                                                        <i class="fas fa-user text-gray-500"></i>
-                                                    </div>
-                                                @endif
-                                            </div>
-                                            <div class="ml-3">
-                                                <p class="text-sm font-medium text-gray-900">{{ $meter->meter_number }}</p>
-                                                @if($meter->customer)
-                                                    <a href="{{ route('customers.show', $meter->customer) }}" class="text-xs text-blue-700 hover:text-blue-900">{{ $meter->customer->full_name }}</a>
-                                                @else
-                                                    <p class="text-xs text-gray-500">Unassigned Customer</p>
-                                                @endif
+                    @endif
+                </div>
+
+                <div class="xl:col-span-3 border-t xl:border-t-0 xl:border-l border-gray-200 flex flex-col max-h-[70vh] xl:max-h-[calc(100vh-11rem)]">
+                    <div class="p-3 border-b border-gray-100 space-y-2">
+                        <label for="meterSearch" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide">Search meters</label>
+                        <div class="relative">
+                            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                            <input type="search" id="meterSearch" autocomplete="off"
+                                   placeholder="Meter no, owner, account…"
+                                   class="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                   oninput="filterMeters(this.value)">
+                        </div>
+                        <p id="searchCount" class="text-xs text-gray-500">{{ $meters->count() }} meters</p>
+                    </div>
+
+                    <div id="meterList" class="flex-1 overflow-y-auto p-2 space-y-2">
+                        @forelse($meters as $meter)
+                            <button type="button"
+                                    class="meter-card w-full text-left border border-gray-200 rounded-lg p-3 hover:bg-emerald-50 hover:border-emerald-300 transition"
+                                    data-meter-id="{{ $meter['id'] }}"
+                                    data-search="{{ $meter['search_text'] }}"
+                                    onclick="focusOnMeter({{ $meter['id'] }})">
+                                <div class="flex items-start gap-2">
+                                    <img src="https://maps.google.com/mapfiles/ms/icons/{{ $meter['pin_color'] }}-dot.png" alt="" class="mt-0.5 h-5 w-5 shrink-0">
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center justify-between gap-2">
+                                            <p class="text-sm font-semibold text-gray-900 truncate">{{ $meter['meter_number'] }}</p>
+                                            <span class="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium {{ $meter['status'] === 'active' ? 'bg-green-100 text-green-800' : ($meter['status'] === 'faulty' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-700') }}">
+                                                {{ ucfirst($meter['status']) }}
+                                            </span>
                                         </div>
+                                        <p class="text-xs text-gray-700 truncate mt-0.5">
+                                            {{ $meter['owner_name'] ?? 'Unassigned' }}
+                                            @if($meter['account_number'])
+                                                <span class="text-gray-400">· {{ $meter['account_number'] }}</span>
+                                            @endif
+                                        </p>
+                                        <div class="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-gray-500">
+                                            <span>
+                                                Usage:
+                                                @if($meter['water_usage'] !== null)
+                                                    {{ number_format($meter['water_usage'], 0) }} units
+                                                @else
+                                                    —
+                                                @endif
+                                            </span>
+                                            <span class="font-medium {{ $meter['outstanding'] > 0 ? 'text-red-700' : 'text-emerald-700' }}">
+                                                Due: Rs.{{ number_format($meter['outstanding'], 2) }}
+                                            </span>
                                         </div>
                                     </div>
-                                    @if($meter->address)
-                                    <p class="text-xs text-gray-400 mt-1">{{ Str::limit($meter->address, 40) }}</p>
-                                    @endif
                                 </div>
-                                @endforeach
-                            </div>
-                            
-                            <!-- Map Controls -->
-                            <div class="space-y-2 pt-4 border-t border-gray-200">
-                                <button onclick="showAllMeters()" 
-                                        class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 px-3 rounded-lg text-sm transition-colors">
-                                    <i class="fas fa-expand mr-1"></i>
-                                    Show All Meters
-                                </button>
-                                <button onclick="getCurrentLocation()" 
-                                        class="w-full bg-green-500 hover:bg-green-600 text-white py-2 px-3 rounded-lg text-sm transition-colors">
-                                    <i class="fas fa-location-arrow mr-1"></i>
-                                    My Location
-                                </button>
-                            </div>
-                        </div>
+                            </button>
+                        @empty
+                            <p class="text-sm text-gray-500 p-4">No meters have map coordinates yet.</p>
+                        @endforelse
                     </div>
                 </div>
             </div>
@@ -112,41 +124,49 @@
 
 @if(\App\Models\SystemConfiguration::googleMapsKey() !== '')
 <script src="https://maps.googleapis.com/maps/api/js?key={{ \App\Models\SystemConfiguration::googleMapsKey() }}&callback=initMap" async defer></script>
-@else
-<div class="mx-6 mb-6 rounded border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-    Add the Google Maps API key in System Settings to show this map.
-</div>
 @endif
 
 <script>
 let map;
 let markers = [];
+let markerById = {};
 let infoWindow;
+let userMarker = null;
 
 const meterData = @json($meters);
 
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function money(value) {
+    return Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 function initMap() {
-    // Default location (center of Sri Lanka)
     const defaultLocation = { lat: 7.8731, lng: 80.7718 };
-    
-    // Initialize map
+
     map = new google.maps.Map(document.getElementById('map'), {
-        zoom: 8,
+        zoom: 10,
         center: defaultLocation,
-        mapTypeId: 'roadmap'
+        mapTypeId: 'roadmap',
+        fullscreenControl: true,
+        streetViewControl: false,
+        mapTypeControl: true,
     });
 
-    // Initialize info window
     infoWindow = new google.maps.InfoWindow();
 
-    // Add markers for each meter
-    meterData.forEach(function(meter) {
+    meterData.forEach(function (meter) {
         if (meter.latitude && meter.longitude) {
             addMeterMarker(meter);
         }
     });
 
-    // Fit map to show all markers
     showAllMeters();
 }
 
@@ -156,112 +176,174 @@ function addMeterMarker(meter) {
         lng: parseFloat(meter.longitude)
     };
 
-    // Choose marker color based on status
-    let markerColor = 'green'; // active
-    if (meter.status === 'faulty') markerColor = 'red';
-    else if (meter.status === 'inactive') markerColor = 'gray';
-    else if (meter.status === 'replaced') markerColor = 'blue';
-
+    const pin = meter.pin_color || 'green';
     const marker = new google.maps.Marker({
         position: position,
         map: map,
         title: meter.meter_number,
-        icon: `https://maps.google.com/mapfiles/ms/icons/${markerColor}-dot.png`,
+        icon: `https://maps.google.com/mapfiles/ms/icons/${pin}-dot.png`,
         meterId: meter.id
     });
 
-    // Create info window content
-    const infoContent = `
-        <div class="p-2">
-            <h3 class="font-bold text-lg text-gray-900">${meter.meter_number}</h3>
-            <p class="text-sm text-gray-600">${meter.customer ? meter.customer.full_name : 'Unassigned Customer'}</p>
-            <p class="text-xs text-gray-500">${meter.customer ? meter.customer.account_number : 'No Account'}</p>
-            ${meter.address ? `<p class="text-xs text-gray-400 mt-1">${meter.address}</p>` : ''}
-            <div class="flex items-center justify-between mt-2">
-                <span class="px-2 py-1 rounded-full text-xs font-medium ${getStatusClass(meter.status)}">
-                    ${meter.status.charAt(0).toUpperCase() + meter.status.slice(1)}
-                </span>
-                <div class="space-x-1">
-                    <a href="/meters/${meter.id}" class="text-blue-600 hover:text-blue-800 text-xs">
-                        <i class="fas fa-eye"></i> View
-                    </a>
-                    <a href="/meters/${meter.id}/edit" class="text-green-600 hover:text-green-800 text-xs">
-                        <i class="fas fa-edit"></i> Edit
-                    </a>
-                </div>
-            </div>
-        </div>
-    `;
-
-    // Add click listener
-    marker.addListener('click', function() {
-        infoWindow.setContent(infoContent);
+    marker.addListener('click', function () {
+        infoWindow.setContent(buildInfoContent(meter));
         infoWindow.open(map, marker);
+        highlightCard(meter.id);
     });
 
     markers.push(marker);
+    markerById[meter.id] = marker;
 }
 
-function getStatusClass(status) {
-    switch(status) {
-        case 'active': return 'bg-green-100 text-green-700';
-        case 'faulty': return 'bg-red-100 text-red-700';
-        case 'replaced': return 'bg-blue-100 text-blue-700';
-        default: return 'bg-gray-100 text-gray-700';
+function buildInfoContent(meter) {
+    const owner = meter.owner_name || 'Unassigned';
+    const account = meter.account_number || '—';
+    const usage = meter.water_usage !== null && meter.water_usage !== undefined
+        ? `${Number(meter.water_usage).toLocaleString()} units`
+        : '—';
+    const dial = meter.current_reading !== null && meter.current_reading !== undefined
+        ? Number(meter.current_reading).toLocaleString()
+        : '—';
+    const dueClass = Number(meter.outstanding) > 0 ? 'color:#b91c1c;font-weight:700;' : 'color:#047857;font-weight:700;';
+    const status = (meter.status || 'unknown');
+    const customerLink = meter.customer_id
+        ? `<a href="/customers/${meter.customer_id}" style="color:#1d4ed8;text-decoration:underline;">${escapeHtml(owner)}</a>`
+        : escapeHtml(owner);
+
+    return `
+        <div style="min-width:240px;max-width:300px;font-family:system-ui,sans-serif;padding:2px 4px;">
+            <div style="font-size:16px;font-weight:700;color:#111827;">${escapeHtml(meter.meter_number)}</div>
+            <div style="margin-top:6px;font-size:13px;color:#374151;line-height:1.45;">
+                <div><strong>Owner:</strong> ${customerLink}</div>
+                <div><strong>Account:</strong> ${escapeHtml(account)}</div>
+                <div><strong>Status:</strong> ${escapeHtml(status.charAt(0).toUpperCase() + status.slice(1))}</div>
+                <div><strong>Water usage:</strong> ${escapeHtml(usage)}${meter.usage_date ? ` <span style="color:#6b7280;">(${escapeHtml(meter.usage_date)})</span>` : ''}</div>
+                <div><strong>Current dial:</strong> ${escapeHtml(dial)}</div>
+                <div style="margin-top:4px;"><strong>Outstanding:</strong> <span style="${dueClass}">Rs.${money(meter.outstanding)}</span>
+                    <span style="margin-left:6px;font-size:11px;color:#6b7280;">${escapeHtml(meter.outstanding_label || '')}</span>
+                </div>
+            </div>
+            <div style="margin-top:10px;display:flex;gap:10px;font-size:12px;">
+                <a href="/meters/${meter.id}" style="color:#2563eb;">View meter</a>
+                <a href="/meters/${meter.id}/edit" style="color:#059669;">Edit</a>
+            </div>
+        </div>
+    `;
+}
+
+function highlightCard(meterId) {
+    document.querySelectorAll('.meter-card').forEach(function (card) {
+        card.classList.toggle('ring-2', Number(card.dataset.meterId) === Number(meterId));
+        card.classList.toggle('ring-emerald-500', Number(card.dataset.meterId) === Number(meterId));
+        card.classList.toggle('bg-emerald-50', Number(card.dataset.meterId) === Number(meterId));
+    });
+
+    const active = document.querySelector(`.meter-card[data-meter-id="${meterId}"]`);
+    if (active) {
+        active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
 }
 
 function focusOnMeter(meterId) {
-    const marker = markers.find(m => m.meterId === meterId);
-    if (marker) {
-        map.setCenter(marker.getPosition());
-        map.setZoom(17);
-        
-        // Trigger click event to show info window
-        google.maps.event.trigger(marker, 'click');
+    const marker = markerById[meterId];
+    if (!marker || !map) {
+        return;
     }
+
+    map.setCenter(marker.getPosition());
+    map.setZoom(17);
+    google.maps.event.trigger(marker, 'click');
 }
 
 function showAllMeters() {
-    if (markers.length > 0) {
-        const bounds = new google.maps.LatLngBounds();
-        markers.forEach(function(marker) {
+    if (!map || markers.length === 0) {
+        return;
+    }
+
+    const bounds = new google.maps.LatLngBounds();
+    markers.forEach(function (marker) {
+        if (marker.getMap()) {
             bounds.extend(marker.getPosition());
+        }
+    });
+    map.fitBounds(bounds);
+
+    const listener = google.maps.event.addListener(map, 'idle', function () {
+        if (map.getZoom() > 16) map.setZoom(16);
+        google.maps.event.removeListener(listener);
+    });
+}
+
+function filterMeters(query) {
+    const q = String(query || '').trim().toLowerCase();
+    let visible = 0;
+
+    document.querySelectorAll('.meter-card').forEach(function (card) {
+        const match = !q || (card.dataset.search || '').includes(q);
+        card.style.display = match ? '' : 'none';
+        if (match) visible += 1;
+
+        const marker = markerById[card.dataset.meterId];
+        if (marker) {
+            marker.setMap(match ? map : null);
+        }
+    });
+
+    const countEl = document.getElementById('searchCount');
+    if (countEl) {
+        countEl.textContent = q
+            ? `${visible} of ${meterData.length} meters`
+            : `${meterData.length} meters`;
+    }
+
+    if (q && visible > 0) {
+        const bounds = new google.maps.LatLngBounds();
+        let any = false;
+        markers.forEach(function (marker) {
+            if (marker.getMap()) {
+                bounds.extend(marker.getPosition());
+                any = true;
+            }
         });
-        map.fitBounds(bounds);
-        
-        // Ensure minimum zoom level
-        const listener = google.maps.event.addListener(map, 'idle', function() {
-            if (map.getZoom() > 15) map.setZoom(15);
-            google.maps.event.removeListener(listener);
-        });
+        if (any) {
+            map.fitBounds(bounds);
+            if (visible === 1) {
+                map.setZoom(Math.max(map.getZoom(), 16));
+            }
+        }
+    } else if (!q) {
+        showAllMeters();
     }
 }
 
 function getCurrentLocation() {
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(function(position) {
-            const userLocation = {
-                lat: position.coords.latitude,
-                lng: position.coords.longitude
-            };
-            
-            map.setCenter(userLocation);
-            map.setZoom(15);
-            
-            // Add user location marker
-            new google.maps.Marker({
-                position: userLocation,
-                map: map,
-                title: 'Your Location',
-                icon: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'
-            });
-        }, function() {
-            alert('Error: The Geolocation service failed.');
-        });
-    } else {
-        alert('Error: Your browser doesn\'t support geolocation.');
+    if (!navigator.geolocation) {
+        alert("Your browser doesn't support geolocation.");
+        return;
     }
+
+    navigator.geolocation.getCurrentPosition(function (position) {
+        const userLocation = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+        };
+
+        map.setCenter(userLocation);
+        map.setZoom(15);
+
+        if (userMarker) {
+            userMarker.setMap(null);
+        }
+
+        userMarker = new google.maps.Marker({
+            position: userLocation,
+            map: map,
+            title: 'Your Location',
+            icon: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+        });
+    }, function () {
+        alert('Could not get your current location.');
+    });
 }
 </script>
-@endsection 
+@endsection

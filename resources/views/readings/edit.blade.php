@@ -26,8 +26,9 @@
 
     <div class="mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="max-w-4xl mx-auto">
+            @php $editable = $canEditBilled ?? ($reading->status !== 'billed'); @endphp
             <!-- Status Warning -->
-            @if($reading->status === 'billed')
+            @if($reading->status === 'billed' && ! $editable)
                 <div class="bg-red-50 border border-red-200 rounded-xl p-6 mb-8">
                     <div class="flex items-start">
                         <div class="flex-shrink-0">
@@ -36,26 +37,37 @@
                         <div class="ml-3">
                             <h3 class="text-lg font-medium text-red-900">Reading Cannot Be Modified</h3>
                             <div class="mt-2 text-sm text-red-700">
-                                <p>This reading has been included in a bill and cannot be edited. If you need to make changes, please contact your supervisor.</p>
+                                <p>This reading is locked to a paid or cancelled bill. Edit is not available.</p>
+                                @if(!empty($linkedBill))
+                                    <p class="mt-2"><a href="{{ route('bills.show', $linkedBill) }}" class="font-medium underline">Open bill {{ $linkedBill->bill_number }}</a></p>
+                                @endif
                             </div>
                         </div>
                     </div>
                 </div>
             @else
-                <!-- Instructions Card -->
                 <div class="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8">
                     <div class="flex items-start">
                         <div class="flex-shrink-0">
                             <i class="fas fa-info-circle text-blue-600 text-xl"></i>
                         </div>
                         <div class="ml-3">
-                            <h3 class="text-lg font-medium text-blue-900">Edit Reading Guidelines</h3>
+                            <h3 class="text-lg font-medium text-blue-900">
+                                {{ $reading->status === 'billed' ? 'Edit billed reading' : 'Edit Reading Guidelines' }}
+                            </h3>
                             <div class="mt-2 text-sm text-blue-700">
                                 <ul class="list-disc list-inside space-y-1">
                                     <li>Ensure the reading is accurate and matches the meter display</li>
                                     <li>The reading must be greater than or equal to the previous reading</li>
-                                    <li>Add detailed notes if making significant changes</li>
-                                    <li>Verified readings will need re-verification after editing</li>
+                                    @if($reading->status === 'billed')
+                                        <li>Saving will recalculate the linked unpaid bill and adjust later readings on this meter.</li>
+                                        @if(!empty($linkedBill))
+                                            <li>Linked bill: <a href="{{ route('bills.edit', $linkedBill) }}" class="font-medium underline">{{ $linkedBill->bill_number }}</a></li>
+                                        @endif
+                                    @else
+                                        <li>Add detailed notes if making significant changes</li>
+                                        <li>Verified readings will need re-verification after editing</li>
+                                    @endif
                                 </ul>
                             </div>
                         </div>
@@ -126,7 +138,7 @@
                     </h3>
                 </div>
 
-                <form action="{{ route('readings.update', $reading) }}" method="POST" id="editReadingForm" @if($reading->status === 'billed') class="pointer-events-none opacity-60" @endif>
+                <form action="{{ route('readings.update', $reading) }}" method="POST" id="editReadingForm" @if(! $editable) class="pointer-events-none opacity-60" @endif>
                     @csrf
                     @method('PUT')
                     
@@ -180,7 +192,7 @@
                                        value="{{ old('reading_date', $reading->reading_date->format('Y-m-d')) }}"
                                        max="{{ date('Y-m-d') }}"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('reading_date') border-red-500 @enderror" 
-                                       required @if($reading->status === 'billed') disabled @endif>
+                                       required @if(! $editable) disabled @endif>
                                 @error('reading_date')
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
@@ -196,7 +208,7 @@
                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('current_reading') border-red-500 @enderror" 
                                        placeholder="Enter meter reading..."
                                        oninput="calculateConsumption()"
-                                       required @if($reading->status === 'billed') disabled @endif>
+                                       required @if(! $editable) disabled @endif>
                                 @error('current_reading')
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
@@ -227,7 +239,7 @@
                                 </label>
                                 <select name="reading_type" id="reading_type" 
                                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('reading_type') border-red-500 @enderror" 
-                                        required @if($reading->status === 'billed') disabled @endif>
+                                        required @if(! $editable) disabled @endif>
                                     <option value="actual" {{ old('reading_type', $reading->reading_type) == 'actual' ? 'selected' : '' }}>Actual Reading</option>
                                     <option value="estimated" {{ old('reading_type', $reading->reading_type) == 'estimated' ? 'selected' : '' }}>Estimated Reading</option>
                                     <option value="customer_read" {{ old('reading_type', $reading->reading_type) == 'customer_read' ? 'selected' : '' }}>Customer Read</option>
@@ -245,7 +257,7 @@
                                        value="{{ old('reader_name', $reading->reader_name) }}"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('reader_name') border-red-500 @enderror" 
                                        placeholder="Enter reader name..."
-                                       required @if($reading->status === 'billed') disabled @endif>
+                                       required @if(! $editable) disabled @endif>
                                 @error('reader_name')
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
@@ -260,14 +272,13 @@
                             <textarea name="notes" id="notes" rows="3" 
                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('notes') border-red-500 @enderror" 
                                       placeholder="Add any notes about the reading changes or meter condition..."
-                                      @if($reading->status === 'billed') disabled @endif>{{ old('notes', $reading->notes) }}</textarea>
+                                      @if(! $editable) disabled @endif>{{ old('notes', $reading->notes) }}</textarea>
                             @error('notes')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
 
-                        <!-- Change Summary -->
-                        @if($reading->status !== 'billed')
+                        @if($editable)
                             <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                                 <div class="flex items-start">
                                     <div class="flex-shrink-0">
@@ -279,6 +290,9 @@
                                             <ul class="list-disc list-inside space-y-1">
                                                 @if($reading->status === 'verified')
                                                     <li>This reading has been verified. Changes will reset it to pending status.</li>
+                                                @endif
+                                                @if($reading->status === 'billed')
+                                                    <li>The linked unpaid bill charges will be recalculated from the new dials.</li>
                                                 @endif
                                                 <li>All changes are logged for audit purposes.</li>
                                                 <li>Consider adding detailed notes explaining the reason for changes.</li>
@@ -296,7 +310,7 @@
                             <a href="{{ route('readings.show', $reading) }}" class="bg-gray-500 text-white px-6 py-2 rounded-lg font-medium hover:bg-gray-600 transition duration-200">
                                 Cancel
                             </a>
-                            @if($reading->status !== 'billed')
+                            @if($editable)
                                 <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition duration-200">
                                     <i class="fas fa-save mr-2"></i>Update Reading
                                 </button>
@@ -339,7 +353,7 @@ function calculateConsumption() {
 }
 
 // Form validation before submission
-@if($reading->status !== 'billed')
+@if($editable)
 document.getElementById('editReadingForm').addEventListener('submit', function(e) {
     const currentReading = parseFloat(document.getElementById('current_reading').value) || 0;
     

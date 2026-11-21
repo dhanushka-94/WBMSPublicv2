@@ -137,9 +137,14 @@ class SmsTemplateService
 
     public function billVariables(Bill $bill): array
     {
+        $bill->loadMissing('customer');
         $period = $bill->billing_period_from->format('M d, Y').' - '.$bill->billing_period_to->format('M d, Y');
-        $outstanding = number_format((float) $bill->balance_amount, 2);
+        $billBalance = number_format((float) $bill->balance_amount, 2);
         $amount = number_format((float) $bill->total_amount, 2);
+        // Template "total Outstanding" = all open bills for the customer, not this month only.
+        $customerOutstanding = $bill->customer
+            ? number_format((float) $bill->customer->getOutstandingBalance(), 2)
+            : $billBalance;
         $link = $this->billLink($bill);
 
         return [
@@ -149,9 +154,9 @@ class SmsTemplateService
             'billing_period' => $period,
             'bill_amount' => $amount,
             'amount' => $amount,
-            'outstanding_amount' => $outstanding,
-            'balance' => $outstanding,
-            'total_due' => $outstanding,
+            'outstanding_amount' => $customerOutstanding,
+            'balance' => $billBalance,
+            'total_due' => $customerOutstanding,
             'due_date' => $bill->due_date->format('M d, Y'),
             'days_overdue' => (string) $bill->due_date->diffInDays(now()),
             'bill_link' => $link,

@@ -343,11 +343,9 @@
                                                 <a href="{{ route('readings.show', $latestReading) }}" class="text-blue-600 hover:text-blue-900" title="View Reading">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
-                                                @if($latestReading->status !== 'billed')
-                                                    <a href="{{ route('readings.edit', $latestReading) }}" class="text-indigo-600 hover:text-indigo-900" title="Edit Reading">
-                                                        <i class="fas fa-edit"></i>
-                                                    </a>
-                                                    @endif
+                                                <a href="{{ route('readings.edit', $latestReading) }}" class="text-indigo-600 hover:text-indigo-900" title="Edit Reading">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
                                                 @else
                                                     <span class="text-gray-400" title="No reading available">
                                                         <i class="fas fa-exclamation-triangle"></i>

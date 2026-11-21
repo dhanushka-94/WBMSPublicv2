@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Bill;
 use App\Models\WaterMeter;
 use App\Models\Customer;
 use App\Models\CustomerType;
@@ -478,12 +479,92 @@ class WaterMeterController extends Controller
      */
     public function mapView(): View
     {
-        $meters = WaterMeter::with('customer')
+        $meters = WaterMeter::query()
+            ->with([
+                'customer:id,account_number,first_name,last_name,title,status',
+                'meterReadings' => fn ($q) => $q->latest('reading_date')->latest('id')->limit(1),
+            ])
             ->whereNotNull('latitude')
             ->whereNotNull('longitude')
+            ->orderBy('meter_number')
             ->get();
 
-        return view('meters.map', compact('meters'));
+        $customerIds = $meters->pluck('customer_id')->filter()->unique()->values();
+        $outstandings = $customerIds->isEmpty()
+            ? collect()
+            : Bill::query()
+                ->whereIn('customer_id', $customerIds)
+                ->whereIn('status', ['generated', 'sent', 'overdue'])
+                ->selectRaw('customer_id, SUM(balance_amount) as outstanding')
+                ->groupBy('customer_id')
+                ->pluck('outstanding', 'customer_id');
+
+        $mapMeters = $meters->map(function (WaterMeter $meter) use ($outstandings) {
+            $latest = $meter->meterReadings->first();
+            $outstanding = round((float) ($outstandings[$meter->customer_id] ?? 0), 2);
+            $band = $this->outstandingBand($outstanding, (bool) $meter->customer_id);
+
+            return [
+                'id' => $meter->id,
+                'meter_number' => $meter->meter_number,
+                'status' => $meter->status,
+                'latitude' => (float) $meter->latitude,
+                'longitude' => (float) $meter->longitude,
+                'address' => $meter->address,
+                'current_reading' => $meter->current_reading !== null ? (float) $meter->current_reading : null,
+                'water_usage' => $latest?->consumption !== null ? (float) $latest->consumption : null,
+                'usage_date' => $latest?->reading_date?->format('Y-m-d'),
+                'outstanding' => $outstanding,
+                'outstanding_band' => $band['key'],
+                'outstanding_label' => $band['label'],
+                'pin_color' => $band['pin'],
+                'owner_name' => $meter->customer?->full_name,
+                'account_number' => $meter->customer?->account_number,
+                'customer_id' => $meter->customer_id,
+                'customer_status' => $meter->customer?->status,
+                'search_text' => strtolower(trim(implode(' ', array_filter([
+                    $meter->meter_number,
+                    $meter->customer?->full_name,
+                    $meter->customer?->account_number,
+                    $meter->address,
+                ])))),
+            ];
+        })->values();
+
+        return view('meters.map', [
+            'meters' => $mapMeters,
+            'legend' => [
+                ['key' => 'clear', 'label' => 'No outstanding', 'pin' => 'green'],
+                ['key' => 'low', 'label' => 'Outstanding ≤ Rs.500', 'pin' => 'yellow'],
+                ['key' => 'medium', 'label' => 'Outstanding ≤ Rs.2,000', 'pin' => 'orange'],
+                ['key' => 'high', 'label' => 'Outstanding > Rs.2,000', 'pin' => 'red'],
+                ['key' => 'unassigned', 'label' => 'No owner', 'pin' => 'purple'],
+            ],
+        ]);
+    }
+
+    /**
+     * @return array{key: string, label: string, pin: string}
+     */
+    private function outstandingBand(float $outstanding, bool $hasCustomer = true): array
+    {
+        if (! $hasCustomer) {
+            return ['key' => 'unassigned', 'label' => 'No owner', 'pin' => 'purple'];
+        }
+
+        if ($outstanding <= 0.009) {
+            return ['key' => 'clear', 'label' => 'No outstanding', 'pin' => 'green'];
+        }
+
+        if ($outstanding <= 500) {
+            return ['key' => 'low', 'label' => 'Low outstanding', 'pin' => 'yellow'];
+        }
+
+        if ($outstanding <= 2000) {
+            return ['key' => 'medium', 'label' => 'Medium outstanding', 'pin' => 'orange'];
+        }
+
+        return ['key' => 'high', 'label' => 'High outstanding', 'pin' => 'red'];
     }
 
     /**

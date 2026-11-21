@@ -13,6 +13,7 @@ use App\Support\TablePage;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class OfficeReportController extends Controller
 {
@@ -56,6 +57,70 @@ class OfficeReportController extends Controller
             'notes' => $data['notes'] ?? null,
             'usesMonth' => $usesMonth,
             'usesDate' => $usesDate,
+            'canExportCsv' => $report === 'daily-collection',
+        ]);
+    }
+
+    public function exportDailyCollection(Request $request): StreamedResponse
+    {
+        $date = $request->input('date', now()->toDateString());
+        $cash = CollectionTotals::forDate($date);
+        $payments = Payment::with(['customer', 'bill', 'receiver', 'overpaymentEntries'])
+            ->whereDate('paid_on', $date)
+            ->orderBy('id')
+            ->get();
+
+        $filename = 'daily_collection_'.$date.'.csv';
+
+        return response()->streamDownload(function () use ($payments, $cash, $date) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, [
+                'Date',
+                'Receipt',
+                'Account',
+                'Customer',
+                'Bill',
+                'Cash received',
+                'Applied to bill',
+                'Wallet added',
+                'Method',
+                'Received by',
+                'Paid on',
+            ]);
+
+            foreach ($payments as $payment) {
+                fputcsv($file, [
+                    $date,
+                    $payment->receipt_number,
+                    $payment->customer?->account_number,
+                    $payment->customer?->full_name,
+                    $payment->bill?->bill_number,
+                    number_format($payment->exactPaidAmount(), 2, '.', ''),
+                    number_format((float) $payment->amount, 2, '.', ''),
+                    number_format($payment->walletAddedAmount(), 2, '.', ''),
+                    str_replace('_', ' ', (string) $payment->payment_method),
+                    $payment->receiver?->name,
+                    optional($payment->paid_on)->timezone(config('app.timezone'))->format('Y-m-d H:i'),
+                ]);
+            }
+
+            fputcsv($file, []);
+            fputcsv($file, [
+                'TOTAL',
+                $cash['receipts'].' receipts',
+                '',
+                '',
+                '',
+                number_format($cash['cash'], 2, '.', ''),
+                number_format($cash['applied'], 2, '.', ''),
+                number_format($cash['overpaid'], 2, '.', ''),
+                '',
+                '',
+                '',
+            ]);
+            fclose($file);
+        }, $filename, [
+            'Content-Type' => 'text/csv',
         ]);
     }
 
@@ -251,8 +316,7 @@ class OfficeReportController extends Controller
             ->all();
 
         $overpaid = (float) WalletEntry::query()
-            ->where('reason', 'overpayment')
-            ->where('amount', '>', 0)
+            ->livingOverpayments()
             ->whereBetween('created_at', [$start, $end])
             ->sum('amount');
 

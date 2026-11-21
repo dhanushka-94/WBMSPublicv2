@@ -300,35 +300,14 @@ class Bill extends Model
         $paymentIds = $payments->pluck('id')->filter()->all();
         $walletAdded = 0.0;
 
-        // Only count overpayments still tied to living payments on this bill.
-        // Orphan rows (payment deleted, payment_id nulled) must not keep showing cash received.
-        if ($this->customer_id && $paymentIds !== []) {
-            $query = WalletEntry::query()
-                ->where('customer_id', $this->customer_id)
+        // Only overpayments still tied to living payments on this bill.
+        // Orphan rows (payment deleted → payment_id nulled) must not keep showing cash received.
+        if ($paymentIds !== []) {
+            $walletAdded = round((float) WalletEntry::query()
                 ->where('reason', 'overpayment')
                 ->where('amount', '>', 0)
-                ->where(function ($q) use ($paymentIds) {
-                    $q->whereIn('payment_id', $paymentIds)
-                        ->orWhere(function ($billLinked) use ($paymentIds) {
-                            $billLinked->where('bill_id', $this->id)
-                                ->whereIn('payment_id', $paymentIds);
-                        });
-
-                    foreach ($this->payments as $payment) {
-                        if (!$payment->created_at) {
-                            continue;
-                        }
-                        $from = $payment->created_at->copy()->subSeconds(2);
-                        $to = $payment->created_at->copy()->addSeconds(2);
-                        $q->orWhere(function ($inner) use ($from, $to) {
-                            $inner->whereNull('bill_id')
-                                ->whereNull('payment_id')
-                                ->whereBetween('created_at', [$from, $to]);
-                        });
-                    }
-                });
-
-            $walletAdded = round((float) $query->sum('amount'), 2);
+                ->whereIn('payment_id', $paymentIds)
+                ->sum('amount'), 2);
         }
 
         return [

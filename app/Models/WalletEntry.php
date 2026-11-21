@@ -35,4 +35,19 @@ class WalletEntry extends Model
     {
         return $this->belongsTo(Payment::class);
     }
+
+    /**
+     * Overpayments still tied to a living payment (excludes reversed/orphan rows).
+     */
+    public function scopeLivingOverpayments($query)
+    {
+        return $query->where('reason', 'overpayment')
+            ->where('amount', '>', 0)
+            ->whereNotNull('payment_id')
+            ->whereExists(function ($exists) {
+                $exists->selectRaw('1')
+                    ->from('payments')
+                    ->whereColumn('payments.id', 'wallet_entries.payment_id');
+            });
+    }
 }

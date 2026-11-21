@@ -41,12 +41,14 @@ Route::prefix('v1')->group(function () {
             'version' => '1.0.0',
             'api_version' => 'v1',
             'mobile_app_maintenance' => SystemConfiguration::mobileAppMaintenance(),
+            'google_maps_api_key' => SystemConfiguration::googleMapsKey(),
             'features' => [
                 'offline_mode' => true,
                 'photo_capture' => true,
                 'gps_tracking' => true,
                 'receipt_printing' => true,
                 'auto_sync' => true,
+                'maps' => SystemConfiguration::googleMapsKey() !== '',
             ],
             'contact' => [
                 'support_email' => 'support@waterbilling.com',
@@ -275,6 +277,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
                     'api_version' => 'v1',
                     'maintenance_mode' => app()->isDownForMaintenance(),
                     'mobile_app_maintenance' => SystemConfiguration::mobileAppMaintenance(),
+                    'google_maps_api_key' => SystemConfiguration::googleMapsKey(),
                 ]
             ]);
         });

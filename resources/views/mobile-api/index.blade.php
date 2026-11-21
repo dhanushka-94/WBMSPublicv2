@@ -41,7 +41,7 @@
         <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
             <h2 class="text-xl font-bold text-gray-900 mb-3">App flow</h2>
             <ol class="list-decimal list-inside text-gray-700 space-y-2">
-                <li><code class="bg-gray-100 px-1 rounded">POST /login</code> and store <code class="bg-gray-100 px-1 rounded">data.token</code>. Use <code class="bg-gray-100 px-1 rounded">data.user.profile_photo_url</code> for the reader avatar when it is not null.</li>
+                <li><code class="bg-gray-100 px-1 rounded">POST /login</code> and store <code class="bg-gray-100 px-1 rounded">data.token</code>. Use <code class="bg-gray-100 px-1 rounded">data.user.profile_photo_url</code> for the reader avatar when it is not null. Store <code class="bg-gray-100 px-1 rounded">data.app_config.google_maps_api_key</code> to load Google Maps in the app (also on <code class="bg-gray-100 px-1 rounded">GET /app-info</code>).</li>
                 <li>Optional: upload or refresh the reader’s own photo with <code class="bg-gray-100 px-1 rounded">POST /profile/photo</code> (JPG/PNG, 1:1, max 1 MB).</li>
                 <li><code class="bg-gray-100 px-1 rounded">GET /meter-reading/rates</code> and store the tariff slabs for offline receipts.</li>
                 <li><code class="bg-gray-100 px-1 rounded">GET /meter-reading/route/today</code> for the day’s customer list.</li>

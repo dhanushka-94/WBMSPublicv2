@@ -2,6 +2,29 @@
 
 return [
     [
+        'version' => '2.6.14',
+        'date' => '21 November 2026',
+        'title' => 'Meter map upgrade and Google Maps key for mobile',
+        'changes' => [
+            'Water Meters Map View is larger, with search by meter/owner/account.',
+            'Map pins are coloured by outstanding balance; click shows meter number, owner, status, water usage, and outstanding.',
+            'Mobile API returns google_maps_api_key from System Settings on login app_config, app-info, check-token, and system-info.',
+            'Meter CRUD URLs use /meters/{id} (e.g. /meters/415/edit); old /water-meters links redirect.',
+        ],
+    ],
+    [
+        'version' => '2.6.13',
+        'date' => '21 November 2026',
+        'title' => 'Office fixes: receipts, readings, daily CSV, SMS outstanding, map key',
+        'changes' => [
+            'Reversed receipts no longer inflate collection cash: only living payment-linked overpayments are counted.',
+            'Billed meter readings can be edited from the backend; linked unpaid bills and later readings are recalculated.',
+            'Daily Collection report has a CSV export for daily receipt checks.',
+            'SMS outstanding_amount / total_due now use the customer total outstanding (all open bills), not only the month bill.',
+            'Google Maps API key can be stored in System Settings so the meters map renders.',
+        ],
+    ],
+    [
         'version' => '2.6.12',
         'date' => '21 November 2026',
         'title' => 'SMS public pages, template updates, and safer opening bills',

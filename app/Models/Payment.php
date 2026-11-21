@@ -62,30 +62,11 @@ class Payment extends Model
             return 0.0;
         }
 
-        $linked = (float) ($this->relationLoaded('overpaymentEntries')
+        // Only rows still linked to this payment. Do not match orphan (payment_id null) rows
+        // by timestamp — that re-attaches cash from deleted/reversed receipts.
+        return round((float) ($this->relationLoaded('overpaymentEntries')
             ? $this->overpaymentEntries->sum('amount')
-            : $this->overpaymentEntries()->sum('amount'));
-
-        if ($linked > 0) {
-            return round($linked, 2);
-        }
-
-        if (!$this->customer_id || !$this->created_at) {
-            return 0.0;
-        }
-
-        return round((float) WalletEntry::query()
-            ->where('customer_id', $this->customer_id)
-            ->where('reason', 'overpayment')
-            ->where('amount', '>', 0)
-            ->where(function ($query) {
-                $query->whereNull('payment_id')->orWhere('payment_id', $this->id);
-            })
-            ->whereBetween('created_at', [
-                $this->created_at->copy()->subSeconds(2),
-                $this->created_at->copy()->addSeconds(2),
-            ])
-            ->sum('amount'), 2);
+            : $this->overpaymentEntries()->sum('amount')), 2);
     }
 
     /**

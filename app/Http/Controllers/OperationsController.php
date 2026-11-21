@@ -34,10 +34,7 @@ class OperationsController extends Controller
             'payments' => Payment::count(),
             'paid_exact' => round(
                 (float) Payment::sum('amount')
-                + (float) WalletEntry::query()
-                    ->where('reason', 'overpayment')
-                    ->where('amount', '>', 0)
-                    ->sum('amount'),
+                + (float) WalletEntry::query()->livingOverpayments()->sum('amount'),
                 2
             ),
         ];
