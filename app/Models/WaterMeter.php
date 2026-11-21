@@ -130,6 +130,26 @@ class WaterMeter extends Model
         return false;
     }
 
+    /**
+     * Set the dial from the latest meter reading (may go up or down after a correction).
+     */
+    public function refreshDialFromLatestReading(): ?float
+    {
+        $latest = $this->meterReadings()
+            ->orderByDesc('reading_date')
+            ->orderByDesc('id')
+            ->first();
+
+        if (!$latest) {
+            return null;
+        }
+
+        $this->current_reading = round((float) $latest->current_reading, 2);
+        $this->save();
+
+        return (float) $this->current_reading;
+    }
+
     public function isDueForMaintenance(): bool
     {
         return $this->next_maintenance_date && 

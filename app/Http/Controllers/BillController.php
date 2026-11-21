@@ -9,7 +9,9 @@ use App\Models\WaterMeter;
 use App\Models\MeterReading;
 use App\Models\Rate;
 use App\Services\BillPaymentService;
+use App\Services\BillReadingChainService;
 use Illuminate\Http\Request;
+use InvalidArgumentException;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
 use Carbon\Carbon;
@@ -243,7 +245,7 @@ class BillController extends Controller
     /**
      * Update the specified bill in storage.
      */
-    public function update(Request $request, Bill $bill): RedirectResponse
+    public function update(Request $request, Bill $bill, BillReadingChainService $chain): RedirectResponse
     {
         if ($bill->status === 'paid') {
             return redirect()->route('bills.show', $bill)
@@ -258,7 +260,7 @@ class BillController extends Controller
             'billing_period_from' => 'required|date',
             'billing_period_to' => 'required|date|after:billing_period_from',
             'previous_reading' => 'required|numeric|min:0',
-            'current_reading' => 'required|numeric|min:0',
+            'current_reading' => 'required|numeric|gte:previous_reading',
             'service_charges' => 'nullable|numeric|min:0',
             'damage_charges' => 'nullable|numeric|min:0',
             'late_fees' => 'nullable|numeric|min:0',
@@ -300,10 +302,35 @@ class BillController extends Controller
                 'notes' => $request->notes
             ]);
 
+            $sync = $chain->syncAfterBillUpdate($bill->fresh(), $request->user()?->id);
+
             DB::commit();
 
+            $parts = ['Bill updated and the meter reading chain was synced.'];
+            if ($sync['reading_synced']) {
+                $parts[] = 'Linked meter reading updated.';
+            }
+            if ($sync['later_readings'] > 0) {
+                $parts[] = $sync['later_readings'].' later reading(s) adjusted.';
+            }
+            if ($sync['later_bills'] > 0) {
+                $parts[] = $sync['later_bills'].' later unpaid bill(s) recalculated.';
+            }
+            if ($sync['wallet_credited'] > 0) {
+                $parts[] = 'Rs. '.number_format($sync['wallet_credited'], 2).' credited to the wallet (bill total reduced below amount paid).';
+            }
+            if ($sync['wallet_applied'] > 0) {
+                $parts[] = 'Rs. '.number_format($sync['wallet_applied'], 2).' applied from the wallet.';
+            }
+            if ($sync['meter_dial'] !== null) {
+                $parts[] = 'Meter dial is now '.number_format((float) $sync['meter_dial'], 0).'.';
+            }
+
             return redirect()->route('bills.show', $bill)
-                ->with('success', 'Bill updated successfully.');
+                ->with('success', implode(' ', $parts));
+        } catch (InvalidArgumentException $e) {
+            DB::rollBack();
+            return back()->with('error', $e->getMessage())->withInput();
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error updating bill: ' . $e->getMessage());

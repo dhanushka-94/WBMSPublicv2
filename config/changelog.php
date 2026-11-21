@@ -2,6 +2,16 @@
 
 return [
     [
+        'version' => '2.6.11',
+        'date' => '21 November 2026',
+        'title' => 'Full meter-reading chain sync when a bill is edited',
+        'changes' => [
+            'Editing previous or current reading on an unpaid bill recalculates charges and syncs the linked meter reading.',
+            'Later readings and unpaid later bills on the same meter are adjusted, and the meter dial is refreshed.',
+            'If the new bill total is below amount already paid, the excess is credited to the wallet; remaining due can use wallet credit.',
+        ],
+    ],
+    [
         'version' => '2.6.10',
         'date' => '20 November 2026',
         'title' => 'Fix payment delete so bill and wallet overpayment reverse fully',
