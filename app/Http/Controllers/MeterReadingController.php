@@ -614,7 +614,7 @@ class MeterReadingController extends Controller
             'water_meter_id' => $meter->id,
             'meter_reading_id' => null,
             'bill_date' => $existing?->bill_date ?? $today,
-            'due_date' => $existing?->due_date ?? $today->copy()->addDays(30),
+            'due_date' => $existing?->due_date ?? Bill::dueDateFrom($today),
             'billing_period_from' => $existing?->billing_period_from ?? $today,
             'billing_period_to' => $existing?->billing_period_to ?? $today,
             'previous_reading' => $dial,

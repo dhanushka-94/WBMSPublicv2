@@ -62,7 +62,7 @@ class SampleDataSeeder extends Seeder
             ['scheme_name', 'Dunsinane Water Supply Scheme', 'string', 'Name printed on the bill'],
             ['currency', 'LKR', 'string', 'Currency used on bills and receipts'],
             ['office_phone', '0522223344', 'string', 'Scheme office telephone'],
-            ['bill_due_days', '30', 'integer', 'Days after the bill date before payment is due'],
+            ['bill_due_days', '14', 'integer', 'Payment window in days including the bill issue date'],
         ];
 
         foreach ($rows as [$key, $value, $type, $description]) {

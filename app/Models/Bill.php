@@ -7,12 +7,36 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Carbon\Carbon;
+use App\Helpers\SystemConfig;
 use App\Services\SmsNotificationService;
 use App\Models\SmsNotification;
 
 class Bill extends Model
 {
     use HasFactory;
+
+    /**
+     * Payment window in days including the bill issue date (default 14).
+     * Example: issued 22 Nov → due 5 Dec (day 1 = issue day).
+     */
+    public static function dueDays(): int
+    {
+        $days = (int) SystemConfig::get('bill_due_days', 14);
+
+        return max(1, $days);
+    }
+
+    /**
+     * Due date = issue date + (due days − 1), so the window includes the issue day.
+     */
+    public static function dueDateFrom(Carbon|string|null $billDate = null): Carbon
+    {
+        $issued = $billDate instanceof Carbon
+            ? $billDate->copy()->startOfDay()
+            : Carbon::parse($billDate ?: now())->startOfDay();
+
+        return $issued->copy()->addDays(self::dueDays() - 1);
+    }
 
     protected $fillable = [
         'customer_id',
@@ -260,7 +284,7 @@ class Bill extends Model
         $this->water_meter_id = $reading->water_meter_id;
         $this->meter_reading_id = $reading->id;
         $this->bill_date = Carbon::now();
-        $this->due_date = Carbon::now()->addDays(30);
+        $this->due_date = self::dueDateFrom($this->bill_date);
         $this->billing_period_from = $reading->reading_date->startOfMonth();
         $this->billing_period_to = $reading->reading_date->endOfMonth();
         $this->previous_reading = $reading->previous_reading;

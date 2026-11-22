@@ -16,6 +16,9 @@
                     <a href="{{ route('bills.index') }}" class="bg-white text-blue-600 px-4 py-2 rounded-lg font-medium hover:bg-blue-50 transition duration-200">
                         <i class="fas fa-arrow-left mr-2"></i>Back to Bills
                     </a>
+                    <a href="{{ route('bills.pdf', $bill) }}" class="bg-red-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-600 transition duration-200">
+                        <i class="fas fa-file-pdf mr-2"></i>Download PDF
+                    </a>
                     <a href="{{ route('bills.print', $bill) }}" target="_blank" class="bg-green-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-600 transition duration-200">
                         <i class="fas fa-print mr-2"></i>Print Bill
                     </a>
@@ -412,6 +415,9 @@
                                 </form>
                             @endif
 
+                            <a href="{{ route('bills.pdf', $bill) }}" class="w-full bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition duration-200 flex items-center justify-center mb-2">
+                                <i class="fas fa-file-pdf mr-2"></i>Download PDF
+                            </a>
                             <a href="{{ route('bills.print', $bill) }}" target="_blank" class="w-full bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition duration-200 flex items-center justify-center">
                                 <i class="fas fa-print mr-2"></i>Print Bill
                             </a>

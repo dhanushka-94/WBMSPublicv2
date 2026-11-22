@@ -50,29 +50,29 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | SMS Templates
+    | SMS Templates (English only, with line breaks for readability)
     |--------------------------------------------------------------------------
     */
 
     'templates' => [
-        'new_bill' => "Dunsinane Water Project: Dear {customer_name}, bill {bill_number} ({billing_period}) is (இம்மாத கட்டணம் ரூ) Rs.{bill_amount}. Due {due_date}. Account {account_number} total Outstanding (மொத்த நிலுவை) Rs.{outstanding_amount}.\nView: {bill_link}",
+        'new_bill' => "Dunsinane Water Project\n\nDear {customer_name},\n\nBill: {bill_number}\nPeriod: {billing_period}\nAmount: Rs.{bill_amount}\nDue: {due_date}\nAccount: {account_number}\nOutstanding: Rs.{outstanding_amount}\n\nView bill:\n{bill_link}",
 
-        'due_reminder' => 'Dunsinane Water Project: Dear {customer_name}, bill {bill_number} of Rs.{outstanding_amount} is due on {due_date}. Account {account_number}. Pay: {payment_link}',
+        'due_reminder' => "Dunsinane Water Project\n\nDear {customer_name},\n\nReminder: bill {bill_number} is due on {due_date}.\nAmount due: Rs.{outstanding_amount}\nAccount: {account_number}\n\nPay here:\n{payment_link}",
 
-        'overdue_alert' => 'Dunsinane Water Project: URGENT - Dear {customer_name}, bill {bill_number} is overdue ({days_overdue} days). Outstanding Rs.{outstanding_amount}. Pay now: {payment_link}',
+        'overdue_alert' => "Dunsinane Water Project\n\nURGENT\n\nDear {customer_name},\n\nBill {bill_number} is overdue by {days_overdue} days.\nOutstanding: Rs.{outstanding_amount}\n\nPay now:\n{payment_link}",
 
-        'payment_confirmation' => "Dunsinane Water Project: Dear {customer_name}, payment Rs.{paid_amount} received on {payment_date}. Receipt {receipt_number}, bill {bill_number}. Balance Rs.{balance}.\n\n\nView: {receipt_link}",
+        'payment_confirmation' => "Dunsinane Water Project\n\nDear {customer_name},\n\nPayment received: Rs.{paid_amount}\nDate: {payment_date}\nReceipt: {receipt_number}\nBill: {bill_number}\nBalance: Rs.{balance}\n\nView receipt:\n{receipt_link}",
 
-        'late_fee_notice' => 'Dunsinane Water Project: Late fee Rs.{late_fee} added to bill {bill_number}. Outstanding now Rs.{outstanding_amount}. Pay: {payment_link}',
+        'late_fee_notice' => "Dunsinane Water Project\n\nDear {customer_name},\n\nLate fee Rs.{late_fee} was added to bill {bill_number}.\nOutstanding now: Rs.{outstanding_amount}\n\nPay here:\n{payment_link}",
 
-        'service_disconnection' => 'Dunsinane Water Project: Dear {customer_name}, account {account_number} may be disconnected on {disconnection_date}. Outstanding Rs.{outstanding_amount}. Pay: {payment_link}',
+        'service_disconnection' => "Dunsinane Water Project\n\nDear {customer_name},\n\nAccount {account_number} may be disconnected on {disconnection_date}.\nOutstanding: Rs.{outstanding_amount}\n\nPay here:\n{payment_link}",
 
-        'reconnection' => 'Dunsinane Water Project: Dear {customer_name}, account {account_number} has been reconnected. Thank you.',
+        'reconnection' => "Dunsinane Water Project\n\nDear {customer_name},\n\nAccount {account_number} has been reconnected.\nThank you.",
 
-        'meter_reading_reminder' => 'Dunsinane Water Project: Dear {customer_name}, meter reading for account {account_number} is scheduled on {date} ({day}) between {time_range}. Please keep the meter accessible.',
+        'meter_reading_reminder' => "Dunsinane Water Project\n\nDear {customer_name},\n\nMeter reading for account {account_number}\nis scheduled on {date} ({day})\nbetween {time_range}.\n\nPlease keep the meter accessible.",
 
-        'maintenance_notice' => "Dunsinane Water Project: Water supply interruption in {area} on {date} ({day}) from {start_time} to {end_time}. Reason: {reason}.\nடன்சினன் நீர் திட்டம்: அறிவித்தல்! {area} {date_ta} {day_ta} காலை {start_time_ta} மணி முதல் {end_time_ta} மணி வரை நீர் விநியோகம் தடைப்படும். காரணம்: {reason_ta}. தயவு செய்து நீரை சேமித்து வைக்கவும்.",
+        'maintenance_notice' => "Dunsinane Water Project\n\nWater supply interruption\n\nArea: {area}\nDate: {date} ({day})\nTime: {start_time} to {end_time}\nReason: {reason}\n\nPlease store water in advance.",
 
-        'custom' => 'Dunsinane Water Project: Dear {customer_name}, account {account_number}: ',
+        'custom' => "Dunsinane Water Project\n\nDear {customer_name},\nAccount: {account_number}\n\n",
     ],
-]; 
+];

@@ -678,7 +678,7 @@ class MeterReadingApiController extends Controller
             'water_meter_id' => $reading->water_meter_id,
             'meter_reading_id' => $reading->id,
             'bill_date' => now()->toDateString(),
-            'due_date' => now()->addDays(30)->toDateString(),
+            'due_date' => Bill::dueDateFrom(now())->toDateString(),
             'billing_period_from' => $reading->reading_date->copy()->startOfMonth()->toDateString(),
             'billing_period_to' => $reading->reading_date->copy()->endOfMonth()->toDateString(),
             'previous_reading' => $reading->previous_reading,

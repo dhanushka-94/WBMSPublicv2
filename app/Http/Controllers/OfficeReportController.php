@@ -21,6 +21,8 @@ class OfficeReportController extends Controller
     {
         $month = $request->input('month', now()->format('Y-m'));
         $date = $request->input('date', now()->toDateString());
+        $dateFrom = $request->input('date_from', now()->startOfMonth()->toDateString());
+        $dateTo = $request->input('date_to', now()->toDateString());
         $start = Carbon::parse($month.'-01')->startOfMonth();
         $end = $start->copy()->endOfMonth();
 
@@ -33,6 +35,7 @@ class OfficeReportController extends Controller
             'meter-faults' => $this->meterFaults(),
             'billing-summary' => $this->billingSummary($start, $end),
             'daily-collection' => $this->dailyCollection($date),
+            'collection-range' => $this->collectionRange($dateFrom, $dateTo),
             'monthly-collection' => $this->monthlyCollection($start, $end),
             'collection-efficiency' => $this->collectionEfficiency($start, $end),
             'age-analysis' => $this->ageAnalysis(),
@@ -46,6 +49,7 @@ class OfficeReportController extends Controller
             'collection-efficiency',
         ], true);
         $usesDate = $report === 'daily-collection';
+        $usesDateRange = $report === 'collection-range';
 
         return view('reports.office', [
             'report' => $report,
@@ -54,10 +58,13 @@ class OfficeReportController extends Controller
             'rows' => $data['rows'],
             'month' => $month,
             'date' => $date,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
             'notes' => $data['notes'] ?? null,
             'usesMonth' => $usesMonth,
             'usesDate' => $usesDate,
-            'canExportCsv' => $report === 'daily-collection',
+            'usesDateRange' => $usesDateRange,
+            'canExportCsv' => in_array($report, ['daily-collection', 'collection-range'], true),
         ]);
     }
 
@@ -70,9 +77,45 @@ class OfficeReportController extends Controller
             ->orderBy('id')
             ->get();
 
-        $filename = 'daily_collection_'.$date.'.csv';
+        return $this->streamCollectionCsv(
+            'daily_collection_'.$date.'.csv',
+            $payments,
+            $cash,
+            $date
+        );
+    }
 
-        return response()->streamDownload(function () use ($payments, $cash, $date) {
+    public function exportCollectionRange(Request $request): StreamedResponse
+    {
+        [$from, $to] = $this->resolveDateRange(
+            $request->input('date_from'),
+            $request->input('date_to')
+        );
+        $cash = CollectionTotals::forPeriod($from, $to);
+        $payments = Payment::with(['customer', 'bill', 'receiver', 'overpaymentEntries'])
+            ->whereBetween('paid_on', [$from, $to])
+            ->orderBy('paid_on')
+            ->orderBy('id')
+            ->get();
+
+        return $this->streamCollectionCsv(
+            'bill_collection_'.$from->toDateString().'_to_'.$to->toDateString().'.csv',
+            $payments,
+            $cash
+        );
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, Payment>  $payments
+     * @param  array{applied: float, overpaid: float, cash: float, receipts: int}  $cash
+     */
+    private function streamCollectionCsv(
+        string $filename,
+        $payments,
+        array $cash,
+        ?string $fixedDate = null
+    ): StreamedResponse {
+        return response()->streamDownload(function () use ($payments, $cash, $fixedDate) {
             $file = fopen('php://output', 'w');
             fputcsv($file, [
                 'Date',
@@ -90,7 +133,7 @@ class OfficeReportController extends Controller
 
             foreach ($payments as $payment) {
                 fputcsv($file, [
-                    $date,
+                    $fixedDate ?: optional($payment->paid_on)->timezone(config('app.timezone'))->format('Y-m-d'),
                     $payment->receipt_number,
                     $payment->customer?->account_number,
                     $payment->customer?->full_name,
@@ -122,6 +165,21 @@ class OfficeReportController extends Controller
         }, $filename, [
             'Content-Type' => 'text/csv',
         ]);
+    }
+
+    /**
+     * @return array{0: Carbon, 1: Carbon}
+     */
+    private function resolveDateRange(?string $dateFrom, ?string $dateTo): array
+    {
+        $from = Carbon::parse($dateFrom ?: now()->startOfMonth()->toDateString(), config('app.timezone'))->startOfDay();
+        $to = Carbon::parse($dateTo ?: now()->toDateString(), config('app.timezone'))->endOfDay();
+
+        if ($from->gt($to)) {
+            [$from, $to] = [$to->copy()->startOfDay(), $from->copy()->endOfDay()];
+        }
+
+        return [$from, $to];
     }
 
     private function customerRegister(): array
@@ -296,6 +354,40 @@ class OfficeReportController extends Controller
             'columns' => ['Receipt', 'Customer', 'Bill', 'Cash received', 'Applied to bill', 'Wallet added', 'Method', 'Received by'],
             'rows' => $rows,
             'notes' => 'Day total cash received: LKR '.number_format($cash['cash'], 2)
+                .' (applied LKR '.number_format($cash['applied'], 2)
+                .' · wallet LKR '.number_format($cash['overpaid'], 2)
+                .' · '.$cash['receipts'].' receipts).',
+        ];
+    }
+
+    private function collectionRange(string $dateFrom, string $dateTo): array
+    {
+        [$from, $to] = $this->resolveDateRange($dateFrom, $dateTo);
+        $cash = CollectionTotals::forPeriod($from, $to);
+        $rows = Payment::with(['customer', 'bill', 'receiver', 'overpaymentEntries'])
+            ->whereBetween('paid_on', [$from, $to])
+            ->orderBy('paid_on')
+            ->orderBy('id')
+            ->paginate(25)
+            ->withQueryString()
+            ->through(fn ($payment) => [
+                optional($payment->paid_on)->timezone(config('app.timezone'))->format('Y-m-d'),
+                $payment->receipt_number,
+                $this->customerLink($payment->customer),
+                $this->billLink($payment->bill),
+                'LKR '.number_format($payment->exactPaidAmount(), 2),
+                'LKR '.number_format((float) $payment->amount, 2),
+                'LKR '.number_format($payment->walletAddedAmount(), 2),
+                str_replace('_', ' ', $payment->payment_method),
+                $payment->receiver?->name,
+            ]);
+
+        return [
+            'title' => 'Bill Collection (Date Range)',
+            'columns' => ['Date', 'Receipt', 'Customer', 'Bill', 'Cash received', 'Applied to bill', 'Wallet added', 'Method', 'Received by'],
+            'rows' => $rows,
+            'notes' => 'Period '.$from->toDateString().' to '.$to->toDateString()
+                .' · cash received LKR '.number_format($cash['cash'], 2)
                 .' (applied LKR '.number_format($cash['applied'], 2)
                 .' · wallet LKR '.number_format($cash['overpaid'], 2)
                 .' · '.$cash['receipts'].' receipts).',

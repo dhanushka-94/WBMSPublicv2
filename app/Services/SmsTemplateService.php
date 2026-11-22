@@ -112,11 +112,6 @@ class SmsTemplateService
             'start_time' => $startTime,
             'end_time' => $endTime,
             'reason' => $reason,
-            'date_ta' => $date->format('d.m.Y'),
-            'day_ta' => $this->tamilWeekday($date),
-            'start_time_ta' => $this->tamilClockTime($startTime),
-            'end_time_ta' => $this->tamilClockTime($endTime),
-            'reason_ta' => $this->tamilMaintenanceReason($reason),
         ]);
     }
 
@@ -206,7 +201,8 @@ class SmsTemplateService
 
         $template = preg_replace('/\{[^}]+\}/', '', $template);
 
-        return trim($template);
+        // Keep intentional line breaks; only strip spaces/tabs at the ends.
+        return trim($template, " \t\0\x0B");
     }
 
     /**
@@ -258,7 +254,7 @@ class SmsTemplateService
             'maintenance_notice' => [
                 'name' => 'Maintenance Notice',
                 'template' => config('sms.templates.maintenance_notice'),
-                'variables' => ['{area}', '{date}', '{day}', '{start_time}', '{end_time}', '{reason}', '{date_ta}', '{day_ta}', '{start_time_ta}', '{end_time_ta}', '{reason_ta}'],
+                'variables' => ['{area}', '{date}', '{day}', '{start_time}', '{end_time}', '{reason}'],
             ],
             'custom' => [
                 'name' => 'Custom SMS',
@@ -291,11 +287,6 @@ class SmsTemplateService
             'start_time' => '6:00 AM',
             'end_time' => '2:00 PM',
             'reason' => 'routine maintenance',
-            'date_ta' => '30.07.2024',
-            'day_ta' => 'செவ்வாய்க்கிழமை',
-            'start_time_ta' => '6.00',
-            'end_time_ta' => '14.00',
-            'reason_ta' => 'வழமையான பராமரிப்பு பணி',
             'payment_link' => 'https://example.com/bills/1',
             'bill_link' => 'https://example.com/bills/1',
             'receipt_link' => 'https://example.com/receipts/1',
@@ -311,38 +302,5 @@ class SmsTemplateService
         $template = SmsTemplate::bodyFor($templateType, (string) config("sms.templates.{$templateType}", ''));
 
         return $this->replaceVariables($template, $variables);
-    }
-
-    private function tamilWeekday(Carbon $date): string
-    {
-        return [
-            'Sunday' => 'ஞாயிற்றுக்கிழமை',
-            'Monday' => 'திங்கட்கிழமை',
-            'Tuesday' => 'செவ்வாய்க்கிழமை',
-            'Wednesday' => 'புதன்கிழமை',
-            'Thursday' => 'வியாழக்கிழமை',
-            'Friday' => 'வெள்ளிக்கிழமை',
-            'Saturday' => 'சனிக்கிழமை',
-        ][$date->format('l')] ?? $date->format('l');
-    }
-
-    private function tamilClockTime(string $time): string
-    {
-        $trimmed = trim($time);
-        try {
-            return Carbon::parse($trimmed)->format('g.i');
-        } catch (\Throwable) {
-            return preg_replace('/\s*(AM|PM)\s*/i', '', str_replace(':', '.', $trimmed)) ?: $trimmed;
-        }
-    }
-
-    private function tamilMaintenanceReason(string $reason): string
-    {
-        $normalized = strtolower(trim($reason));
-
-        return match ($normalized) {
-            'routine maintenance', 'routine maintenance.', 'வழமையான பராமரிப்பு பணி' => 'வழமையான பராமரிப்பு பணி',
-            default => $reason,
-        };
     }
 } 

@@ -471,11 +471,13 @@
         </div>
     </div>
 
+    @unless(!empty($forPdf))
     <script>
-        // Auto-print when page loads
+        // Auto-print when page loads (browser print only; skipped for PDF download)
         window.onload = function() {
             window.print();
         };
     </script>
+    @endunless
 </body>
 </html> 

@@ -30,9 +30,12 @@
                             Active
                         </label>
                     </div>
-                    <textarea name="body" rows="4" maxlength="640" class="mt-3 w-full rounded border-gray-300 text-sm">{{ old('body', $template->body) }}</textarea>
-                    <p class="mt-1 text-xs text-gray-500">Max 640 characters. Payment confirmations include date &amp; time, receipt number, and receipt link.</p>
-                    <p class="mt-3 text-sm text-gray-700"><span class="font-medium">Sample:</span> {{ $template->preview }}</p>
+                    <textarea name="body" rows="12" maxlength="800" class="mt-3 w-full rounded border-gray-300 text-sm font-mono whitespace-pre-wrap">{{ old('body', $template->body) }}</textarea>
+                    <p class="mt-1 text-xs text-gray-500">Max 800 characters. Use blank lines for spacing. English only. Payment confirmations include date &amp; time, receipt number, and receipt link.</p>
+                    <div class="mt-3 rounded border border-gray-200 bg-gray-50 p-3">
+                        <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Customer will receive</p>
+                        <pre class="mt-2 whitespace-pre-wrap break-words text-sm text-gray-800 font-sans">{{ $template->preview }}</pre>
+                    </div>
                     <button class="mt-3 rounded bg-blue-600 px-4 py-2 text-sm text-white">Save</button>
                 </form>
             @endforeach

@@ -86,6 +86,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/bills', [BillController::class, 'index'])->name('bills.index');
     Route::get('/bills/{bill}', [BillController::class, 'show'])->whereNumber('bill')->name('bills.show');
     Route::get('bills/{bill}/print', [BillController::class, 'print'])->name('bills.print');
+    Route::get('bills/{bill}/pdf', [BillController::class, 'pdf'])->name('bills.pdf');
     Route::get('payments/collect', [PaymentCollectionController::class, 'index'])->name('payments.collect');
     Route::post('payments/collect', [PaymentCollectionController::class, 'store'])->name('payments.collect.store');
     Route::get('payments', [PaymentController::class, 'index'])->name('payments.index');
@@ -236,6 +237,8 @@ Route::middleware(['auth', 'verified', 'system.check'])->group(function () {
     Route::get('reports/reader-statistics', [ReaderStatisticsController::class, 'index'])->name('reports.reader-statistics');
     Route::get('reports/office/daily-collection/export', [OfficeReportController::class, 'exportDailyCollection'])
         ->name('reports.office.daily-collection.export');
+    Route::get('reports/office/collection-range/export', [OfficeReportController::class, 'exportCollectionRange'])
+        ->name('reports.office.collection-range.export');
     Route::get('reports/office/{report}', [OfficeReportController::class, 'show'])->name('reports.office');
     Route::get('reports/monthly-active', [MonthlyActiveReportController::class, 'index'])->name('reports.monthly-active');
     Route::get('reports/monthly-active/export', [MonthlyActiveReportController::class, 'export'])->name('reports.monthly-active.export');

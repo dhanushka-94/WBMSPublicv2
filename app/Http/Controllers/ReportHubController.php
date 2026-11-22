@@ -36,6 +36,7 @@ class ReportHubController extends Controller
                     ['Overdue', 'Overdue bills', 'reports.overdue', 'fa-exclamation-triangle', 'text-red-600'],
                     ['Billing Summary', 'Billing totals', 'reports.office', 'fa-file-invoice-dollar', 'text-emerald-600', 'billing-summary'],
                     ['Daily Collection', 'Payments by day', 'reports.office', 'fa-coins', 'text-yellow-600', 'daily-collection'],
+                    ['Bill Collection (Range)', 'Payments by date range', 'reports.office', 'fa-calendar-check', 'text-amber-600', 'collection-range'],
                     ['Monthly Collection', 'Payments by month', 'reports.office', 'fa-calendar-alt', 'text-indigo-600', 'monthly-collection'],
                     ['Collection Efficiency', 'Collection performance', 'reports.office', 'fa-percentage', 'text-purple-600', 'collection-efficiency'],
                     ['Age Analysis', 'Outstanding age buckets', 'reports.office', 'fa-hourglass-half', 'text-rose-600', 'age-analysis'],

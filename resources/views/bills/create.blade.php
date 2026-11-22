@@ -91,8 +91,9 @@
                             <label for="due_date" class="block text-sm font-medium text-gray-700 mb-2">
                                 Due Date <span class="text-red-500">*</span>
                             </label>
-                            <input type="date" name="due_date" id="due_date" value="{{ old('due_date', date('Y-m-d', strtotime('+30 days'))) }}" required 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('due_date') border-red-500 @enderror">
+                            <input type="date" name="due_date" id="due_date" value="{{ old('due_date', \App\Models\Bill::dueDateFrom(old('bill_date', date('Y-m-d')))->toDateString()) }}" required readonly
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('due_date') border-red-500 @enderror">
+                            <p class="mt-1 text-xs text-gray-500">Auto: {{ \App\Models\Bill::dueDays() }} days including bill issue date</p>
                             @error('due_date')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
@@ -396,8 +397,26 @@ document.addEventListener('DOMContentLoaded', function() {
     meterSelect.addEventListener('change', fillPreviousReading);
     previousReadingInput.addEventListener('input', calculateConsumption);
     currentReadingInput.addEventListener('input', calculateConsumption);
-    document.getElementById('bill_date').addEventListener('change', calculateConsumption);
+    const billDateInput = document.getElementById('bill_date');
+    const dueDateInput = document.getElementById('due_date');
+    const dueDays = {{ (int) \App\Models\Bill::dueDays() }};
+
+    function syncDueDate() {
+        if (!billDateInput.value) return;
+        const issued = new Date(billDateInput.value + 'T00:00:00');
+        issued.setDate(issued.getDate() + dueDays - 1);
+        const yyyy = issued.getFullYear();
+        const mm = String(issued.getMonth() + 1).padStart(2, '0');
+        const dd = String(issued.getDate()).padStart(2, '0');
+        dueDateInput.value = `${yyyy}-${mm}-${dd}`;
+    }
+
+    billDateInput.addEventListener('change', function () {
+        syncDueDate();
+        calculateConsumption();
+    });
     chargeInputs.forEach(input => input.addEventListener('input', renderPreview));
+    syncDueDate();
 
     if (customerSelect.value) {
         selectCustomerMeter();

@@ -59,7 +59,7 @@ class GenerateMonthlyBills extends Command
         try {
             DB::beginTransaction();
 
-            $dueDate = $billDate->copy()->addDays(30);
+            $dueDate = Bill::dueDateFrom($billDate);
             $billingPeriodFrom = $billDate->copy()->startOfMonth();
             $billingPeriodTo = $billDate->copy()->endOfMonth();
 

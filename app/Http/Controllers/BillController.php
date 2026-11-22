@@ -14,9 +14,11 @@ use Illuminate\Http\Request;
 use InvalidArgumentException;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Response;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class BillController extends Controller
 {
@@ -133,7 +135,6 @@ class BillController extends Controller
             'customer_id' => 'required|exists:customers,id',
             'water_meter_id' => 'required|exists:water_meters,id',
             'bill_date' => 'required|date',
-            'due_date' => 'required|date|after:bill_date',
             'billing_period_from' => 'required|date',
             'billing_period_to' => 'required|date|after:billing_period_from',
             'previous_reading' => 'required|numeric|min:0',
@@ -156,13 +157,14 @@ class BillController extends Controller
             $customer = Customer::findOrFail($request->customer_id);
             $customerType = $customer->billingCategory();
             $charges = Rate::calculateCharges($customerType, $consumption, $request->bill_date);
+            $dueDate = Bill::dueDateFrom($request->bill_date);
 
             // Create the bill
             $bill = Bill::create([
                 'customer_id' => $request->customer_id,
                 'water_meter_id' => $request->water_meter_id,
                 'bill_date' => $request->bill_date,
-                'due_date' => $request->due_date,
+                'due_date' => $dueDate,
                 'billing_period_from' => $request->billing_period_from,
                 'billing_period_to' => $request->billing_period_to,
                 'previous_reading' => $request->previous_reading,
@@ -256,7 +258,6 @@ class BillController extends Controller
             'customer_id' => 'required|exists:customers,id',
             'water_meter_id' => 'required|exists:water_meters,id',
             'bill_date' => 'required|date',
-            'due_date' => 'required|date|after:bill_date',
             'billing_period_from' => 'required|date',
             'billing_period_to' => 'required|date|after:billing_period_from',
             'previous_reading' => 'required|numeric|min:0',
@@ -279,13 +280,14 @@ class BillController extends Controller
             $customer = Customer::findOrFail($request->customer_id);
             $customerType = $customer->billingCategory();
             $charges = Rate::calculateCharges($customerType, $consumption, $request->bill_date);
+            $dueDate = Bill::dueDateFrom($request->bill_date);
 
             // Update the bill
             $bill->update([
                 'customer_id' => $request->customer_id,
                 'water_meter_id' => $request->water_meter_id,
                 'bill_date' => $request->bill_date,
-                'due_date' => $request->due_date,
+                'due_date' => $dueDate,
                 'billing_period_from' => $request->billing_period_from,
                 'billing_period_to' => $request->billing_period_to,
                 'previous_reading' => $request->previous_reading,
@@ -369,7 +371,7 @@ class BillController extends Controller
             DB::beginTransaction();
 
             $billDate = Carbon::now()->day(20); // 20th of current month
-            $dueDate = $billDate->copy()->addDays(30);
+            $dueDate = Bill::dueDateFrom($billDate);
             $billingPeriodFrom = $billDate->copy()->startOfMonth();
             $billingPeriodTo = $billDate->copy()->endOfMonth();
 
@@ -614,6 +616,23 @@ class BillController extends Controller
         $format = $request->input('format') === 'thermal' ? 'thermal' : 'a4';
 
         return view('bills.dunsinane', compact('bill', 'language', 'format'));
+    }
+
+    /**
+     * Download system bill as PDF (A4).
+     */
+    public function pdf(Bill $bill): Response
+    {
+        $bill->load(['customer', 'waterMeter', 'meterReading', 'payments']);
+
+        $pdf = Pdf::loadView('bills.print', [
+            'bill' => $bill,
+            'forPdf' => true,
+        ])->setPaper('a4', 'portrait');
+
+        $filename = 'bill_'.$bill->bill_number.'_'.now()->format('Ymd_His').'.pdf';
+
+        return $pdf->download($filename);
     }
 
     public function rebill(Bill $bill): RedirectResponse

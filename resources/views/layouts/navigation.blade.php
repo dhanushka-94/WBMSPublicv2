@@ -12,6 +12,7 @@
         'meter-faults' => ['Meter Faults', 'fa-tools', 'text-orange-600'],
         'billing-summary' => ['Billing Summary', 'fa-file-invoice-dollar', 'text-emerald-600'],
         'daily-collection' => ['Daily Collection', 'fa-coins', 'text-yellow-600'],
+        'collection-range' => ['Bill Collection (Range)', 'fa-calendar-check', 'text-amber-600'],
         'monthly-collection' => ['Monthly Collection', 'fa-calendar-alt', 'text-indigo-600'],
         'collection-efficiency' => ['Collection Efficiency', 'fa-percentage', 'text-purple-600'],
         'age-analysis' => ['Age Analysis', 'fa-hourglass-half', 'text-rose-600'],
@@ -202,7 +203,7 @@
                             <p class="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Collections</p>
                             <a href="{{ route('reports.revenue') }}" class="{{ $link }}"><i class="fas fa-chart-bar w-4 text-indigo-600"></i>Revenue</a>
                             <a href="{{ route('reports.overdue') }}" class="{{ $link }}"><i class="fas fa-exclamation-triangle w-4 text-red-600"></i>Overdue</a>
-                            @foreach(['billing-summary', 'daily-collection', 'monthly-collection', 'collection-efficiency', 'age-analysis'] as $key)
+                            @foreach(['billing-summary', 'daily-collection', 'collection-range', 'monthly-collection', 'collection-efficiency', 'age-analysis'] as $key)
                                 @php [$label, $icon, $color] = $officeReports[$key]; @endphp
                                 <a href="{{ route('reports.office', $key) }}" class="{{ $link }}"><i class="fas {{ $icon }} w-4 {{ $color }}"></i>{{ $label }}</a>
                             @endforeach

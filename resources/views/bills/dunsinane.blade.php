@@ -54,7 +54,7 @@
             text-decoration: none;
             cursor: pointer;
         }
-        .tools a.active, .tools button.primary {
+        .tools a.active, .tools a.primary, .tools button.primary {
             background: var(--accent);
             border-color: var(--accent);
             color: #fff;
@@ -369,6 +369,7 @@
         {{ $format === 'thermal' ? 'A4' : 'Thermal' }}
     </a>
     <button type="button" class="primary" onclick="window.print()">Print</button>
+    <a href="{{ route('bills.pdf', $bill) }}" class="primary">Download PDF</a>
 </div>
 
 <div class="sheet">

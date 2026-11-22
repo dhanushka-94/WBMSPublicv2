@@ -26,7 +26,6 @@ class SmsTemplateController extends Controller
                 '{total_due}', '{late_fee}', '{due_date}', '{payment_date}', '{receipt_number}',
                 '{days_overdue}', '{disconnection_date}', '{date}', '{day}', '{time_range}',
                 '{area}', '{start_time}', '{end_time}', '{reason}',
-                '{date_ta}', '{day_ta}', '{start_time_ta}', '{end_time_ta}', '{reason_ta}',
                 '{bill_link}', '{receipt_link}', '{payment_link}',
             ],
         ]);
@@ -35,7 +34,7 @@ class SmsTemplateController extends Controller
     public function update(Request $request, SmsTemplate $template): RedirectResponse
     {
         $validated = $request->validate([
-            'body' => 'required|string|max:640',
+            'body' => 'required|string|max:800',
             'is_active' => 'nullable|boolean',
         ]);
 

@@ -1,8 +1,7 @@
 # SMS message samples
 
 These are exact examples of what the customer receives on their phone.  
-Edit the message text under each heading.  
-When done, send this file back.
+English only, with line breaks for readability.
 
 Sample used below: **Amal Herath** · **CP/NE/DN/MD/251** · bill **WB2026100362**
 
@@ -11,8 +10,19 @@ Sample used below: **Amal Herath** · **CP/NE/DN/MD/251** · bill **WB2026100362
 ## Bill Created
 
 ```
-Dunsinane Water Project: Dear Amal Herath, bill WB2026100362 (Oct 01, 2026 - Oct 31, 2026) is (இம்மாத கட்டணம் ரூ) Rs.3,050.00. Due Nov 30, 2026. Account CP/NE/DN/MD/251 total Outstanding (மொத்த நிலுவை) Rs.3,050.00.
-View: https://erp.dunwassip.com/sms-link/bills/362
+Dunsinane Water Project
+
+Dear Amal Herath,
+
+Bill: WB2026100362
+Period: Oct 01, 2026 - Oct 31, 2026
+Amount: Rs.3,050.00
+Due: Nov 30, 2026
+Account: CP/NE/DN/MD/251
+Outstanding: Rs.3,050.00
+
+View bill:
+https://erp.dunwassip.com/sms-link/bills/362
 ```
 
 ---
@@ -20,34 +30,18 @@ View: https://erp.dunwassip.com/sms-link/bills/362
 ## Payment Confirmation
 
 ```
-Dunsinane Water Project: Dear Amal Herath, payment Rs.1,000.00 received on Nov 21, 2026 13:30. Receipt RC2026110005, bill WB2026100362. Balance Rs.2,050.00. 
+Dunsinane Water Project
 
+Dear Amal Herath,
 
-View: https://erp.dunwassip.com/sms-link/receipts/5
-```
+Payment received: Rs.1,000.00
+Date: Nov 21, 2026 13:30
+Receipt: RC2026110005
+Bill: WB2026100362
+Balance: Rs.2,050.00
 
----
-
-## Overdue Reminder
-
-```
-Dunsinane Water Project: URGENT - Dear Amal Herath, bill WB2026100362 is overdue (5 days). Outstanding Rs.3,050.00. Pay now: https://erp.dunwassip.com/sms-link/bills/362
-```
-
----
-
-## Disconnection Notice
-
-```
-Dunsinane Water Project: Dear Amal Herath, account CP/NE/DN/MD/251 may be disconnected on Nov 28, 2026. Outstanding Rs.3,050.00. Pay: https://erp.dunwassip.com/sms-link/bills/362
-```
-
----
-
-## Custom SMS
-
-```
-Dunsinane Water Project: Dear Amal Herath, account CP/NE/DN/MD/251: Your water connection inspection is scheduled for next week.
+View receipt:
+https://erp.dunwassip.com/sms-link/receipts/5
 ```
 
 ---
@@ -55,7 +49,34 @@ Dunsinane Water Project: Dear Amal Herath, account CP/NE/DN/MD/251: Your water c
 ## Due Reminder
 
 ```
-Dunsinane Water Project: Dear Amal Herath, bill WB2026100362 of Rs.3,050.00 is due on Nov 30, 2026. Account CP/NE/DN/MD/251. Pay: https://erp.dunwassip.com/sms-link/bills/362
+Dunsinane Water Project
+
+Dear Amal Herath,
+
+Reminder: bill WB2026100362 is due on Nov 30, 2026.
+Amount due: Rs.3,050.00
+Account: CP/NE/DN/MD/251
+
+Pay here:
+https://erp.dunwassip.com/sms-link/bills/362
+```
+
+---
+
+## Overdue Reminder
+
+```
+Dunsinane Water Project
+
+URGENT
+
+Dear Amal Herath,
+
+Bill WB2026100362 is overdue by 5 days.
+Outstanding: Rs.3,050.00
+
+Pay now:
+https://erp.dunwassip.com/sms-link/bills/362
 ```
 
 ---
@@ -63,7 +84,31 @@ Dunsinane Water Project: Dear Amal Herath, bill WB2026100362 of Rs.3,050.00 is d
 ## Late Fee Notice
 
 ```
-Dunsinane Water Project: Late fee Rs.250.00 added to bill WB2026100362. Outstanding now Rs.3,300.00. Pay: https://erp.dunwassip.com/sms-link/bills/362
+Dunsinane Water Project
+
+Dear Amal Herath,
+
+Late fee Rs.250.00 was added to bill WB2026100362.
+Outstanding now: Rs.3,050.00
+
+Pay here:
+https://erp.dunwassip.com/sms-link/bills/362
+```
+
+---
+
+## Disconnection Notice
+
+```
+Dunsinane Water Project
+
+Dear Amal Herath,
+
+Account CP/NE/DN/MD/251 may be disconnected on Nov 28, 2026.
+Outstanding: Rs.3,050.00
+
+Pay here:
+https://erp.dunwassip.com/sms-link/bills/362
 ```
 
 ---
@@ -71,7 +116,12 @@ Dunsinane Water Project: Late fee Rs.250.00 added to bill WB2026100362. Outstand
 ## Reconnection Notice
 
 ```
-Dunsinane Water Project: Dear Amal Herath, account CP/NE/DN/MD/251 has been reconnected. Thank you.
+Dunsinane Water Project
+
+Dear Amal Herath,
+
+Account CP/NE/DN/MD/251 has been reconnected.
+Thank you.
 ```
 
 ---
@@ -79,7 +129,15 @@ Dunsinane Water Project: Dear Amal Herath, account CP/NE/DN/MD/251 has been reco
 ## Meter Reading Reminder
 
 ```
-Dunsinane Water Project: Dear Amal Herath, meter reading for account CP/NE/DN/MD/251 is scheduled on Nov 24, 2026 (Tuesday) between 9:00 AM - 4:00 PM. Please keep the meter accessible.
+Dunsinane Water Project
+
+Dear Amal Herath,
+
+Meter reading for account CP/NE/DN/MD/251
+is scheduled on Nov 25, 2026 (Tuesday)
+between 9:00 AM - 4:00 PM.
+
+Please keep the meter accessible.
 ```
 
 ---
@@ -87,6 +145,27 @@ Dunsinane Water Project: Dear Amal Herath, meter reading for account CP/NE/DN/MD
 ## Maintenance Notice
 
 ```
-Dunsinane Water Project: Water supply interruption in MIDDLE DIVISION on Nov 23, 2026 (Monday) from 9:00 AM to 12:00 PM. Reason: routine maintenance.
-டன்சினன் நீர் திட்டம்: அறிவித்தல்! MIDDLE DIVISION 23.11.2026 திங்கட்கிழமை காலை 9.00 மணி முதல் 12.00 மணி வரை நீர் விநியோகம் தடைப்படும். காரணம்: வழமையான பராமரிப்பு பணி. தயவு செய்து நீரை சேமித்து வைக்கவும்.
+Dunsinane Water Project
+
+Water supply interruption
+
+Area: Maskeliya Division
+Date: Nov 25, 2026 (Tuesday)
+Time: 6:00 AM to 2:00 PM
+Reason: routine maintenance
+
+Please store water in advance.
+```
+
+---
+
+## Custom SMS
+
+```
+Dunsinane Water Project
+
+Dear Amal Herath,
+Account: CP/NE/DN/MD/251
+
+Your water connection inspection is scheduled for next week.
 ```

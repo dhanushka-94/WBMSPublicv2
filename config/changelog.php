@@ -2,6 +2,33 @@
 
 return [
     [
+        'version' => '2.6.19',
+        'date' => '22 November 2026',
+        'title' => 'Bill due date is 14 days including issue day',
+        'changes' => [
+            'Due date is 14 days from bill issue including the issue day (issued 22 Nov → due 5 Dec).',
+            'Applies to manual bills, monthly generation, meter-reading bills, opening balances, and SMS due dates.',
+        ],
+    ],
+    [
+        'version' => '2.6.18',
+        'date' => '22 November 2026',
+        'title' => 'SMS templates: English only with clear line breaks',
+        'changes' => [
+            'Tamil text removed from all SMS templates (new bill, maintenance, and related messages).',
+            'Templates use short lines and blank-line spacing so messages are easier to read on the phone.',
+        ],
+    ],
+    [
+        'version' => '2.6.17',
+        'date' => '22 November 2026',
+        'title' => 'Bill PDF download and collection date-range report',
+        'changes' => [
+            'System bill print screen and bill detail page include Download PDF (A4 English layout via Dompdf).',
+            'New Bill Collection (Range) office report filters payments by from/to dates with CSV export.',
+        ],
+    ],
+    [
         'version' => '2.6.16',
         'date' => '21 November 2026',
         'title' => 'Fix live Meter Map height collapsing to blank',
