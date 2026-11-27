@@ -3,6 +3,7 @@
     $isSuperAdmin = auth()->check() && auth()->user()->isSuperAdmin();
     $isOfficeAdmin = auth()->check() && in_array(auth()->user()->role, ['admin', 'super_admin'], true);
     $canControlSystem = $isSuperAdmin;
+    $canOpenInitialReadings = $isSuperAdmin || \App\Models\SystemConfiguration::initialReadingsOpen();
     $officeReports = [
         'customer-register' => ['Customer Register', 'fa-address-book', 'text-blue-600'],
         'contacts' => ['Contact List', 'fa-address-card', 'text-cyan-600'],
@@ -23,6 +24,9 @@
     $onOperations = request()->routeIs('operations.*');
     $onReports = request()->routeIs('reports.*');
     $onSms = request()->routeIs('sms.*');
+    $smsFailedCount = (auth()->check() && in_array(auth()->user()->role, ['super_admin', 'admin', 'billing_officer', 'staff'], true))
+        ? \App\Models\SmsNotification::where('status', 'failed')->count()
+        : 0;
     $onSystem = request()->routeIs('users.*', 'reader-routes.*', 'activity-logs.*', 'mobile-api.*', 'about', 'changelog')
         || (request()->routeIs('settings.*') && ! request()->routeIs('settings.rates.*'));
     $mobileSection = match (true) {
@@ -156,7 +160,9 @@
                     <a href="{{ route('readings.index') }}" class="{{ $link }}"><i class="fas fa-clipboard-list w-4 text-cyan-600"></i>Meter Readings</a>
                     <div class="my-1 border-t border-gray-100"></div>
                     <a href="{{ route('readings.bulk') }}" class="{{ $link }}"><i class="fas fa-list w-4 text-orange-600"></i>Bulk Entry</a>
+                    @if($canOpenInitialReadings)
                     <a href="{{ route('readings.initial') }}" class="{{ $link }}"><i class="fas fa-tachometer-alt w-4 text-amber-600"></i>Initial Readings</a>
+                    @endif
                     <a href="{{ route('readings.schedule') }}" class="{{ $link }}"><i class="fas fa-calendar-alt w-4 text-indigo-600"></i>Reading Schedule</a>
                     <a href="{{ route('meters.map') }}" class="{{ $link }}"><i class="fas fa-map-marked-alt w-4 text-emerald-600"></i>Meter Map</a>
                 </div>
@@ -186,6 +192,8 @@
                             <p class="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Connections</p>
                             <a href="{{ route('reports.index') }}" class="{{ $link }}"><i class="fas fa-th-large w-4 text-slate-600"></i>All Reports</a>
                             <a href="{{ route('reports.monthly-active') }}" class="{{ $link }}"><i class="fas fa-users-cog w-4 text-green-600"></i>Monthly Active</a>
+                            <a href="{{ route('reports.customer-summary') }}" class="{{ $link }}"><i class="fas fa-table w-4 text-blue-600"></i>Customer Summary</a>
+                            <a href="{{ route('reports.customer-summary', ['phone' => 'missing']) }}" class="{{ $link }}"><i class="fas fa-phone-slash w-4 text-red-600"></i>No Phone Number</a>
                             @foreach(['customer-register', 'contacts', 'new-connections', 'disconnected'] as $key)
                                 @php [$label, $icon, $color] = $officeReports[$key]; @endphp
                                 <a href="{{ route('reports.office', $key) }}" class="{{ $link }}"><i class="fas {{ $icon }} w-4 {{ $color }}"></i>{{ $label }}</a>
@@ -215,6 +223,7 @@
             <div class="relative">
                 <button type="button" @click="menu = menu === 'sms' ? null : 'sms'" class="{{ $onSms ? $barOn : $bar }}">
                     <i class="fas fa-sms"></i> SMS
+                    @if($smsFailedCount > 0)<span class="rounded-full bg-red-500 px-1.5 text-[10px] font-semibold leading-4 text-white" title="{{ $smsFailedCount }} failed SMS">{{ $smsFailedCount > 99 ? '99+' : $smsFailedCount }}</span>@endif
                     <i class="fas fa-chevron-down text-[10px] opacity-80"></i>
                 </button>
                 <div x-show="menu === 'sms'" x-cloak class="absolute left-0 top-full z-50 mt-1 w-56 rounded-lg bg-white p-1.5 shadow-lg ring-1 ring-black/5" style="display: none;">
@@ -222,6 +231,8 @@
                     <a href="{{ route('sms.templates') }}" class="{{ $link }}"><i class="fas fa-file-alt w-4 text-blue-600"></i>SMS Templates</a>
                     <a href="{{ route('sms.bulk') }}" class="{{ $link }}"><i class="fas fa-paper-plane w-4 text-blue-600"></i>Send Custom SMS</a>
                     <a href="{{ route('sms.index') }}" class="{{ $link }}"><i class="fas fa-list w-4 text-blue-600"></i>SMS Logs</a>
+                    <a href="{{ route('sms.failed') }}" class="{{ $link }}"><i class="fas fa-exclamation-circle w-4 text-red-600"></i>Failed SMS @if($smsFailedCount > 0)<span class="ms-auto rounded-full bg-red-100 px-2 text-xs font-semibold text-red-700">{{ $smsFailedCount }}</span>@endif</a>
+                    <a href="{{ route('sms.usage') }}" class="{{ $link }}"><i class="fas fa-coins w-4 text-amber-600"></i>SMS Usage &amp; Cost</a>
                     @if($isSuperAdmin)
                     <a href="{{ route('sms.settings') }}" class="{{ $link }}"><i class="fas fa-cog w-4 text-gray-600"></i>SMS Settings</a>
                     @endif
@@ -236,7 +247,7 @@
                 <div x-show="menu === 'system'" x-cloak class="absolute right-0 top-full z-50 mt-1 w-56 rounded-lg bg-white p-1.5 shadow-lg ring-1 ring-black/5" style="display: none;">
                     <a href="{{ route('users.index') }}" class="{{ $link }}"><i class="fas fa-users-cog w-4 text-blue-600"></i>Users</a>
                     <a href="{{ route('reader-routes.index') }}" class="{{ $link }}"><i class="fas fa-route w-4 text-indigo-600"></i>Reader Routes</a>
-                    @if($isSuperAdmin)
+                    @if($isOfficeAdmin)
                     <a href="{{ route('settings.index') }}" class="{{ $link }}"><i class="fas fa-sliders-h w-4 text-gray-600"></i>Settings</a>
                     @endif
                     @if($isOfficeAdmin)
@@ -284,7 +295,9 @@
                         <a href="{{ route('meters.index') }}" class="{{ $mobileLink }}"><i class="fas fa-gauge w-4"></i>Water Meters</a>
                         <a href="{{ route('readings.index') }}" class="{{ $mobileLink }}"><i class="fas fa-clipboard-list w-4"></i>Meter Readings</a>
                         <a href="{{ route('readings.bulk') }}" class="{{ $mobileLink }}"><i class="fas fa-list w-4"></i>Bulk Entry</a>
+                        @if($canOpenInitialReadings)
                         <a href="{{ route('readings.initial') }}" class="{{ $mobileLink }}"><i class="fas fa-tachometer-alt w-4"></i>Initial Readings</a>
+                        @endif
                         <a href="{{ route('readings.schedule') }}" class="{{ $mobileLink }}"><i class="fas fa-calendar-alt w-4"></i>Reading Schedule</a>
                         <a href="{{ route('meters.map') }}" class="{{ $mobileLink }}"><i class="fas fa-map-marked-alt w-4"></i>Meter Map</a>
                     @elseif($key === 'billing')
@@ -298,6 +311,8 @@
                         <a href="{{ route('reports.revenue') }}" class="{{ $mobileLink }}"><i class="fas fa-chart-bar w-4"></i>Revenue</a>
                         <a href="{{ route('reports.overdue') }}" class="{{ $mobileLink }}"><i class="fas fa-exclamation-triangle w-4"></i>Overdue</a>
                         <a href="{{ route('reports.monthly-active') }}" class="{{ $mobileLink }}"><i class="fas fa-users-cog w-4"></i>Monthly Active</a>
+                        <a href="{{ route('reports.customer-summary') }}" class="{{ $mobileLink }}"><i class="fas fa-table w-4"></i>Customer Summary</a>
+                        <a href="{{ route('reports.customer-summary', ['phone' => 'missing']) }}" class="{{ $mobileLink }}"><i class="fas fa-phone-slash w-4"></i>No Phone Number</a>
                         <a href="{{ route('reports.reader-routes') }}" class="{{ $mobileLink }}"><i class="fas fa-clipboard-check w-4"></i>Reader Routes</a>
                         <a href="{{ route('reports.reader-statistics') }}" class="{{ $mobileLink }}"><i class="fas fa-chart-pie w-4"></i>Reader Statistics</a>
                         @foreach($officeReports as $reportKey => [$label, $icon])
@@ -308,13 +323,15 @@
                         <a href="{{ route('sms.templates') }}" class="{{ $mobileLink }}"><i class="fas fa-file-alt w-4"></i>SMS Templates</a>
                         <a href="{{ route('sms.bulk') }}" class="{{ $mobileLink }}"><i class="fas fa-paper-plane w-4"></i>Send Custom SMS</a>
                         <a href="{{ route('sms.index') }}" class="{{ $mobileLink }}"><i class="fas fa-list w-4"></i>SMS Logs</a>
+                        <a href="{{ route('sms.failed') }}" class="{{ $mobileLink }}"><i class="fas fa-exclamation-circle w-4"></i>Failed SMS @if($smsFailedCount > 0)<span class="ms-auto rounded-full bg-red-500 px-2 text-xs font-semibold text-white">{{ $smsFailedCount }}</span>@endif</a>
+                        <a href="{{ route('sms.usage') }}" class="{{ $mobileLink }}"><i class="fas fa-coins w-4"></i>SMS Usage &amp; Cost</a>
                         @if($isSuperAdmin)
                         <a href="{{ route('sms.settings') }}" class="{{ $mobileLink }}"><i class="fas fa-cog w-4"></i>SMS Settings</a>
                         @endif
                     @else
                         <a href="{{ route('users.index') }}" class="{{ $mobileLink }}"><i class="fas fa-users-cog w-4"></i>Users</a>
                         <a href="{{ route('reader-routes.index') }}" class="{{ $mobileLink }}"><i class="fas fa-route w-4"></i>Reader Routes</a>
-                        @if($isSuperAdmin)
+                        @if($isOfficeAdmin)
                         <a href="{{ route('settings.index') }}" class="{{ $mobileLink }}"><i class="fas fa-sliders-h w-4"></i>Settings</a>
                         @endif
                         @if($isOfficeAdmin)
@@ -369,10 +386,10 @@ function toggleSystemStatus() {
             const reason = prompt('Please provide a reason for disabling the system:', 'Payment overdue - System temporarily disabled');
             if (!reason) return;
 
-            if (confirm('Are you sure you want to disable the system? This will restrict access to most features.')) {
+            if (confirm('Are you sure you want to disable the system? This will restrict access to most features and put the meter reader app in maintenance.')) {
                 performToggle(action, reason);
             }
-        } else if (confirm('Are you sure you want to enable the system? All features will be restored.')) {
+        } else if (confirm('Are you sure you want to enable the system? All features will be restored, and the meter reader app goes back to its previous state.')) {
             performToggle(action);
         }
     @endif

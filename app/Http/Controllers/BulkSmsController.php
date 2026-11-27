@@ -26,7 +26,7 @@ class BulkSmsController extends Controller
             'customers' => $customers,
             'eligibleCount' => $this->eligibleQuery()->count(),
             'starter' => \App\Models\SmsTemplate::bodyFor('custom', 'Dear {customer_name}, account {account_number}: '),
-            'costPerSegment' => (float) SystemConfiguration::get('sms_cost_per_segment', 0),
+            'costPerSegment' => (float) config('sms.cost_per_segment', 0),
         ]);
     }
 
@@ -47,7 +47,7 @@ class BulkSmsController extends Controller
             ? $templates->replaceVariables($validated['message'], $this->variables($first, $templates))
             : $templates->previewTemplate('custom', ['customer_name' => 'Sample Customer', 'account_number' => 'CP/NE/DN/FD/001']);
         $segments = NotifyLkSmsService::segmentCount($preview);
-        $cost = $segments * (float) SystemConfiguration::get('sms_cost_per_segment', 0) * $recipients->count();
+        $cost = $segments * (float) config('sms.cost_per_segment', 0) * $recipients->count();
 
         $previewMeta = [
             'recipients' => $recipients->count(),

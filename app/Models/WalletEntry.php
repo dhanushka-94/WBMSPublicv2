@@ -36,6 +36,29 @@ class WalletEntry extends Model
         return $this->belongsTo(Payment::class);
     }
 
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    /** Admin or Super Admin changes made by hand. Never counted as cash received in reports. */
+    public function getIsManualAdjustmentAttribute(): bool
+    {
+        return in_array($this->reason, ['adjustment_add', 'adjustment_deduct'], true);
+    }
+
+    public function getReasonLabelAttribute(): string
+    {
+        return match ($this->reason) {
+            'overpayment' => 'Extra cash from a payment',
+            'applied' => 'Used on a bill',
+            'payment_reversed' => 'Payment reversed',
+            'adjustment_add' => 'Added by admin',
+            'adjustment_deduct' => 'Deducted by admin',
+            default => ucfirst(str_replace('_', ' ', (string) $this->reason)),
+        };
+    }
+
     /**
      * Overpayments still tied to a living payment (excludes reversed/orphan rows).
      */

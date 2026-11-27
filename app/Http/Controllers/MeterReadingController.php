@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\ReadingChainLockedException;
 use App\Models\Bill;
 use App\Models\MeterReading;
 use App\Models\WaterMeter;
@@ -287,6 +288,9 @@ class MeterReadingController extends Controller
                 ? (float) $lastReading->current_reading
                 : (float) ($waterMeter->initial_reading ?? $reading->previous_reading);
 
+            // Keep the values before the save so the activity log shows what changed.
+            $readingOld = $reading->only(['water_meter_id', 'reading_date', 'previous_reading', 'current_reading', 'consumption', 'reading_type', 'reader_name', 'notes', 'status']);
+
             // Update the reading
             $reading->update([
                 'water_meter_id' => $request->water_meter_id,
@@ -303,11 +307,35 @@ class MeterReadingController extends Controller
             ]);
 
             $syncMessage = 'Meter reading updated successfully.';
+            $billBefore = $linkedBill ? (float) $linkedBill->total_amount : null;
+            $chainChanged = round((float) $readingOld['current_reading'], 2) !== round((float) $reading->current_reading, 2)
+                || Carbon::parse($readingOld['reading_date'])->toDateString() !== $reading->reading_date->toDateString()
+                || (int) $readingOld['water_meter_id'] !== (int) $reading->water_meter_id;
+
+            if (! $editingBilled && $chainChanged) {
+                // Not billed yet: later readings and unpaid bills still follow this reading's new current value.
+                $cascade = $chain->syncLaterReadings($reading->fresh());
+                $parts = ['Meter reading updated.'];
+                if ($cascade['later_readings'] > 0) {
+                    $parts[] = $cascade['later_readings'].' later reading(s) adjusted.';
+                }
+                if ($cascade['later_bills'] > 0) {
+                    $parts[] = $cascade['later_bills'].' later unpaid bill(s) recalculated.';
+                }
+                $syncMessage = implode(' ', $parts);
+            }
+
             if ($editingBilled) {
                 $sync = $chain->syncAfterReadingUpdate($reading->fresh(), $request->user()?->id);
                 $parts = ['Meter reading updated.'];
                 if ($sync['bill_synced']) {
-                    $parts[] = 'Linked unpaid bill recalculated.';
+                    $billAfter = $linkedBill ? Bill::query()->find($linkedBill->id) : null;
+                    if ($billAfter && $billBefore !== null) {
+                        $parts[] = 'Linked bill '.$billAfter->bill_number.' recalculated: total Rs. '
+                            .number_format($billBefore, 2).' -> Rs. '.number_format((float) $billAfter->total_amount, 2).'.';
+                    } else {
+                        $parts[] = 'Linked unpaid bill recalculated.';
+                    }
                 }
                 if ($sync['later_readings'] > 0) {
                     $parts[] = $sync['later_readings'].' later reading(s) adjusted.';
@@ -318,10 +346,24 @@ class MeterReadingController extends Controller
                 $syncMessage = implode(' ', $parts);
             }
 
+            $readingNew = $reading->fresh();
+            \App\Models\ActivityLog::logModelActivity(
+                'update',
+                $readingNew,
+                $readingOld,
+                $readingNew->only(array_keys($readingOld)),
+                auth()->user()->name.' updated meter reading ID '.$readingNew->id.' for meter '.($waterMeter->meter_number ?? $waterMeter->id)
+                    .': current reading '.number_format((float) $readingOld['current_reading'], 2).' -> '.number_format((float) $readingNew->current_reading, 2)
+                    .($editingBilled && $billBefore !== null ? '. '.$syncMessage : '.')
+            );
+
             DB::commit();
 
             return redirect()->route('readings.show', $reading)
                 ->with('success', $syncMessage);
+        } catch (ReadingChainLockedException $e) {
+            DB::rollBack();
+            return back()->with('error', $e->getMessage())->withInput();
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error updating meter reading: ' . $e->getMessage());

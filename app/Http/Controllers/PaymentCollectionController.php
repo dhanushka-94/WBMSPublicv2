@@ -50,8 +50,14 @@ class PaymentCollectionController extends Controller
 
         $customer = null;
         $bills = collect();
+        $outstanding = 0.0;
         if ($request->filled('customer')) {
             $customer = Customer::query()->findOrFail($request->integer('customer'));
+            // Total over every unpaid bill, not just the page of bills shown below.
+            $outstanding = (float) $customer->bills()
+                ->where('balance_amount', '>', 0)
+                ->whereNotIn('status', ['cancelled', 'draft'])
+                ->sum('balance_amount');
             $bills = $customer->bills()
                 ->where('balance_amount', '>', 0)
                 ->whereNotIn('status', ['cancelled', 'draft'])
@@ -69,6 +75,7 @@ class PaymentCollectionController extends Controller
             'customerTypes' => CustomerType::query()->orderBy('name')->get(['id', 'name']),
             'customer' => $customer,
             'bills' => $bills,
+            'outstanding' => $outstanding,
         ]);
     }
 

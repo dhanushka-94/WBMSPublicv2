@@ -19,6 +19,7 @@ class Customer extends Model
         'meter_number',
         'qr_code_path',
         'title',
+        'gender',
         'first_name',
         'last_name',
         'profile_photo',

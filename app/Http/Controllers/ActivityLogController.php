@@ -8,8 +8,11 @@ use App\Traits\LogsActivity;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Validation\Rule;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\Validator;
 
 class ActivityLogController extends Controller
 {
@@ -20,82 +23,32 @@ class ActivityLogController extends Controller
      */
     public function index(Request $request): View
     {
-        $query = ActivityLog::with('user');
+        $errors = $this->dropInvalidFilters($request);
 
-        // Search functionality
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('description', 'like', "%{$search}%")
-                  ->orWhere('user_name', 'like', "%{$search}%")
-                  ->orWhere('user_email', 'like', "%{$search}%")
-                  ->orWhere('subject_name', 'like', "%{$search}%")
-                  ->orWhere('ip_address', 'like', "%{$search}%");
-            });
-        }
-
-        // User filter
-        if ($request->filled('user_id')) {
-            $query->where('user_id', $request->user_id);
-        }
-
-        // Action filter
-        if ($request->filled('action')) {
-            $query->where('action', $request->action);
-        }
-
-        // Module filter
-        if ($request->filled('module')) {
-            $query->where('module', $request->module);
-        }
-
-        // Status filter
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        // Date range filter
-        if ($request->filled('date_from')) {
-            $query->whereDate('created_at', '>=', $request->date_from);
-        }
-        if ($request->filled('date_to')) {
-            $query->whereDate('created_at', '<=', $request->date_to);
-        }
-
-        // Quick date filters
-        if ($request->filled('period')) {
-            switch ($request->period) {
-                case 'today':
-                    $query->today();
-                    break;
-                case 'week':
-                    $query->thisWeek();
-                    break;
-                case 'month':
-                    $query->thisMonth();
-                    break;
-                case 'login':
-                    $query->authentication();
-                    break;
-                case 'crud':
-                    $query->crudOperations();
-                    break;
-            }
-        }
-
-        $activities = $query->orderBy('created_at', 'desc')->paginate(25);
+        // The list, the statistics cards and the export all use the same filtered query,
+        // so the numbers always agree with each other.
+        $perPage = in_array((int) $request->input('per_page'), [25, 50, 100], true) ? (int) $request->input('per_page') : 25;
+        $activities = $this->filteredQuery($request)
+            ->with('user')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->paginate($perPage)
+            ->withQueryString();
 
         // Get filter options
         $users = User::select('id', 'name', 'email')->orderBy('name')->get();
         $actions = ActivityLog::distinct()->pluck('action')->sort()->values();
-        $modules = ActivityLog::distinct()->pluck('module')->sort()->values();
+        $modules = ActivityLog::distinct()->pluck('module')
+            ->map(fn ($module) => ActivityLog::canonicalModule($module))
+            ->unique()->sort()->values();
 
-        // Get statistics for the current filter
         $stats = $this->getFilteredStats($request);
         $archiveMonths = ActivityLog::archiveMonths();
 
-        // Log this view activity
-        $this->logActivity('view', 'Viewed activity logs dashboard');
+        // Record the visit once. The page's own 30-second refresh is not user activity.
+        if (!$request->boolean('auto')) {
+            $this->logActivity('view', 'Viewed activity logs dashboard');
+        }
 
         return view('activity-logs.index', compact(
             'activities',
@@ -104,7 +57,107 @@ class ActivityLogController extends Controller
             'modules',
             'stats',
             'archiveMonths'
-        ));
+        ))->withErrors($errors);
+    }
+
+    /**
+     * Validation rules shared by the list, statistics and export.
+     */
+    private function filterRules(Request $request): array
+    {
+        return [
+            'search' => ['nullable', 'string', 'max:100'],
+            'user_id' => ['nullable', 'regex:/^(\d+|guest)$/'],
+            'action' => ['nullable', 'string', 'max:60'],
+            'module' => ['nullable', 'string', 'max:60'],
+            'status' => ['nullable', Rule::in(['success', 'failed', 'warning'])],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => array_filter(['nullable', 'date', $request->filled('date_from') ? 'after_or_equal:date_from' : null]),
+            'period' => ['nullable', Rule::in(['today', 'week', 'month', 'login', 'crud'])],
+            'hide_views' => ['nullable', 'boolean'],
+        ];
+    }
+
+    /**
+     * An invalid filter (for example "To" earlier than "From") is ignored and reported on the page,
+     * instead of silently returning an empty list.
+     */
+    private function dropInvalidFilters(Request $request)
+    {
+        $validator = Validator::make($request->all(), $this->filterRules($request), [
+            'date_to.after_or_equal' => 'The "Date To" must be on or after the "Date From". That date range was not applied.',
+            'date_from.date' => 'The "Date From" is not a valid date.',
+            'date_to.date' => 'The "Date To" is not a valid date.',
+        ]);
+
+        if ($validator->fails()) {
+            $request->merge(array_fill_keys($validator->errors()->keys(), null));
+        }
+
+        return $validator->errors();
+    }
+
+    /**
+     * The one place that turns the filter form into a query.
+     */
+    private function filteredQuery(Request $request): Builder
+    {
+        $query = ActivityLog::query();
+
+        if ($request->filled('search')) {
+            $term = trim((string) $request->input('search'));
+            $like = '%'.addcslashes($term, '%_\\').'%';
+            $actionLike = '%'.addcslashes(str_replace(' ', '_', $term), '%_\\').'%';
+            $query->where(function ($q) use ($like, $actionLike) {
+                $q->where('description', 'like', $like)
+                    ->orWhere('user_name', 'like', $like)
+                    ->orWhere('user_email', 'like', $like)
+                    ->orWhere('subject_name', 'like', $like)
+                    ->orWhere('ip_address', 'like', $like)
+                    ->orWhere('action', 'like', $actionLike)
+                    ->orWhere('module', 'like', $like);
+            });
+        }
+
+        if ($request->filled('user_id')) {
+            $request->input('user_id') === 'guest'
+                ? $query->whereNull('user_id')
+                : $query->where('user_id', (int) $request->input('user_id'));
+        }
+
+        if ($request->filled('action')) {
+            $query->where('action', $request->input('action'));
+        }
+
+        if ($request->filled('module')) {
+            $query->whereIn('module', ActivityLog::moduleVariants((string) $request->input('module')));
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->input('date_from'));
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->input('date_to'));
+        }
+
+        match ($request->input('period')) {
+            'today' => $query->today(),
+            'week' => $query->thisWeek(),
+            'month' => $query->thisMonth(),
+            'login' => $query->authentication(),
+            'crud' => $query->crudOperations(),
+            default => null,
+        };
+
+        if ($request->boolean('hide_views')) {
+            $query->hidePageViews();
+        }
+
+        return $query;
     }
 
     /**
@@ -180,16 +233,21 @@ class ActivityLogController extends Controller
             $query->where('action', $request->action);
         }
         if ($request->filled('module')) {
-            $query->where('module', $request->module);
+            $query->whereIn('module', ActivityLog::moduleVariants((string) $request->module));
         }
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
         if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($inner) use ($search) {
-                $inner->where('description', 'like', "%{$search}%")
-                    ->orWhere('ip_address', 'like', "%{$search}%");
+            $term = trim((string) $request->search);
+            $like = '%'.addcslashes($term, '%_\\').'%';
+            $actionLike = '%'.addcslashes(str_replace(' ', '_', $term), '%_\\').'%';
+            $query->where(function ($inner) use ($like, $actionLike) {
+                $inner->where('description', 'like', $like)
+                    ->orWhere('ip_address', 'like', $like)
+                    ->orWhere('subject_name', 'like', $like)
+                    ->orWhere('action', 'like', $actionLike)
+                    ->orWhere('module', 'like', $like);
             });
         }
 
@@ -210,7 +268,9 @@ class ActivityLogController extends Controller
         $lastLoginAt = (clone $forUser)->where('action', 'login')->latest('created_at')->value('created_at');
         $lastLogin = $lastLoginAt ? Carbon::parse($lastLoginAt)->diffForHumans() : 'Never';
         $availableActions = (clone $forUser)->distinct()->orderBy('action')->pluck('action');
-        $availableModules = (clone $forUser)->distinct()->orderBy('module')->pluck('module');
+        $availableModules = (clone $forUser)->distinct()->pluck('module')
+            ->map(fn ($module) => ActivityLog::canonicalModule($module))
+            ->unique()->sort()->values();
 
         $this->logActivity('view', "Viewed activity logs for user: {$user->name}");
 
@@ -230,38 +290,25 @@ class ActivityLogController extends Controller
     public function export(Request $request)
     {
         $format = $request->input('format', 'csv');
-        
-        $query = ActivityLog::with('user');
-        
-        // Apply same filters as index
-        if ($request->filled('user_id')) {
-            $query->where('user_id', $request->user_id);
-        }
-        if ($request->filled('action')) {
-            $query->where('action', $request->action);
-        }
-        if ($request->filled('module')) {
-            $query->where('module', $request->module);
-        }
-        if ($request->filled('date_from')) {
-            $query->whereDate('created_at', '>=', $request->date_from);
-        }
-        if ($request->filled('date_to')) {
-            $query->whereDate('created_at', '<=', $request->date_to);
+        if (!in_array($format, ['csv', 'json'], true)) {
+            return back()->with('error', 'Invalid export format');
         }
 
-        $activities = $query->orderBy('created_at', 'desc')->get();
-
-        // Log export activity
-        $this->logExport('activity_logs', $activities->count(), $format);
-
-        if ($format === 'csv') {
-            return $this->exportCsv($activities);
-        } elseif ($format === 'json') {
-            return $this->exportJson($activities);
+        $errors = $this->dropInvalidFilters($request);
+        if ($errors->isNotEmpty()) {
+            return back()->withErrors($errors);
         }
 
-        return back()->with('error', 'Invalid export format');
+        // Exactly the rows the filtered list shows.
+        $query = $this->filteredQuery($request);
+        $count = (clone $query)->count();
+
+        $this->logExport('activity_logs', $count, $format);
+
+        // CSV is streamed in newest-first batches by id; JSON loads the rows in one go.
+        return $format === 'csv'
+            ? $this->exportCsv($query)
+            : $this->exportJson($query->orderByDesc('created_at')->orderByDesc('id'));
     }
 
     /**
@@ -293,38 +340,28 @@ class ActivityLogController extends Controller
      */
     private function getFilteredStats(Request $request): array
     {
-        $query = ActivityLog::query();
-
-        // Apply same filters as main query
-        if ($request->filled('user_id')) {
-            $query->where('user_id', $request->user_id);
-        }
-        if ($request->filled('action')) {
-            $query->where('action', $request->action);
-        }
-        if ($request->filled('module')) {
-            $query->where('module', $request->module);
-        }
-        if ($request->filled('date_from')) {
-            $query->whereDate('created_at', '>=', $request->date_from);
-        }
-        if ($request->filled('date_to')) {
-            $query->whereDate('created_at', '<=', $request->date_to);
-        }
+        // Same filters as the list, so the cards always match the number of rows listed.
+        $row = $this->filteredQuery($request)
+            ->selectRaw("COUNT(*) as total,
+                SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as successful,
+                SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed,
+                SUM(CASE WHEN created_at >= ? AND created_at < ? THEN 1 ELSE 0 END) as today,
+                COUNT(DISTINCT user_id) as unique_users", [today()->startOfDay(), today()->addDay()->startOfDay()])
+            ->first();
 
         return [
-            'total' => $query->count(),
-            'successful' => $query->clone()->where('status', 'success')->count(),
-            'failed' => $query->clone()->where('status', 'failed')->count(),
-            'today' => $query->clone()->whereDate('created_at', today())->count(),
-            'unique_users' => $query->clone()->distinct('user_id')->count('user_id')
+            'total' => (int) $row->total,
+            'successful' => (int) $row->successful,
+            'failed' => (int) $row->failed,
+            'today' => (int) $row->today,
+            'unique_users' => (int) $row->unique_users,
         ];
     }
 
     /**
      * Export activities as CSV
      */
-    private function exportCsv($activities)
+    private function exportCsv(Builder $query)
     {
         $filename = 'activity_logs_' . now()->format('Y-m-d_H-i-s') . '.csv';
         
@@ -333,8 +370,10 @@ class ActivityLogController extends Controller
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
         ];
 
-        $callback = function () use ($activities) {
+        $callback = function () use ($query) {
             $file = fopen('php://output', 'w');
+            // Cells that start with = + - @ can run as formulas in Excel, so mark them as text.
+            $safe = fn ($value) => is_string($value) && $value !== '' && in_array($value[0], ['=', '+', '-', '@'], true) ? "'".$value : $value;
             
             // Write headers
             fputcsv($file, [
@@ -352,23 +391,25 @@ class ActivityLogController extends Controller
                 'Duration (ms)'
             ]);
 
-            // Write data
-            foreach ($activities as $activity) {
-                fputcsv($file, [
-                    $activity->id,
-                    $activity->created_at->format('Y-m-d h:i:s A'),
-                    $activity->user_name,
-                    $activity->user_email,
-                    $activity->user_role,
-                    $activity->action,
-                    $activity->module,
-                    $activity->description,
-                    $activity->subject_name,
-                    $activity->status,
-                    $activity->ip_address,
-                    $activity->duration_ms
-                ]);
-            }
+            // Write data in batches so a large export does not load every row into memory.
+            $query->chunkByIdDesc(1000, function ($activities) use ($file, $safe) {
+                foreach ($activities as $activity) {
+                    fputcsv($file, [
+                        $activity->id,
+                        $activity->created_at->format('Y-m-d h:i:s A'),
+                        $safe($activity->user_name),
+                        $safe($activity->user_email),
+                        $activity->user_role,
+                        $activity->action,
+                        $activity->module,
+                        $safe($activity->description),
+                        $safe($activity->subject_name),
+                        $activity->status,
+                        $activity->ip_address,
+                        $activity->duration_ms
+                    ]);
+                }
+            });
 
             fclose($file);
         };
@@ -379,11 +420,11 @@ class ActivityLogController extends Controller
     /**
      * Export activities as JSON
      */
-    private function exportJson($activities)
+    private function exportJson(Builder $query)
     {
         $filename = 'activity_logs_' . now()->format('Y-m-d_H-i-s') . '.json';
         
-        $data = $activities->map(function ($activity) {
+        $data = $query->get()->map(function ($activity) {
             return [
                 'id' => $activity->id,
                 'datetime' => $activity->created_at->format('Y-m-d h:i:s A'),

@@ -51,6 +51,18 @@
         @if(session('error'))
             <div class="mb-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-red-800">{{ session('error') }}</div>
         @endif
+        @php($walletErrors = $errors->getBag('wallet'))
+        @if($walletErrors->any())
+            <div class="mb-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-red-800">
+                <p class="font-semibold">The wallet was not changed.</p>
+                <ul class="mt-1 list-disc pl-5 text-sm">
+                    @foreach($walletErrors->all() as $walletError)
+                        <li>{{ $walletError }}</li>
+                    @endforeach
+                </ul>
+                <a href="#wallet" class="mt-2 inline-block text-sm font-medium underline">Go to the wallet form</a>
+            </div>
+        @endif
 
         <nav class="mb-6 flex gap-2 overflow-x-auto pb-1 text-sm">
             <a href="#overview" class="whitespace-nowrap rounded-full bg-white px-3 py-1.5 font-medium text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100">Overview</a>
@@ -59,6 +71,7 @@
             <a href="#customer-bills" class="whitespace-nowrap rounded-full bg-white px-3 py-1.5 font-medium text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100">Bills</a>
             <a href="#customer-payments" class="whitespace-nowrap rounded-full bg-white px-3 py-1.5 font-medium text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100">Payments</a>
             <a href="#make-payment" class="whitespace-nowrap rounded-full bg-white px-3 py-1.5 font-medium text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100">Pay</a>
+            <a href="#wallet" class="whitespace-nowrap rounded-full bg-white px-3 py-1.5 font-medium text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100">Wallet</a>
             <a href="#connection" class="whitespace-nowrap rounded-full bg-white px-3 py-1.5 font-medium text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100">Connection</a>
             <a href="#profile" class="whitespace-nowrap rounded-full bg-white px-3 py-1.5 font-medium text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100">Profile</a>
         </nav>
@@ -128,6 +141,8 @@
                         <p class="text-xs font-medium uppercase text-teal-700">Wallet now</p>
                         <p class="mt-1 text-xl font-bold text-teal-900">Rs. {{ number_format($customer->wallet_balance, 2) }}</p>
                         <a href="#make-payment" class="text-xs font-medium text-teal-700 hover:text-teal-900">Make payment</a>
+                        <span class="text-xs text-teal-400">·</span>
+                        <a href="#wallet" class="text-xs font-medium text-teal-700 hover:text-teal-900">Wallet history</a>
                     </div>
                 </div>
             </div>
@@ -463,6 +478,103 @@
                     <i class="fas fa-check mr-2"></i>Save payment
                 </button>
             </form>
+        </section>
+
+        {{-- 5b. Wallet --}}
+        @php($canEditWallet = in_array(auth()->user()->role, ['admin', 'super_admin'], true))
+        <section id="wallet" class="mb-8 scroll-mt-24 overflow-hidden rounded-xl border border-teal-200 bg-white shadow-sm">
+            <div class="flex flex-wrap items-center justify-between gap-3 bg-teal-700 px-6 py-4">
+                <div>
+                    <h2 class="text-lg font-semibold text-white"><i class="fas fa-wallet mr-2"></i>Wallet</h2>
+                    <p class="text-sm text-teal-100">Credit that is used on this customer's next bills.</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-xs uppercase text-teal-100">Balance</p>
+                    <p class="text-2xl font-bold text-white">Rs. {{ number_format($customer->wallet_balance, 2) }}</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-6 p-6 {{ $canEditWallet ? 'lg:grid-cols-3' : '' }}">
+                <div class="{{ $canEditWallet ? 'lg:col-span-2' : '' }}">
+                    <h3 class="mb-2 text-sm font-semibold text-slate-800">History</h3>
+                    <div class="overflow-x-auto rounded-lg border border-slate-200">
+                        <table class="min-w-full text-sm">
+                            <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+                                <tr>
+                                    <th class="px-3 py-2">Date</th>
+                                    <th class="px-3 py-2">What</th>
+                                    <th class="px-3 py-2 text-right">Amount</th>
+                                    <th class="px-3 py-2">Note</th>
+                                    <th class="px-3 py-2">By</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">
+                                @forelse($walletEntries as $entry)
+                                    <tr>
+                                        <td class="whitespace-nowrap px-3 py-2 text-slate-700">{{ $entry->created_at->format('Y-m-d H:i') }}</td>
+                                        <td class="px-3 py-2">
+                                            <span class="font-medium {{ $entry->is_manual_adjustment ? 'text-teal-700' : 'text-slate-800' }}">{{ $entry->reason_label }}</span>
+                                            @if($entry->payment)
+                                                <div class="text-xs text-slate-500">Receipt {{ $entry->payment->receipt_number }}</div>
+                                            @elseif($entry->bill)
+                                                <div class="text-xs text-slate-500">Bill {{ $entry->bill->bill_number }}</div>
+                                            @endif
+                                        </td>
+                                        <td class="whitespace-nowrap px-3 py-2 text-right font-semibold {{ (float) $entry->amount >= 0 ? 'text-green-700' : 'text-red-700' }}">
+                                            {{ (float) $entry->amount >= 0 ? '+' : '-' }}Rs. {{ number_format(abs((float) $entry->amount), 2) }}
+                                        </td>
+                                        <td class="px-3 py-2 text-slate-600">{{ $entry->notes ?: '—' }}</td>
+                                        <td class="whitespace-nowrap px-3 py-2 text-slate-600">{{ $entry->user->name ?? '—' }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="5" class="px-3 py-6 text-center text-slate-500">No wallet activity yet.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                    @if($walletEntryCount > $walletEntries->count())
+                        <p class="mt-2 text-xs text-slate-500">Showing the latest {{ $walletEntries->count() }} of {{ $walletEntryCount }} entries.</p>
+                    @endif
+                </div>
+
+                @if($canEditWallet)
+                    <form method="POST" action="{{ route('customers.wallet.adjust', $customer) }}" class="space-y-4 rounded-lg border border-teal-200 bg-teal-50/40 p-4"
+                          onsubmit="return confirm('Save this wallet change? It is kept in the wallet history and the activity log.');">
+                        @csrf
+                        <h3 class="text-sm font-semibold text-slate-800">Edit wallet</h3>
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="flex cursor-pointer items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm has-[:checked]:border-green-500 has-[:checked]:bg-green-50">
+                                <input type="radio" name="type" value="add" class="text-green-600" {{ old('type', 'add') === 'add' ? 'checked' : '' }}>
+                                <span>Add credit</span>
+                            </label>
+                            <label class="flex cursor-pointer items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm has-[:checked]:border-red-500 has-[:checked]:bg-red-50">
+                                <input type="radio" name="type" value="deduct" class="text-red-600" {{ old('type') === 'deduct' ? 'checked' : '' }}>
+                                <span>Deduct credit</span>
+                            </label>
+                        </div>
+
+                        <div>
+                            <label for="wallet_amount" class="mb-1 block text-sm font-medium text-slate-700">Amount (Rs.)</label>
+                            <input type="number" name="amount" id="wallet_amount" step="0.01" min="0.01" value="{{ old('amount') }}" required class="w-full rounded-md border-slate-300">
+                        </div>
+
+                        <div>
+                            <label for="wallet_reason" class="mb-1 block text-sm font-medium text-slate-700">Reason (required)</label>
+                            <textarea name="reason" id="wallet_reason" rows="2" maxlength="200" required placeholder="e.g. Refund of a wrong bill, correction after audit" class="w-full rounded-md border-slate-300">{{ old('reason') }}</textarea>
+                        </div>
+
+                        <button type="submit" class="w-full rounded-lg bg-teal-700 px-5 py-2.5 font-semibold text-white hover:bg-teal-800">
+                            <i class="fas fa-save mr-2"></i>Save wallet change
+                        </button>
+                        <p class="text-xs text-slate-500">Past entries are never changed. Each edit is a new line in the history above. Admin changes are not counted as cash received in any report.</p>
+                    </form>
+                @else
+                    <p class="text-xs text-slate-500">Only an Admin or Super Admin can change a wallet.</p>
+                @endif
+            </div>
         </section>
 
         {{-- 6. Connection --}}

@@ -37,6 +37,16 @@
     </div>
 
     <div class="mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        @if($errors->any())
+            <div class="mb-6 rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-800">
+                @foreach($errors->all() as $message)
+                    <p><i class="fas fa-exclamation-circle mr-2"></i>{{ $message }}</p>
+                @endforeach
+            </div>
+        @endif
+        @if(session('error'))
+            <div class="mb-6 rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-800">{{ session('error') }}</div>
+        @endif
         <div class="mb-6 rounded-xl border border-purple-100 bg-white px-5 py-4 text-sm text-gray-700">
             This list keeps the last 90 days. Every action is also saved in a monthly text file.
             @forelse($archiveMonths as $month)
@@ -117,22 +127,16 @@
                 
                 <form method="GET" action="{{ route('activity-logs.index') }}" id="filterForm" class="space-y-4">
                     <!-- Quick Filters -->
-                    <div class="flex flex-wrap gap-2 mb-4">
-                        <button type="button" onclick="setQuickFilter('today')" class="quick-filter text-sm px-4 py-2 rounded-full {{ request('period') == 'today' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
-                            Today
-                        </button>
-                        <button type="button" onclick="setQuickFilter('week')" class="quick-filter text-sm px-4 py-2 rounded-full {{ request('period') == 'week' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
-                            This Week
-                        </button>
-                        <button type="button" onclick="setQuickFilter('month')" class="quick-filter text-sm px-4 py-2 rounded-full {{ request('period') == 'month' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
-                            This Month
-                        </button>
-                        <button type="button" onclick="setQuickFilter('login')" class="quick-filter text-sm px-4 py-2 rounded-full {{ request('period') == 'login' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
-                            Login/Logout
-                        </button>
-                        <button type="button" onclick="setQuickFilter('crud')" class="quick-filter text-sm px-4 py-2 rounded-full {{ request('period') == 'crud' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
-                            CRUD Operations
-                        </button>
+                    <div class="flex flex-wrap items-center gap-2 mb-4">
+                        <span class="text-xs font-medium uppercase tracking-wide text-gray-500 mr-1">Quick view</span>
+                        @foreach(['today' => 'Today', 'week' => 'This week', 'month' => 'This month', 'login' => 'Sign-ins (web and mobile)', 'crud' => 'Data changes'] as $key => $label)
+                            @php($active = request('period') === $key)
+                            {{-- Click once to apply, click again to turn it off. Other filters are kept. --}}
+                            <a href="{{ request()->fullUrlWithQuery(['period' => $active ? null : $key, 'page' => null, 'auto' => null]) }}"
+                               class="quick-filter text-sm px-4 py-2 rounded-full {{ $active ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+                                {{ $label }}@if($active) <i class="fas fa-times ml-1 text-xs"></i>@endif
+                            </a>
+                        @endforeach
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -149,6 +153,7 @@
                             <label class="block text-sm font-medium text-gray-700 mb-2">User</label>
                             <select name="user_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
                                 <option value="">All Users</option>
+                                <option value="guest" {{ request('user_id') === 'guest' ? 'selected' : '' }}>Guest / not signed in</option>
                                 @foreach($users as $user)
                                     <option value="{{ $user->id }}" {{ request('user_id') == $user->id ? 'selected' : '' }}>
                                         {{ $user->name }} ({{ $user->email }})
@@ -177,7 +182,7 @@
                                 <option value="">All Modules</option>
                                 @foreach($modules as $module)
                                     <option value="{{ $module }}" {{ request('module') == $module ? 'selected' : '' }}>
-                                        {{ ucfirst($module) }}
+                                        {{ ucfirst(str_replace(['_', '-'], ' ', $module)) }}
                                     </option>
                                 @endforeach
                             </select>
@@ -209,7 +214,24 @@
                         </div>
                     </div>
 
-                    <input type="hidden" name="period" id="period" value="{{ request('period') }}">
+                    @if(request('period'))
+                        <input type="hidden" name="period" value="{{ request('period') }}">
+                    @endif
+
+                    <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
+                        <label class="inline-flex items-center text-sm text-gray-700">
+                            <input type="checkbox" name="hide_views" value="1" {{ request()->boolean('hide_views') ? 'checked' : '' }} class="rounded border-gray-300 text-purple-600 focus:ring-purple-500 mr-2">
+                            Hide page views and downloads (show only things people did)
+                        </label>
+                        <label class="inline-flex items-center text-sm text-gray-700">
+                            Rows per page
+                            <select name="per_page" class="ml-2 border border-gray-300 rounded-lg py-1 text-sm focus:ring-purple-500 focus:border-purple-500">
+                                @foreach([25, 50, 100] as $size)
+                                    <option value="{{ $size }}" {{ (int) request('per_page', 25) === $size ? 'selected' : '' }}>{{ $size }}</option>
+                                @endforeach
+                            </select>
+                        </label>
+                    </div>
 
                     <div class="flex space-x-3">
                         <button type="submit" class="bg-purple-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-purple-700 transition duration-200">
@@ -280,7 +302,7 @@
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex items-center">
                                         <i class="{{ $activity->action_icon }} mr-2"></i>
-                                        <span class="text-sm font-medium">{{ ucfirst(str_replace('_', ' ', $activity->action)) }}</span>
+                                        <span class="text-sm font-medium {{ $activity->action_color }}">{{ ucfirst(str_replace('_', ' ', $activity->action)) }}</span>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 text-sm text-gray-900">
@@ -356,18 +378,15 @@ document.addEventListener('DOMContentLoaded', function() {
         location.reload();
     });
 
-    // Auto-refresh every 30 seconds
+    // Auto-refresh every 30 seconds while no filter is applied and you are on page 1.
+    // The refresh adds auto=1 so it is not counted as activity in the log.
     setInterval(function() {
-        // Only refresh if no filters are applied
-        if (!new URLSearchParams(window.location.search).toString()) {
-            location.reload();
+        const params = new URLSearchParams(window.location.search);
+        params.delete('auto');
+        if (params.toString() === '') {
+            window.location.replace(window.location.pathname + '?auto=1');
         }
     }, 30000);
 });
-
-function setQuickFilter(period) {
-    document.getElementById('period').value = period;
-    document.getElementById('filterForm').submit();
-}
 </script>
 @endsection 

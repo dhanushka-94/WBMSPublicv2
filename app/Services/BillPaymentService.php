@@ -210,7 +210,8 @@ class BillPaymentService
 
             $saved = $bill->recordPayment($use, 'wallet', [
                 'paid_on' => $options['paid_on'] ?? now()->toDateTimeString(),
-                'received_by' => $userId,
+                // System auto-apply: no staff receiver (the reader only triggered it).
+                'received_by' => null,
                 'notes' => $options['notes'] ?? 'Auto-applied wallet credit when the bill was created',
                 'source' => $options['source'] ?? 'wallet_auto_apply',
                 'skip_sms' => array_key_exists('skip_sms', $options) ? (bool) $options['skip_sms'] : true,

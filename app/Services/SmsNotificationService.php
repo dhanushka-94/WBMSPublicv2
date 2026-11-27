@@ -10,6 +10,7 @@ use App\Models\SmsNotification;
 use App\Models\SmsTemplate;
 use App\Models\SystemConfiguration;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class SmsNotificationService
@@ -311,6 +312,97 @@ class SmsNotificationService
         return $this->sendSmsNotification($notification);
     }
 
+    /**
+     * Resend a failed SMS. Result keys: success, message, and optionally
+     * skipped (no longer failed) or disabled (sending is turned off).
+     */
+    public function resend(SmsNotification $notification): array
+    {
+        if (!$this->smsEnabled()) {
+            return ['success' => false, 'disabled' => true, 'message' => 'SMS sending is turned off in SMS Settings.'];
+        }
+
+        // Move failed -> pending in one statement so a double click or two staff members cannot send it twice.
+        $claimed = SmsNotification::whereKey($notification->id)
+            ->where('status', 'failed')
+            ->update(['status' => 'pending', 'error_message' => null]);
+
+        if (!$claimed) {
+            return ['success' => false, 'skipped' => true, 'message' => 'This SMS is no longer in the failed state.'];
+        }
+
+        $notification->refresh();
+
+        // If staff corrected the customer's number after the failure, send to the corrected number.
+        $notification->phone_number = $this->preferredPhone($notification);
+
+        // A successful resend is charged at today's rate.
+        $notification->cost_per_segment = (float) config('sms.cost_per_segment', 0);
+        $notification->save();
+
+        return $this->sendSmsNotification($notification);
+    }
+
+    /**
+     * Send a delivered SMS again (for example when the customer says it never arrived).
+     * The original row is left untouched and a new row is logged, so the extra charge is counted.
+     * Result keys: success, message, notification (the new row), and optionally skipped or disabled.
+     */
+    public function sendAgain(SmsNotification $original): array
+    {
+        if (!$this->smsEnabled()) {
+            return ['success' => false, 'disabled' => true, 'message' => 'SMS sending is turned off in SMS Settings.'];
+        }
+
+        if ($original->status !== 'sent') {
+            return ['success' => false, 'message' => 'Only delivered messages can be sent again. Use Resend for failed messages.'];
+        }
+
+        // Stops a double click or two staff members from sending it twice at the same moment.
+        $lock = Cache::lock('sms-send-again:' . $original->id, 20);
+        if (!$lock->get()) {
+            return ['success' => false, 'skipped' => true, 'message' => 'This SMS is already being sent again.'];
+        }
+
+        try {
+            $copy = SmsNotification::create([
+                'customer_id' => $original->customer_id,
+                'bill_id' => $original->bill_id,
+                'payment_id' => $original->payment_id,
+                'receipt_number' => $original->receipt_number,
+                'phone_number' => $this->preferredPhone($original),
+                'message' => $original->message,
+                'segments' => NotifyLkSmsService::segmentCount($original->message),
+                'cost_per_segment' => (float) config('sms.cost_per_segment', 0),
+                'type' => $original->type,
+                'source' => 'resend',
+            ]);
+
+            $result = $this->sendSmsNotification($copy);
+            $result['notification'] = $copy->fresh();
+
+            return $result;
+        } finally {
+            $lock->release();
+        }
+    }
+
+    /**
+     * The customer's current mobile number when it is valid, otherwise the number stored on the SMS.
+     */
+    private function preferredPhone(SmsNotification $notification): string
+    {
+        $stored = (string) $notification->phone_number;
+        $current = $notification->customer?->phone;
+        $lastNine = fn ($number) => substr(preg_replace('/\D+/', '', (string) $number), -9);
+
+        if ($current && $this->smsService->hasValidPhone($current) && $lastNine($current) !== $lastNine($stored)) {
+            return $current;
+        }
+
+        return $stored;
+    }
+
     protected function smsEnabled(): bool
     {
         $stored = SystemConfiguration::get('sms_enabled');
@@ -355,6 +447,7 @@ class SmsNotificationService
                 'phone_number' => $customer->phone,
                 'message' => $message,
                 'segments' => NotifyLkSmsService::segmentCount($message),
+                'cost_per_segment' => (float) config('sms.cost_per_segment', 0),
                 'type' => $type,
                 'source' => $meta['source'] ?? 'automated',
                 'scheduled_at' => $scheduledAt,
@@ -388,7 +481,9 @@ class SmsNotificationService
                 $notification->customer->first_name ?? null,
                 $notification->customer->last_name ?? null,
                 $notification->customer->email ?? null,
-                $notification->customer->address ?? null
+                $notification->customer->address ?? null,
+                unicode: false,
+                logAttempt: false
             );
 
             if ($result['success']) {

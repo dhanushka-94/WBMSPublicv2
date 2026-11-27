@@ -40,7 +40,10 @@ class ActivityLogger
                 return;
             }
 
-            if ($request->is('api/*') && $request->attributes->get('activity_logged')) {
+            // The controller already wrote a descriptive row for this request (payment, login, SMS resend...).
+            // Writing a second generic row only inflates the log, so keep just the detailed one.
+            // Errors (4xx/5xx) still get the generic row so failures are never hidden.
+            if ($request->attributes->get('activity_logged') && $response->getStatusCode() < 400) {
                 return;
             }
 
@@ -132,6 +135,11 @@ class ActivityLogger
 
         $routeName = $request->route()?->getName();
         $path = $request->path();
+
+        // The activity log page refreshes itself every 30 seconds; those reloads are not user activity.
+        if ($routeName === 'activity-logs.index' && $request->boolean('auto')) {
+            return true;
+        }
 
         // Skip if route matches skip patterns
         if ($routeName) {
@@ -259,6 +267,10 @@ class ActivityLogger
 
         // Route-based actions
         if ($routeName) {
+            // Opening an edit form (GET ...edit) only shows the page. The save is the PUT/PATCH request.
+            if ($method === 'GET' && str_ends_with($routeName, '.edit')) {
+                return 'view';
+            }
             if ($routeName === 'payments.collect.store' || $routeName === 'bills.payment') {
                 return 'payment';
             }
@@ -458,6 +470,22 @@ class ActivityLogger
     }
 
     /**
+     * Replace passwords, tokens and API keys (at any depth) so they never reach the log.
+     */
+    protected function maskSensitive(array $data): array
+    {
+        foreach ($data as $key => $value) {
+            if (is_array($value)) {
+                $data[$key] = $this->maskSensitive($value);
+            } elseif (is_string($key) && preg_match('/pass(word)?|token|secret|api[_-]?key|(^|_)key$|authorization|credential|\botp\b|(^|_)pin$/i', $key)) {
+                $data[$key] = '[hidden]';
+            }
+        }
+
+        return $data;
+    }
+
+    /**
      * Get additional request properties for logging
      */
     protected function getRequestProperties(Request $request): array
@@ -470,16 +498,7 @@ class ActivityLogger
 
         // Add relevant request data (excluding sensitive information)
         if ($request->isMethod('POST') || $request->isMethod('PUT') || $request->isMethod('PATCH')) {
-            $data = $request->except([
-                'password',
-                'password_confirmation',
-                'current_password',
-                'new_password',
-                'new_password_confirmation',
-                'token',
-                '_token',
-                '_method'
-            ]);
+            $data = $this->maskSensitive($request->except(['_token', '_method']));
 
             if (!empty($data)) {
                 $properties['request_data'] = $data;
@@ -488,7 +507,7 @@ class ActivityLogger
 
         // Add query parameters
         if (!empty($request->query())) {
-            $properties['query_params'] = $request->query();
+            $properties['query_params'] = $this->maskSensitive($request->query());
         }
 
         // Add file uploads info

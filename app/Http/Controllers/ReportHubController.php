@@ -13,6 +13,8 @@ class ReportHubController extends Controller
                 'title' => 'Connections',
                 'items' => [
                     ['Monthly Active', 'Active connections by month', 'reports.monthly-active', 'fa-users-cog', 'text-green-600'],
+                    ['Customer Summary', 'Usage, bill and outstanding per customer (PDF / Excel)', 'reports.customer-summary', 'fa-table', 'text-blue-600'],
+                    ['No Phone Number', 'Customers with no phone number saved (PDF / Excel)', 'reports.customer-summary', 'fa-phone-slash', 'text-red-600', ['phone' => 'missing']],
                     ['Customer Register', 'Full customer listing', 'reports.office', 'fa-address-book', 'text-blue-600', 'customer-register'],
                     ['Contact List', 'Customer phones and contacts', 'reports.office', 'fa-address-card', 'text-cyan-600', 'contacts'],
                     ['New Connections', 'Recently connected customers', 'reports.office', 'fa-plug', 'text-green-600', 'new-connections'],

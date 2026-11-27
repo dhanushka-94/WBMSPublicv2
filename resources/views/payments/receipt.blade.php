@@ -400,7 +400,7 @@
                 </div>
                 <div class="field">
                     <span class="label">{{ $label['received'] }}</span>
-                    <div class="value">{{ $payment->receiver?->name ?? 'Office' }}</div>
+                    <div class="value">{{ $payment->receivedByLabel() }}</div>
                 </div>
                 @if($payment->reference)
                 <div class="field full">

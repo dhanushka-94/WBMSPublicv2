@@ -372,7 +372,8 @@ class Bill extends Model
         $payment = Payment::create([
             'bill_id' => $this->id,
             'customer_id' => $this->customer_id,
-            'received_by' => $details['received_by'] ?? auth()->id(),
+            // Explicit null = system auto-applied (no staff receiver). Missing key = logged-in user.
+            'received_by' => array_key_exists('received_by', $details) ? $details['received_by'] : auth()->id(),
             'receipt_number' => Payment::nextReceiptNumber(),
             'amount' => $amount,
             'payment_method' => $paymentMethod,

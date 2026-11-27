@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\SystemConfiguration;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -17,6 +18,11 @@ class RestrictOfficeAccess
         }
 
         $name = $request->route()?->getName() ?? '';
+
+        // Super Admin switch in Settings: Initial Readings (page and save) for everyone else, Admin included.
+        if (($name === 'readings.initial' || str_starts_with($name, 'readings.initial.')) && !SystemConfiguration::initialReadingsOpen()) {
+            abort(403, 'Initial Readings is turned off. Ask a Super Admin to turn it on.');
+        }
 
         if ($this->superAdminOnly($name)) {
             abort(403, 'Only a Super Admin can open this page.');
@@ -66,6 +72,14 @@ class RestrictOfficeAccess
 
         // Admins may open the reader APK page; only Super Admin may upload.
         if ($name === 'settings.mobile-app' || str_starts_with($name, 'settings.mobile-app.')) {
+            return false;
+        }
+
+        // Admins also manage Customer Divisions and Customer Types. They open them from the Settings page,
+        // which only shows them those sections. Every other Settings screen stays Super Admin only.
+        if ($name === 'settings.index'
+            || str_starts_with($name, 'settings.divisions.')
+            || str_starts_with($name, 'settings.customer-types.')) {
             return false;
         }
 

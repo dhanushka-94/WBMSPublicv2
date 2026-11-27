@@ -5,6 +5,7 @@
 @section('content')
 <div class="min-h-screen bg-gray-50 py-8">
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        @include('sms.partials.flash')
         <!-- Header -->
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
             <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-lg">
@@ -176,8 +177,8 @@
                     </div>
                     <div class="flex items-center text-sm text-gray-500">
                         <i class="fas fa-info-circle mr-2"></i>
-                        Message Length: {{ strlen($sms_notification->message) }} characters
-                        ({{ ceil(strlen($sms_notification->message) / 160) }} SMS{{ ceil(strlen($sms_notification->message) / 160) > 1 ? ' parts' : '' }})
+                        Message length: {{ mb_strlen($sms_notification->message) }} characters
+                        ({{ max(1, (int) $sms_notification->segments) }} {{ \Illuminate\Support\Str::plural('segment', max(1, (int) $sms_notification->segments)) }}@if($sms_notification->status === 'sent'), Rs. {{ number_format($sms_notification->charged_amount, 2) }}@endif)
                     </div>
                 </div>
 
@@ -209,11 +210,14 @@
                                     <span class="text-sm text-gray-400">N/A</span>
                                 @endif
                             </div>
-                            @if($sms_notification->error_message)
+                            @if($sms_notification->failure_reason)
                             <div>
-                                <span class="text-sm font-medium text-gray-600 block mb-2">Error Message:</span>
+                                <span class="text-sm font-medium text-gray-600 block mb-2">Why it failed:</span>
                                 <div class="bg-red-50 border border-red-200 rounded-md p-3">
-                                    <p class="text-sm text-red-800">{{ $sms_notification->error_message }}</p>
+                                    <p class="text-sm text-red-800">{{ $sms_notification->failure_reason }}</p>
+                                    @if($sms_notification->failure_hint)
+                                        <p class="mt-1 text-xs text-red-700">{{ $sms_notification->failure_hint }}</p>
+                                    @endif
                                 </div>
                             </div>
                             @endif
@@ -229,11 +233,19 @@
                             @if($sms_notification->status === 'failed')
                                 <form method="POST" action="{{ route('sms.resend', $sms_notification) }}">
                                     @csrf
-                                    @method('PATCH')
                                     <button type="submit" 
                                             class="w-full bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-md font-medium transition duration-200 flex items-center justify-center" 
                                             onclick="return confirm('Resend this SMS message?')">
                                         <i class="fas fa-redo mr-2"></i>Resend SMS
+                                    </button>
+                                </form>
+                            @elseif($sms_notification->status === 'sent')
+                                <form method="POST" action="{{ route('sms.send-again', $sms_notification) }}">
+                                    @csrf
+                                    <button type="submit"
+                                            class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md font-medium transition duration-200 flex items-center justify-center"
+                                            onclick="return confirm('Send this SMS again to {{ $sms_notification->phone_number }}?\n\nIt was already delivered, so the customer will receive it twice and it is charged again (about Rs. {{ number_format(max(1, (int) $sms_notification->segments) * (float) config('sms.cost_per_segment', 0), 2) }}).')">
+                                        <i class="fas fa-paper-plane mr-2"></i>Send Again
                                     </button>
                                 </form>
                             @endif

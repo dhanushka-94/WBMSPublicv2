@@ -16,6 +16,7 @@ use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\MobileApiDocsController;
 use App\Http\Controllers\SmsNotificationController;
 use App\Http\Controllers\MonthlyActiveReportController;
+use App\Http\Controllers\CustomerSummaryReportController;
 use App\Http\Controllers\ReaderRouteReportController;
 use App\Http\Controllers\ReaderStatisticsController;
 use App\Http\Controllers\OfficeReportController;
@@ -23,6 +24,7 @@ use App\Http\Controllers\ReportHubController;
 use App\Http\Controllers\BulkSmsController;
 use App\Http\Controllers\SmsLinkController;
 use App\Http\Controllers\SmsSettingsController;
+use App\Http\Controllers\SmsUsageController;
 use App\Http\Controllers\SmsTemplateController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PaymentCollectionController;
@@ -116,6 +118,7 @@ Route::middleware(['auth', 'verified', 'system.check'])->group(function () {
         Route::put('/map-key', [SettingsController::class, 'updateMapKey'])->name('map-key');
         Route::put('/reading-limit', [SettingsController::class, 'updateReadingLimit'])->name('reading-limit');
         Route::put('/mobile-maintenance', [SettingsController::class, 'updateMobileMaintenance'])->name('mobile-maintenance');
+        Route::put('/initial-readings-access', [SettingsController::class, 'updateInitialReadingsAccess'])->name('initial-readings-access');
         
         // Division routes
         Route::post('/divisions', [SettingsController::class, 'storeDivision'])->name('divisions.store');
@@ -155,6 +158,7 @@ Route::middleware(['auth', 'verified', 'system.check'])->group(function () {
     Route::post('/customers', [CustomerController::class, 'store'])->name('customers.store');
     Route::get('/customers/{customer}/edit', [CustomerController::class, 'edit'])->name('customers.edit');
     Route::put('/customers/{customer}', [CustomerController::class, 'update'])->name('customers.update');
+    Route::post('/customers/{customer}/wallet', [CustomerController::class, 'adjustWallet'])->name('customers.wallet.adjust');
     Route::post('/customers/{customer}/disconnect', [CustomerController::class, 'disconnect'])->name('customers.disconnect');
     Route::post('/customers/{customer}/reconnect', [CustomerController::class, 'reconnect'])->name('customers.reconnect');
     Route::delete('/customers/{customer}', [CustomerController::class, 'destroy'])->name('customers.destroy');
@@ -215,9 +219,15 @@ Route::middleware(['auth', 'verified', 'system.check'])->group(function () {
         ->names('sms')
         ->except(['create', 'edit']);
     Route::get('sms/statistics', [SmsNotificationController::class, 'statistics'])->name('sms.statistics');
+    Route::get('sms/usage', [SmsUsageController::class, 'index'])->name('sms.usage');
+    Route::get('sms/usage/export', [SmsUsageController::class, 'export'])->name('sms.usage.export');
     Route::post('sms/export', [SmsNotificationController::class, 'export']);
-    Route::post('sms/bulk-delete', [SmsNotificationController::class, 'bulkDelete'])->name('sms.bulk-delete');
+    Route::get('sms/failed', [SmsNotificationController::class, 'failed'])->name('sms.failed');
+    Route::get('sms/archive/{month}', [SmsNotificationController::class, 'downloadMonth'])->where('month', '\d{4}-\d{2}')->name('sms.archive');
+    Route::post('sms/bulk-resend', [SmsNotificationController::class, 'bulkResend'])->name('sms.bulk-resend');
+    Route::delete('sms/bulk-delete', [SmsNotificationController::class, 'bulkDelete'])->name('sms.bulk-delete');
     Route::post('sms/{sms_notification}/resend', [SmsNotificationController::class, 'resend'])->name('sms.resend');
+    Route::post('sms/{sms_notification}/send-again', [SmsNotificationController::class, 'sendAgain'])->name('sms.send-again');
     Route::get('sms/templates', [SmsTemplateController::class, 'index'])->name('sms.templates');
     Route::put('sms/templates/{template}', [SmsTemplateController::class, 'update'])->name('sms.templates.update');
     Route::get('sms/settings', [SmsSettingsController::class, 'edit'])->name('sms.settings');
@@ -240,6 +250,9 @@ Route::middleware(['auth', 'verified', 'system.check'])->group(function () {
     Route::get('reports/office/collection-range/export', [OfficeReportController::class, 'exportCollectionRange'])
         ->name('reports.office.collection-range.export');
     Route::get('reports/office/{report}', [OfficeReportController::class, 'show'])->name('reports.office');
+    Route::get('reports/customer-summary', [CustomerSummaryReportController::class, 'index'])->name('reports.customer-summary');
+    Route::get('reports/customer-summary/pdf', [CustomerSummaryReportController::class, 'pdf'])->name('reports.customer-summary.pdf');
+    Route::get('reports/customer-summary/excel', [CustomerSummaryReportController::class, 'excel'])->name('reports.customer-summary.excel');
     Route::get('reports/monthly-active', [MonthlyActiveReportController::class, 'index'])->name('reports.monthly-active');
     Route::get('reports/monthly-active/export', [MonthlyActiveReportController::class, 'export'])->name('reports.monthly-active.export');
     Route::get('reports/monthly-active/customers', [MonthlyActiveReportController::class, 'getMonthlyActiveCustomers'])->name('reports.monthly-active.customers');
@@ -254,10 +267,11 @@ Route::middleware(['auth', 'verified', 'system.check'])->group(function () {
     Route::get('activity-logs/user/{user}', [ActivityLogController::class, 'userActivity'])->name('activity-logs.user');
     Route::get('activity-logs/{activity}', [ActivityLogController::class, 'show'])->name('activity-logs.show');
 
-    // Mobile API docs — admin only
+    // Mobile API docs � admin only
     Route::get('mobile-api', [MobileApiDocsController::class, 'index'])
         ->middleware('admin')
         ->name('mobile-api.index');
 });
 
 require __DIR__.'/auth.php';
+

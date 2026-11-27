@@ -3,960 +3,622 @@
 @section('title', 'System Settings')
 
 @section('content')
-<div class="mx-auto">
-    <!-- Page Header -->
-    <div class="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 rounded-xl shadow-2xl p-8 mb-8 relative overflow-hidden">
-        <!-- Background Pattern -->
-        <div class="absolute inset-0 opacity-10">
-            <div class="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/20 to-transparent"></div>
-            <div class="absolute top-4 right-4 w-32 h-32 bg-white/10 rounded-full blur-xl"></div>
-            <div class="absolute bottom-4 left-4 w-24 h-24 bg-white/10 rounded-full blur-lg"></div>
-        </div>
-        
-        <div class="relative z-10 flex justify-between items-center">
+@php
+    // Admins see Rates, Download Mobile App, Customer Divisions and Customer Types.
+    // Everything else is Super Admin only.
+    $isSuper = auth()->user()->isSuperAdmin();
+    $systemOff = ! \App\Helpers\SystemConfig::isSystemEnabled();
+
+    $defaultDay = (int) \App\Models\SystemConfiguration::getDefaultBillingDay();
+    $suffix = in_array($defaultDay % 100, [11, 12, 13], true)
+        ? 'th'
+        : (['1' => 'st', '2' => 'nd', '3' => 'rd'][$defaultDay % 10] ?? 'th');
+    $mobileRelease = \App\Models\SystemConfiguration::mobileAppRelease();
+
+    $sections = [];
+    if ($isSuper) {
+        $sections[] = ['id' => 'sec-readings', 'label' => 'Meter readings', 'icon' => 'fa-tachometer-alt'];
+    }
+    $sections[] = ['id' => 'sec-reader-app', 'label' => 'Reader app', 'icon' => 'fa-mobile-alt'];
+    $sections[] = ['id' => 'sec-billing', 'label' => 'Billing & rates', 'icon' => 'fa-file-invoice-dollar'];
+    if ($isSuper) {
+        $sections[] = ['id' => 'sec-maps', 'label' => 'Maps', 'icon' => 'fa-map-marker-alt'];
+    }
+    $sections[] = ['id' => 'customer-data', 'label' => 'Customer data', 'icon' => 'fa-database'];
+
+    // State handed to the page script. After a failed save, the form reopens with what was typed and the errors.
+    $oldKind = old('_form');
+    $boot = [
+        'tab' => $oldKind === 'customer-type' ? 'customer-types' : 'divisions',
+        'modal' => in_array($oldKind, ['division', 'customer-type'], true) ? $oldKind : null,
+        'mode' => old('_edit_id') ? 'edit' : 'create',
+        'form' => [
+            'id' => (string) old('_edit_id', ''),
+            'name' => (string) old('name', ''),
+            'custom_id' => (string) old('custom_id', ''),
+            'description' => (string) old('description', ''),
+            'is_active' => $oldKind ? (bool) old('is_active') : true,
+        ],
+        'errors' => [
+            'name' => $oldKind ? (string) $errors->first('name') : '',
+            'custom_id' => $oldKind ? (string) $errors->first('custom_id') : '',
+            'description' => $oldKind ? (string) $errors->first('description') : '',
+        ],
+        'urls' => [
+            'division' => [
+                'store' => route('settings.divisions.store'),
+                'update' => route('settings.divisions.update', ':id'),
+            ],
+            'customer-type' => [
+                'store' => route('settings.customer-types.store'),
+                'update' => route('settings.customer-types.update', ':id'),
+            ],
+        ],
+        'counts' => [
+            'divisions' => $divisions->count(),
+            'customer-types' => $customerTypes->count(),
+        ],
+    ];
+@endphp
+
+<style>[x-cloak] { display: none !important; }</style>
+
+<div class="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8" x-data="settingsPage(@js($boot))"
+     @keydown.escape.window="escapePressed()">
+
+    {{-- Header --}}
+    <div class="mb-6 rounded-xl bg-gradient-to-r from-blue-700 to-indigo-700 p-6 text-white shadow-sm">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex items-center gap-4">
+                <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-white/15">
+                    <i class="fas fa-cogs text-xl"></i>
+                </span>
             <div>
-                <h1 class="text-4xl font-bold text-white mb-2 flex items-center">
-                    <div class="bg-white/20 p-3 rounded-lg mr-4">
-                        <i class="fas fa-cogs text-2xl"></i>
-                    </div>
-                    System Settings
-                </h1>
-                <p class="text-blue-100 text-lg">Manage customer divisions and types with custom reference IDs</p>
-                <div class="flex items-center mt-3 space-x-4">
-                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-white/20 text-white backdrop-blur-sm">
-                        <i class="fas fa-database mr-1"></i>
-                        {{ $divisions->total() + $customerTypes->total() }} Total Records
-                    </span>
-                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-white/20 text-white backdrop-blur-sm">
-                        <i class="fas fa-shield-alt mr-1"></i>
-                        10 Char Limit
-                    </span>
+                    <h1 class="text-2xl font-bold">System Settings</h1>
+                    <p class="text-sm text-blue-100">Control how AquaBill works for the office and the reader app.</p>
                 </div>
             </div>
-            <div class="flex space-x-3">
-                <div class="bg-white/20 backdrop-blur-sm rounded-lg p-4 text-center">
-                    <div class="text-2xl font-bold text-white">{{ $divisions->total() }}</div>
-                    <div class="text-xs text-blue-100">Divisions</div>
-                </div>
-                <div class="bg-white/20 backdrop-blur-sm rounded-lg p-4 text-center">
-                    <div class="text-2xl font-bold text-white">{{ $customerTypes->total() }}</div>
-                    <div class="text-xs text-blue-100">Types</div>
-                </div>
+            <div class="flex flex-wrap gap-2 text-xs font-medium">
+                @if($isSuper)
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5">
+                        <span class="h-2 w-2 rounded-full {{ $systemOff ? 'bg-red-400' : 'bg-green-400' }}"></span>
+                        System {{ $systemOff ? 'disabled' : 'active' }}
+                    </span>
+                    <a href="#sec-reader-app" @click.prevent="go('sec-reader-app')" class="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 hover:bg-white/25">
+                        <span class="h-2 w-2 rounded-full {{ $mobileAppMaintenance ? 'bg-amber-400' : 'bg-green-400' }}"></span>
+                        Reader app {{ $mobileAppMaintenance ? 'in maintenance' : 'open' }}
+                    </a>
+                @endif
+                <span class="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5">
+                    <i class="fas fa-map-marked-alt"></i>{{ $divisions->total() }} {{ \Illuminate\Support\Str::plural('division', $divisions->total()) }}
+                </span>
+                <span class="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5">
+                    <i class="fas fa-tags"></i>{{ $customerTypes->total() }} customer {{ \Illuminate\Support\Str::plural('type', $customerTypes->total()) }}
+                </span>
             </div>
         </div>
     </div>
 
-    <!-- Alert Messages -->
+    {{-- Flash messages --}}
     @if(session('success'))
-        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
-            <i class="fas fa-check-circle mr-2"></i>{{ session('success') }}
+        <div x-data="{ show: true }" x-init="setTimeout(() => show = false, 6000)" x-show="show" x-transition.opacity role="status"
+             class="mb-4 flex items-start gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+            <i class="fas fa-check-circle mt-0.5"></i>
+            <span class="flex-1">{{ session('success') }}</span>
+            <button type="button" @click="show = false" class="text-green-700 hover:text-green-900" aria-label="Dismiss"><i class="fas fa-times"></i></button>
         </div>
     @endif
-
     @if(session('error'))
-        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-            <i class="fas fa-exclamation-circle mr-2"></i>{{ session('error') }}
+        <div x-data="{ show: true }" x-show="show" x-transition.opacity role="alert"
+             class="mb-4 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            <i class="fas fa-exclamation-circle mt-0.5"></i>
+            <span class="flex-1">{{ session('error') }}</span>
+            <button type="button" @click="show = false" class="text-red-700 hover:text-red-900" aria-label="Dismiss"><i class="fas fa-times"></i></button>
         </div>
     @endif
 
-    <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
-        <h2 class="text-lg font-semibold text-gray-900">Map API key</h2>
-        <p class="mt-1 text-sm text-gray-600">Google Maps key for the meter map, meter location, and meter details. Leave the box blank to keep the saved key.</p>
-        <form method="POST" action="{{ route('settings.map-key') }}" class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
-            @csrf
-            @method('PUT')
-            <div class="flex-1">
-                <label for="google_maps_api_key" class="block text-sm font-medium text-gray-700 mb-1">Google Maps API key</label>
-                <input type="password" name="google_maps_api_key" id="google_maps_api_key" autocomplete="off"
-                       placeholder="{{ $mapKeySaved ? 'Saved key is hidden' : 'Paste the API key' }}"
-                       class="w-full rounded-md border-gray-300">
-                @error('google_maps_api_key')
-                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                @enderror
-                <p class="mt-1 text-xs text-gray-500">{{ $mapKeySaved ? 'A key is saved.' : 'No key is saved yet.' }}</p>
+    {{-- Jump to a section --}}
+    <nav class="mb-8 flex gap-2 overflow-x-auto pb-1" aria-label="Settings sections">
+        @foreach($sections as $section)
+            <a href="#{{ $section['id'] }}" @click.prevent="go('{{ $section['id'] }}')"
+               :class="active === '{{ $section['id'] }}' ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'"
+               class="inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium shadow-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
+                <i class="fas {{ $section['icon'] }} text-xs"></i>{{ $section['label'] }}
+            </a>
+        @endforeach
+    </nav>
+
+    {{-- Meter readings (Super Admin) --}}
+    @if($isSuper)
+        <section id="sec-readings" data-section class="mb-10 scroll-mt-6">
+            <div class="mb-3">
+                <h2 class="text-base font-semibold text-gray-900">Meter readings</h2>
+                <p class="text-sm text-gray-500">Rules for when and by whom readings can be entered.</p>
+                </div>
+            <div class="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white shadow-sm">
+                @include('settings.partials.toggle-row', [
+                    'action' => route('settings.reading-limit'),
+                    'name' => 'one_reading_per_month',
+                    'checked' => $oneReadingPerMonth,
+                    'title' => 'One reading per meter each month',
+                    'text' => 'Allow only one reading for each meter in a calendar month. A second reading on the same day is always blocked.',
+                    'state' => $oneReadingPerMonth
+                        ? 'On: the office form and the phone reject a second reading in the same month.'
+                        : 'Off: a meter can be read again later in the same month.',
+                    'badgeOn' => 'One per month', 'badgeOff' => 'Several allowed',
+                    'toneOn' => 'blue', 'toneOff' => 'gray',
+                    'confirmOn' => ['title' => 'Allow only one reading per month?', 'message' => 'The office form and the reader app will reject a second reading for the same meter in the same month.', 'yes' => 'Yes, limit it'],
+                    'confirmOff' => ['title' => 'Allow several readings per month?', 'message' => 'A meter can be read again later in the same month. A second reading on the same day is still blocked.', 'yes' => 'Yes, allow it'],
+                ])
+                @include('settings.partials.toggle-row', [
+                    'action' => route('settings.initial-readings-access'),
+                    'name' => 'initial_readings_open',
+                    'checked' => $initialReadingsOpen,
+                    'title' => 'Initial Readings page',
+                    'text' => 'Choose whether other users can open the Initial Meter Readings page and save on it. The Super Admin can always open it.',
+                    'state' => $initialReadingsOpen
+                        ? 'On: users with access to meter readings can open Initial Readings.'
+                        : 'Off: only the Super Admin can open Initial Readings. The menu links are hidden for everyone else, Admin included.',
+                    'badgeOn' => 'Open to others', 'badgeOff' => 'Closed',
+                    'toneOn' => 'green', 'toneOff' => 'amber',
+                    'confirmOn' => ['title' => 'Open Initial Readings to other users?', 'message' => 'Users who could open it before will be able to open it and save again.', 'yes' => 'Yes, open it'],
+                    'confirmOff' => ['title' => 'Close Initial Readings?', 'message' => 'Only the Super Admin will be able to open it. The menu links are hidden for everyone else, Admin included.', 'yes' => 'Yes, close it', 'tone' => 'amber'],
+                ])
             </div>
-            <button type="submit" class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-2 font-medium text-white hover:bg-blue-700">
-                Save key
-            </button>
-        </form>
-    </div>
+        </section>
+    @endif
 
-    <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
-        <h2 class="text-lg font-semibold text-gray-900">Reader app maintenance</h2>
-        <p class="mt-1 text-sm text-gray-600">Turn this on to put the meter reader mobile app in maintenance. The office website stays open. The phone receives <span class="font-medium">mobile_app_maintenance</span> from the API and reading and payment calls are refused until you turn this off.</p>
-        <form method="POST" action="{{ route('settings.mobile-maintenance') }}" class="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            @csrf
-            @method('PUT')
-            <input type="hidden" name="mobile_app_maintenance" value="0">
-            <label class="inline-flex items-center gap-3 text-sm font-medium text-gray-800">
-                <input type="checkbox" name="mobile_app_maintenance" value="1" class="rounded border-gray-300 text-blue-600" {{ $mobileAppMaintenance ? 'checked' : '' }}>
-                Maintenance mode for the reader app
-            </label>
-            <button type="submit" class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-2 font-medium text-white hover:bg-blue-700">
-                Save maintenance
-            </button>
-        </form>
-        <p class="mt-3 text-sm {{ $mobileAppMaintenance ? 'text-amber-700' : 'text-gray-600' }}">
-            {{ $mobileAppMaintenance ? 'On: the reader app is in maintenance.' : 'Off: the reader app can sign in and submit readings.' }}
-        </p>
-    </div>
+    {{-- Reader mobile app --}}
+    <section id="sec-reader-app" data-section class="mb-10 scroll-mt-6">
+        <div class="mb-3">
+            <h2 class="text-base font-semibold text-gray-900">Reader mobile app</h2>
+            <p class="text-sm text-gray-500">Availability of the meter reader app and where to get it.</p>
+        </div>
+        <div class="space-y-4">
+            @if($isSuper)
+                <div class="rounded-xl border border-gray-200 bg-white shadow-sm">
+                    @include('settings.partials.toggle-row', [
+                        'action' => route('settings.mobile-maintenance'),
+                        'name' => 'mobile_app_maintenance',
+                        'checked' => $mobileAppMaintenance,
+                        'title' => 'Reader app maintenance',
+                        'text' => 'Readers can still sign in, but reading and payment calls are refused with a maintenance message. The office website stays open.',
+                        'state' => $mobileAppMaintenance
+                            ? 'On: the reader app is in maintenance.'
+                            : 'Off: the reader app can sign in and submit readings.',
+                        'badgeOn' => 'In maintenance', 'badgeOff' => 'Open',
+                        'toneOn' => 'amber', 'toneOff' => 'green',
+                        'disabled' => $systemOff,
+                        'note' => $systemOff
+                            ? 'The system is disabled, so the reader app is held in maintenance automatically. It goes back to its previous state when you turn the system on.'
+                            : null,
+                        'confirmOn' => ['title' => 'Put the reader app in maintenance?', 'message' => 'Readers can sign in but cannot submit readings or payments until you turn this off.', 'yes' => 'Yes, start maintenance', 'tone' => 'amber'],
+                        'confirmOff' => ['title' => 'Open the reader app again?', 'message' => 'Readers can submit readings and payments again.', 'yes' => 'Yes, open it'],
+                    ])
+                </div>
+            @endif
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                @include('settings.partials.link-card', [
+                    'href' => route('settings.mobile-app'),
+                    'icon' => 'fa-mobile-alt',
+                    'tone' => 'teal',
+                    'title' => 'Download Mobile App',
+                    'text' => 'Reader APK for admins. The Super Admin uploads new versions.',
+                    'stat' => $mobileRelease['version'] ? 'Version '.$mobileRelease['version'] : 'No APK uploaded yet',
+                    'statIcon' => 'fa-tag',
+                ])
+            </div>
+        </div>
+    </section>
 
-    <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
-        <h2 class="text-lg font-semibold text-gray-900">Meter readings per month</h2>
-        <p class="mt-1 text-sm text-gray-600">Turn this on to allow one reading for each meter in a month. Turn it off to allow several readings in the same month. A second reading on the same day is still blocked.</p>
-        <form method="POST" action="{{ route('settings.reading-limit') }}" class="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            @csrf
-            @method('PUT')
-            <input type="hidden" name="one_reading_per_month" value="0">
-            <label class="inline-flex items-center gap-3 text-sm font-medium text-gray-800">
-                <input type="checkbox" name="one_reading_per_month" value="1" class="rounded border-gray-300 text-blue-600" {{ $oneReadingPerMonth ? 'checked' : '' }}>
-                One reading per meter each month
-            </label>
-            <button type="submit" class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-2 font-medium text-white hover:bg-blue-700">
-                Save reading rule
-            </button>
-        </form>
-        <p class="mt-3 text-sm {{ $oneReadingPerMonth ? 'text-amber-700' : 'text-gray-600' }}">
-            {{ $oneReadingPerMonth ? 'On: the office form and the phone reject a second reading in the same month.' : 'Off: a meter can be read again later in the same month.' }}
-        </p>
-    </div>
-
-    <!-- Quick Access Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8 animate-fade-in-up">
-        <!-- Rate Management Card -->
-        <div class="bg-white rounded-xl shadow-lg border border-gray-200 hover:shadow-xl hover:border-purple-200 transition-all duration-300 transform hover:-translate-y-1 group">
-            <div class="p-6">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <div class="flex items-center justify-center h-12 w-12 rounded-lg bg-gradient-to-br from-purple-100 to-purple-200 group-hover:from-purple-200 group-hover:to-purple-300 transition-all duration-300">
-                            <i class="fas fa-calculator text-purple-600 text-xl group-hover:scale-110 transition-transform duration-300"></i>
+    {{-- Billing and rates --}}
+    <section id="sec-billing" data-section class="mb-10 scroll-mt-6">
+        <div class="mb-3">
+            <h2 class="text-base font-semibold text-gray-900">Billing & rates</h2>
+            <p class="text-sm text-gray-500">Tariffs and when customers are billed.</p>
                         </div>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            @include('settings.partials.link-card', [
+                'href' => route('settings.rates.index'),
+                'icon' => 'fa-calculator',
+                'tone' => 'purple',
+                'title' => 'Rate Management',
+                'text' => 'Unit ranges and billing charges.',
+                'stat' => \App\Models\Rate::active()->count().' active rates',
+                'statIcon' => 'fa-chart-line',
+            ])
+            @if($isSuper)
+                @include('settings.partials.link-card', [
+                    'href' => route('settings.billing.index'),
+                    'icon' => 'fa-calendar-alt',
+                    'tone' => 'orange',
+                    'title' => 'Billing Settings',
+                    'text' => 'Billing day and auto-billing for each customer.',
+                    'stat' => \App\Models\Customer::where('auto_billing_enabled', true)->count().' auto-enabled',
+                    'statIcon' => 'fa-clock',
+                ])
+                @include('settings.partials.link-card', [
+                    'href' => route('settings.system-billing'),
+                    'icon' => 'fa-sliders-h',
+                    'tone' => 'indigo',
+                    'title' => 'System Billing',
+                    'text' => 'Default billing configuration for new customers.',
+                    'stat' => 'Default billing day: '.$defaultDay.$suffix,
+                    'statIcon' => 'fa-calendar-day',
+                ])
+            @endif
                     </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-semibold text-gray-900">Rate Management</h3>
-                        <p class="text-sm text-gray-600">Manage unit ranges and billing charges</p>
-                    </div>
-                </div>
-                <div class="mt-4">
-                    <a href="{{ route('settings.rates.index') }}" 
-                       class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105">
-                        <i class="fas fa-cog mr-2"></i>Manage Rates
-                    </a>
-                </div>
-                <div class="mt-3 flex items-center text-sm text-gray-500">
-                    <i class="fas fa-chart-line mr-1"></i>
-                    <span>{{ App\Models\Rate::active()->count() }} active rates</span>
-                </div>
-            </div>
-        </div>
+    </section>
 
-        <!-- Billing Settings Card -->
-        <div class="bg-white rounded-xl shadow-lg border border-gray-200 hover:shadow-xl hover:border-orange-200 transition-all duration-300 transform hover:-translate-y-1 group">
-            <div class="p-6">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <div class="flex items-center justify-center h-12 w-12 rounded-lg bg-gradient-to-br from-orange-100 to-orange-200 group-hover:from-orange-200 group-hover:to-orange-300 transition-all duration-300">
-                            <i class="fas fa-calendar-alt text-orange-600 text-xl group-hover:scale-110 transition-transform duration-300"></i>
-                        </div>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-semibold text-gray-900">Billing Settings</h3>
-                        <p class="text-sm text-gray-600">Individual customer billing dates</p>
-                    </div>
-                </div>
-                <div class="mt-4">
-                    <a href="{{ route('settings.billing.index') }}" 
-                       class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105">
-                        <i class="fas fa-calendar mr-2"></i>Manage Billing
-                    </a>
-                </div>
-                <div class="mt-3 flex items-center text-sm text-gray-500">
-                    <i class="fas fa-clock mr-1"></i>
-                    <span>{{ App\Models\Customer::where('auto_billing_enabled', true)->count() }} auto-enabled</span>
-                </div>
+    {{-- Maps (Super Admin) --}}
+    @if($isSuper)
+        <section id="sec-maps" data-section class="mb-10 scroll-mt-6">
+            <div class="mb-3">
+                <h2 class="text-base font-semibold text-gray-900">Maps</h2>
+                <p class="text-sm text-gray-500">Used by the meter map, meter location, and meter details pages.</p>
             </div>
-        </div>
-
-        <!-- System Billing Configuration Card -->
-        <div class="bg-white rounded-xl shadow-lg border border-gray-200 hover:shadow-xl hover:border-indigo-200 transition-all duration-300 transform hover:-translate-y-1 group">
-            <div class="p-6">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <div class="flex items-center justify-center h-12 w-12 rounded-lg bg-gradient-to-br from-indigo-100 to-indigo-200 group-hover:from-indigo-200 group-hover:to-indigo-300 transition-all duration-300">
-                            <i class="fas fa-cogs text-indigo-600 text-xl group-hover:scale-110 transition-transform duration-300"></i>
-                        </div>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-semibold text-gray-900">System Billing</h3>
-                        <p class="text-sm text-gray-600">Default billing configuration</p>
-                    </div>
-                </div>
-                <div class="mt-4">
-                    <a href="{{ route('settings.system-billing') }}" 
-                       class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105">
-                        <i class="fas fa-sliders-h mr-2"></i>Configure System
-                    </a>
-                </div>
-                <div class="mt-3 flex items-center text-sm text-gray-500">
-                    <i class="fas fa-calendar-day mr-1"></i>
-                    @php
-                        $defaultDay = \App\Models\SystemConfiguration::getDefaultBillingDay();
-                        $suffix = $defaultDay == 1 ? 'st' : ($defaultDay == 2 ? 'nd' : ($defaultDay == 3 ? 'rd' : 'th'));
-                    @endphp
-                    <span>{{ $defaultDay }}{{ $suffix }} default</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Reader Mobile App Card -->
-        <div class="bg-white rounded-xl shadow-lg border border-gray-200 hover:shadow-xl hover:border-teal-200 transition-all duration-300 transform hover:-translate-y-1 group">
-            <div class="p-6">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <div class="flex items-center justify-center h-12 w-12 rounded-lg bg-gradient-to-br from-teal-100 to-teal-200 group-hover:from-teal-200 group-hover:to-teal-300 transition-all duration-300">
-                            <i class="fas fa-mobile-alt text-teal-600 text-xl group-hover:scale-110 transition-transform duration-300"></i>
-                        </div>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-semibold text-gray-900">Download Mobile App</h3>
-                        <p class="text-sm text-gray-600">Reader APK for admins; Super Admin uploads</p>
-                    </div>
-                </div>
-                <div class="mt-4">
-                    <a href="{{ route('settings.mobile-app') }}"
-                       class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105">
-                        <i class="fas fa-download mr-2"></i>Open App Page
-                    </a>
-                </div>
-                <div class="mt-3 flex items-center text-sm text-gray-500">
-                    <i class="fas fa-tag mr-1"></i>
-                    @php $mobileRelease = \App\Models\SystemConfiguration::mobileAppRelease(); @endphp
-                    <span>{{ $mobileRelease['version'] ? 'v'.$mobileRelease['version'] : 'No APK uploaded' }}</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Division Management Card -->
-        <div class="bg-white rounded-xl shadow-lg border border-gray-200 hover:shadow-xl hover:border-blue-200 transition-all duration-300 transform hover:-translate-y-1 group">
-            <div class="p-6">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <div class="flex items-center justify-center h-12 w-12 rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 group-hover:from-blue-200 group-hover:to-blue-300 transition-all duration-300">
-                            <i class="fas fa-map-marked-alt text-blue-600 text-xl group-hover:scale-110 transition-transform duration-300"></i>
-                        </div>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-semibold text-gray-900">Customer Divisions</h3>
-                        <p class="text-sm text-gray-600">Geographical area management</p>
-                    </div>
-                </div>
-                <div class="mt-4">
-                    <button onclick="showTab('divisions')" 
-                            class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105">
-                        <i class="fas fa-map mr-2"></i>Manage Divisions
-                    </button>
-                </div>
-                <div class="mt-3 flex items-center text-sm text-gray-500">
-                    <i class="fas fa-building mr-1"></i>
-                    <span>{{ $divisions->total() }} divisions</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Customer Types Card -->
-        <div class="bg-white rounded-xl shadow-lg border border-gray-200 hover:shadow-xl hover:border-green-200 transition-all duration-300 transform hover:-translate-y-1 group">
-            <div class="p-6">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <div class="flex items-center justify-center h-12 w-12 rounded-lg bg-gradient-to-br from-green-100 to-green-200 group-hover:from-green-200 group-hover:to-green-300 transition-all duration-300">
-                            <i class="fas fa-tags text-green-600 text-xl group-hover:scale-110 transition-transform duration-300"></i>
-                        </div>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-semibold text-gray-900">Customer Types</h3>
-                        <p class="text-sm text-gray-600">Customer category management</p>
-                    </div>
-                </div>
-                <div class="mt-4">
-                    <button onclick="showTab('customer-types')" 
-                            class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105">
-                        <i class="fas fa-tag mr-2"></i>Manage Types
-                    </button>
-                </div>
-                <div class="mt-3 flex items-center text-sm text-gray-500">
-                    <i class="fas fa-users mr-1"></i>
-                    <span>{{ $customerTypes->total() }} types</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Tab Navigation -->
-    <div class="bg-white rounded-xl shadow-lg mb-8 overflow-hidden">
-        <div class="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-            <nav class="flex space-x-8 px-8">
-                <button class="tab-btn py-6 px-3 border-b-3 font-semibold text-sm border-blue-500 text-blue-600 flex items-center relative group transition-all duration-300" 
-                        onclick="showTab('divisions')">
-                    <div class="absolute inset-0 bg-blue-50 rounded-t-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <div class="relative z-10 flex items-center">
-                        <i class="fas fa-map-marked-alt mr-2 text-lg"></i>
-                    Customer Divisions
-                        <span class="ml-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs px-3 py-1 rounded-full font-medium shadow-sm">{{ $divisions->total() }}</span>
-                    </div>
-                </button>
-                <button class="tab-btn py-6 px-3 border-b-3 font-semibold text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 flex items-center relative group transition-all duration-300" 
-                        onclick="showTab('customer-types')">
-                    <div class="absolute inset-0 bg-green-50 rounded-t-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <div class="relative z-10 flex items-center">
-                        <i class="fas fa-tags mr-2 text-lg"></i>
-                    Customer Types
-                        <span class="ml-3 bg-gradient-to-r from-gray-400 to-gray-500 text-white text-xs px-3 py-1 rounded-full font-medium shadow-sm">{{ $customerTypes->total() }}</span>
-                    </div>
-                </button>
-            </nav>
-        </div>
-    </div>
-
-    <!-- Divisions Tab -->
-    <div id="divisions-tab" class="tab-content">
-        <div class="bg-white shadow-xl rounded-xl overflow-hidden border border-gray-200">
-            <div class="px-8 py-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 flex justify-between items-center">
-                <div>
-                    <h3 class="text-xl font-semibold text-gray-900 flex items-center">
-                        <div class="bg-blue-100 p-2 rounded-lg mr-3">
-                            <i class="fas fa-map-marked-alt text-blue-600"></i>
-                        </div>
-                        Customer Divisions
-                </h3>
-                    <p class="text-sm text-gray-600 mt-1">Manage geographical areas and regions</p>
-                </div>
-                <button onclick="openModal('division-modal')" 
-                        class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
-                    <i class="fas fa-plus mr-2"></i>Add Division
-                </button>
-            </div>
-            
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gradient-to-r from-gray-50 to-gray-100">
-                        <tr>
-                            <th class="px-8 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                                <div class="flex items-center">
-                                    <i class="fas fa-building mr-2 text-blue-500"></i>
-                                    Division
-                                </div>
-                            </th>
-                            <th class="px-8 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                                <div class="flex items-center">
-                                    <i class="fas fa-hashtag mr-2 text-blue-500"></i>
-                                    Custom ID
-                                </div>
-                            </th>
-                            <th class="px-8 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                                <div class="flex items-center">
-                                    <i class="fas fa-info-circle mr-2 text-blue-500"></i>
-                                    Description
-                                </div>
-                            </th>
-                            <th class="px-8 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                                <div class="flex items-center">
-                                    <i class="fas fa-toggle-on mr-2 text-blue-500"></i>
-                                    Status
-                                </div>
-                            </th>
-                            <th class="px-8 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                                <div class="flex items-center">
-                                    <i class="fas fa-users mr-2 text-blue-500"></i>
-                                    Customers
-                                </div>
-                            </th>
-                            <th class="px-8 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                                <div class="flex items-center">
-                                    <i class="fas fa-cog mr-2 text-blue-500"></i>
-                                    Actions
-                                </div>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-100">
-                        @forelse($divisions as $division)
-                            <tr class="hover:bg-blue-50 transition-colors duration-200">
-                                <td class="px-8 py-5 whitespace-nowrap">
-                                    <div class="flex items-center">
-                                        <div class="bg-blue-100 p-2 rounded-lg mr-3">
-                                            <i class="fas fa-map-marker-alt text-blue-600"></i>
-                                        </div>
-                                        <div class="text-sm font-semibold text-gray-900">{{ $division->name }}</div>
-                                    </div>
-                                </td>
-                                <td class="px-8 py-5 whitespace-nowrap">
-                                    <span class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-bold bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 shadow-sm">
-                                        {{ $division->custom_id }}
-                                    </span>
-                                </td>
-                                <td class="px-8 py-5 whitespace-nowrap text-sm text-gray-600">
-                                    {{ $division->description ?: 'No description' }}
-                                </td>
-                                <td class="px-8 py-5 whitespace-nowrap">
-                                    @if($division->is_active)
-                                        <span class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-semibold bg-gradient-to-r from-green-100 to-green-200 text-green-800 shadow-sm">
-                                            <i class="fas fa-check mr-2"></i>Active
-                                        </span>
-                                    @else
-                                        <span class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-semibold bg-gradient-to-r from-red-100 to-red-200 text-red-800 shadow-sm">
-                                            <i class="fas fa-times mr-2"></i>Inactive
-                                        </span>
-                                    @endif
-                                </td>
-                                <td class="px-8 py-5 whitespace-nowrap">
-                                    <div class="flex items-center">
-                                        <div class="bg-gray-100 p-2 rounded-lg mr-2">
-                                            <i class="fas fa-users text-gray-600"></i>
-                                        </div>
-                                        <span class="text-sm font-semibold text-gray-900">{{ $division->customers()->count() }}</span>
-                                    </div>
-                                </td>
-                                <td class="px-8 py-5 whitespace-nowrap text-sm font-medium">
-                                    <div class="flex items-center space-x-2">
-                                        <button onclick="editDivision(this)"
-                                                class="bg-indigo-100 hover:bg-indigo-200 text-indigo-600 hover:text-indigo-800 p-2 rounded-lg transition-all duration-200 transform hover:scale-105"
-                                                data-id="{{ $division->id }}"
-                                                data-name="{{ htmlspecialchars($division->name, ENT_QUOTES, 'UTF-8') }}"
-                                                data-custom-id="{{ htmlspecialchars($division->custom_id, ENT_QUOTES, 'UTF-8') }}"
-                                                data-description="{{ htmlspecialchars($division->description ?? '', ENT_QUOTES, 'UTF-8') }}"
-                                                data-is-active="{{ $division->is_active ? 'true' : 'false' }}"
-                                                title="Edit Division">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <form action="{{ route('settings.divisions.destroy', $division) }}" method="POST" class="inline">
-                                        @csrf
-                                        @method('DELETE')
-                                            <button type="submit" 
-                                                    class="bg-red-100 hover:bg-red-200 text-red-600 hover:text-red-800 p-2 rounded-lg transition-all duration-200 transform hover:scale-105"
-                                                    title="Delete Division">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </form>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="6" class="px-6 py-4 text-center text-gray-500">
-                                    No divisions found. <button onclick="openModal('division-modal')" class="text-blue-600 hover:text-blue-900">Add the first division</button>
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-            <div class="px-6 py-4">{{ $divisions->links() }}</div>
-        </div>
-    </div>
-
-    <!-- Customer Types Tab -->
-    <div id="customer-types-tab" class="tab-content hidden">
-        <div class="bg-white shadow-xl rounded-xl overflow-hidden border border-gray-200">
-            <div class="px-8 py-6 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50 flex justify-between items-center">
-                <div>
-                    <h3 class="text-xl font-semibold text-gray-900 flex items-center">
-                        <div class="bg-green-100 p-2 rounded-lg mr-3">
-                            <i class="fas fa-tags text-green-600"></i>
-                        </div>
-                        Customer Types
-                </h3>
-                    <p class="text-sm text-gray-600 mt-1">Manage customer categories and classifications</p>
-                </div>
-                <button onclick="openModal('customer-type-modal')" 
-                        class="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
-                    <i class="fas fa-plus mr-2"></i>Add Customer Type
-                </button>
-            </div>
-            
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gradient-to-r from-gray-50 to-gray-100">
-                        <tr>
-                            <th class="px-8 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                                <div class="flex items-center">
-                                    <i class="fas fa-tag mr-2 text-green-500"></i>
-                                    Type
-                                </div>
-                            </th>
-                            <th class="px-8 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                                <div class="flex items-center">
-                                    <i class="fas fa-hashtag mr-2 text-green-500"></i>
-                                    Custom ID
-                                </div>
-                            </th>
-                            <th class="px-8 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                                <div class="flex items-center">
-                                    <i class="fas fa-info-circle mr-2 text-green-500"></i>
-                                    Description
-                                </div>
-                            </th>
-                            <th class="px-8 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                                <div class="flex items-center">
-                                    <i class="fas fa-toggle-on mr-2 text-green-500"></i>
-                                    Status
-                                </div>
-                            </th>
-                            <th class="px-8 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                                <div class="flex items-center">
-                                    <i class="fas fa-users mr-2 text-green-500"></i>
-                                    Customers
-                                </div>
-                            </th>
-                            <th class="px-8 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                                <div class="flex items-center">
-                                    <i class="fas fa-cog mr-2 text-green-500"></i>
-                                    Actions
-                                </div>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-100">
-                        @forelse($customerTypes as $customerType)
-                            <tr class="hover:bg-green-50 transition-colors duration-200">
-                                <td class="px-8 py-5 whitespace-nowrap">
-                                    <div class="flex items-center">
-                                        <div class="bg-green-100 p-2 rounded-lg mr-3">
-                                            <i class="fas fa-tag text-green-600"></i>
-                                        </div>
-                                        <div class="text-sm font-semibold text-gray-900">{{ $customerType->name }}</div>
-                                    </div>
-                                </td>
-                                <td class="px-8 py-5 whitespace-nowrap">
-                                    <span class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-bold bg-gradient-to-r from-green-100 to-green-200 text-green-800 shadow-sm">
-                                        {{ $customerType->custom_id }}
-                                    </span>
-                                </td>
-                                <td class="px-8 py-5 whitespace-nowrap text-sm text-gray-600">
-                                    {{ $customerType->description ?: 'No description' }}
-                                </td>
-                                <td class="px-8 py-5 whitespace-nowrap">
-                                    @if($customerType->is_active)
-                                        <span class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-semibold bg-gradient-to-r from-green-100 to-green-200 text-green-800 shadow-sm">
-                                            <i class="fas fa-check mr-2"></i>Active
-                                        </span>
-                                    @else
-                                        <span class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-semibold bg-gradient-to-r from-red-100 to-red-200 text-red-800 shadow-sm">
-                                            <i class="fas fa-times mr-2"></i>Inactive
-                                        </span>
-                                    @endif
-                                </td>
-                                <td class="px-8 py-5 whitespace-nowrap">
-                                    <div class="flex items-center">
-                                        <div class="bg-gray-100 p-2 rounded-lg mr-2">
-                                            <i class="fas fa-users text-gray-600"></i>
-                                        </div>
-                                        <span class="text-sm font-semibold text-gray-900">{{ $customerType->customers()->count() }}</span>
-                                    </div>
-                                </td>
-                                <td class="px-8 py-5 whitespace-nowrap text-sm font-medium">
-                                    <div class="flex items-center space-x-2">
-                                        <button onclick="editCustomerType(this)"
-                                                class="bg-indigo-100 hover:bg-indigo-200 text-indigo-600 hover:text-indigo-800 p-2 rounded-lg transition-all duration-200 transform hover:scale-105"
-                                                data-id="{{ $customerType->id }}"
-                                                data-name="{{ htmlspecialchars($customerType->name, ENT_QUOTES, 'UTF-8') }}"
-                                                data-custom-id="{{ htmlspecialchars($customerType->custom_id, ENT_QUOTES, 'UTF-8') }}"
-                                                data-description="{{ htmlspecialchars($customerType->description ?? '', ENT_QUOTES, 'UTF-8') }}"
-                                                data-is-active="{{ $customerType->is_active ? 'true' : 'false' }}"
-                                                title="Edit Customer Type">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <form action="{{ route('settings.customer-types.destroy', $customerType) }}" method="POST" class="inline">
-                                        @csrf
-                                        @method('DELETE')
-                                            <button type="submit" 
-                                                    class="bg-red-100 hover:bg-red-200 text-red-600 hover:text-red-800 p-2 rounded-lg transition-all duration-200 transform hover:scale-105"
-                                                    title="Delete Customer Type">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </form>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="6" class="px-6 py-4 text-center text-gray-500">
-                                    No customer types found. <button onclick="openModal('customer-type-modal')" class="text-green-600 hover:text-green-900">Add the first customer type</button>
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-            <div class="px-6 py-4">{{ $customerTypes->links() }}</div>
-        </div>
-    </div>
-</div>
-
-<!-- Division Modal -->
-<div id="division-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm overflow-y-auto h-full w-full hidden z-50">
-    <div class="relative top-20 mx-auto p-0 border-0 w-96 shadow-2xl rounded-xl bg-white overflow-hidden">
-        <div class="bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-4">
-            <h3 class="text-xl font-bold text-white mb-0 flex items-center" id="division-modal-title">
-                <div class="bg-white/20 p-2 rounded-lg mr-3">
-                    <i class="fas fa-map-marked-alt"></i>
-                </div>
-                Add Division
-            </h3>
-        </div>
-        <div class="p-6">
-            <form id="division-form" action="{{ route('settings.divisions.store') }}" method="POST">
+            <form method="POST" action="{{ route('settings.map-key') }}" x-data="{ show: false }" class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
                 @csrf
-                <div id="division-method"></div>
-                
-                <div class="mb-6">
-                    <label for="division_name" class="block text-sm font-semibold text-gray-700 mb-2">Division Name</label>
-                    <input type="text" id="division_name" name="name" required 
-                           class="w-full px-4 py-3 rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200">
+                @method('PUT')
+                <div class="flex flex-wrap items-center gap-2">
+                    <label for="google_maps_api_key" class="text-sm font-semibold text-gray-900">Google Maps API key</label>
+                    @if($mapKeySaved)
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                            <i class="fas fa-check text-[10px]"></i>Key saved
+                        </span>
+                    @else
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20">
+                            <i class="fas fa-exclamation text-[10px]"></i>No key yet
+                        </span>
+                    @endif
                 </div>
-                
-                <div class="mb-6">
-                    <label for="division_custom_id" class="block text-sm font-semibold text-gray-700 mb-2">Custom ID (Max 10 chars)</label>
-                    <input type="text" id="division_custom_id" name="custom_id" required maxlength="10"
-                           class="w-full px-4 py-3 rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200">
-                </div>
-                
-                <div class="mb-6">
-                    <label for="division_description" class="block text-sm font-semibold text-gray-700 mb-2">Description</label>
-                    <textarea id="division_description" name="description" rows="3"
-                              class="w-full px-4 py-3 rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 resize-none"></textarea>
-                </div>
-                
-                <div class="mb-6">
-                    <label class="flex items-center cursor-pointer">
-                        <input type="checkbox" id="division_is_active" name="is_active" value="1" checked
-                               class="w-5 h-5 rounded border-2 border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-200 transition-all duration-200">
-                        <span class="ml-3 text-sm font-medium text-gray-700">Active</span>
-                    </label>
-                </div>
-                
-                <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-                    <button type="button" onclick="closeModal('division-modal')"
-                            class="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg transition-all duration-200 transform hover:scale-105">
-                        Cancel
+                <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-start">
+                    <div class="flex-1">
+                        <div class="relative">
+                            <input :type="show ? 'text' : 'password'" name="google_maps_api_key" id="google_maps_api_key" autocomplete="off"
+                                   placeholder="{{ $mapKeySaved ? 'Saved key is hidden. Type a new one to replace it.' : 'Paste the API key' }}"
+                                   class="w-full rounded-lg border-gray-300 pr-10 text-sm focus:border-blue-500 focus:ring-blue-500">
+                            <button type="button" @click="show = !show" class="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1.5 text-gray-400 hover:text-gray-600"
+                                    :aria-label="show ? 'Hide key' : 'Show key'">
+                                <i class="fas" :class="show ? 'fa-eye-slash' : 'fa-eye'"></i>
                     </button>
-                    <button type="submit"
-                            class="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
-                        <i class="fas fa-save mr-2"></i>Save
+                        </div>
+                        @error('google_maps_api_key')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                        <p class="mt-1.5 text-xs text-gray-500">Leave the box blank to keep the saved key.</p>
+                    </div>
+                    <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2">
+                        <i class="fas fa-save text-xs"></i>Save key
+                    </button>
+                </div>
+            </form>
+        </section>
+    @endif
+
+    {{-- Customer data: divisions and customer types --}}
+    <section id="customer-data" data-section class="mb-10 scroll-mt-6">
+        <div class="mb-3">
+            <h2 class="text-base font-semibold text-gray-900">Customer data</h2>
+            <p class="text-sm text-gray-500">Divisions and customer types, each with a short reference ID.</p>
+        </div>
+        <div class="rounded-xl border border-gray-200 bg-white shadow-sm">
+            <div class="flex gap-1 overflow-x-auto overflow-y-hidden border-b border-gray-200 px-2 sm:px-4" role="tablist" aria-label="Customer data">
+                <button type="button" role="tab" id="tab-divisions" :aria-selected="tab === 'divisions'" aria-controls="panel-divisions" @click="setTab('divisions')"
+                        :class="tab === 'divisions' ? 'border-blue-600 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-700'"
+                        class="-mb-px inline-flex shrink-0 items-center gap-2 border-b-2 px-3 py-3.5 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
+                    <i class="fas fa-map-marked-alt"></i>Divisions
+                    <span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">{{ $divisions->total() }}</span>
+                </button>
+                <button type="button" role="tab" id="tab-customer-types" :aria-selected="tab === 'customer-types'" aria-controls="panel-customer-types" @click="setTab('customer-types')"
+                        :class="tab === 'customer-types' ? 'border-blue-600 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-700'"
+                        class="-mb-px inline-flex shrink-0 items-center gap-2 border-b-2 px-3 py-3.5 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
+                    <i class="fas fa-tags"></i>Customer types
+                    <span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">{{ $customerTypes->total() }}</span>
+                </button>
+            </div>
+            
+            @include('settings.partials.reference-table', [
+                'kind' => 'division',
+                'tabKey' => 'divisions',
+                'items' => $divisions,
+                'label' => 'Division',
+                'plural' => 'divisions',
+                'icon' => 'fa-map-marked-alt',
+                'emptyHelp' => 'Add one to group customers by area.',
+                'destroyRoute' => 'settings.divisions.destroy',
+                'deleteWarning' => 'They will be left with no division, and any reader routes for it are removed.',
+            ])
+            @include('settings.partials.reference-table', [
+                'kind' => 'customer-type',
+                'tabKey' => 'customer-types',
+                'items' => $customerTypes,
+                'label' => 'Customer type',
+                'plural' => 'customer types',
+                'icon' => 'fa-tags',
+                'emptyHelp' => 'Add one to group customers by category.',
+                'destroyRoute' => 'settings.customer-types.destroy',
+                'deleteWarning' => 'They will be left with no customer type, and the customer type decides which tariff a customer is billed on.',
+            ])
+        </div>
+    </section>
+
+    {{-- Add / edit a division or customer type --}}
+    <div x-show="modal" x-cloak x-transition.opacity
+         class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-gray-900/50 p-4 sm:items-center"
+         @click.self="closeModal()" role="dialog" aria-modal="true" :aria-label="modalTitle">
+        <div class="my-8 w-full max-w-md rounded-xl bg-white shadow-2xl">
+            <div class="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+                <h3 class="flex items-center gap-3 text-lg font-semibold text-gray-900">
+                    <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                        <i class="fas" :class="modal === 'division' ? 'fa-map-marked-alt' : 'fa-tags'"></i>
+                    </span>
+                    <span x-text="modalTitle"></span>
+                </h3>
+                <button type="button" @click="closeModal()" class="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600" aria-label="Close"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <form method="POST" :action="actionUrl" @submit="saving = true" class="px-6 py-5">
+                @csrf
+                <input type="hidden" name="_form" :value="modal">
+                <input type="hidden" name="_edit_id" :value="mode === 'edit' ? form.id : ''">
+                <template x-if="mode === 'edit'"><input type="hidden" name="_method" value="PUT"></template>
+
+                <div class="mb-4">
+                    <label for="ref_name" class="mb-1 block text-sm font-medium text-gray-700">Name</label>
+                    <input type="text" id="ref_name" name="name" x-model="form.name" x-ref="nameInput" required maxlength="255"
+                           :class="errors.name ? 'border-red-400' : 'border-gray-300'"
+                           class="w-full rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500">
+                    <p x-show="errors.name" x-text="errors.name" class="mt-1 text-sm text-red-600"></p>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="ref_custom_id" class="mb-1 flex items-center justify-between text-sm font-medium text-gray-700">
+                        <span>Reference ID</span>
+                        <span class="text-xs font-normal text-gray-400"><span x-text="form.custom_id.length"></span>/10</span>
+                    </label>
+                    <input type="text" id="ref_custom_id" name="custom_id" x-model="form.custom_id" required maxlength="10" autocomplete="off"
+                           @input="form.custom_id = form.custom_id.toUpperCase().replace(/[^A-Z0-9]/g, '')"
+                           :class="errors.custom_id ? 'border-red-400' : 'border-gray-300'"
+                           class="w-full rounded-lg font-mono text-sm uppercase focus:border-blue-500 focus:ring-blue-500">
+                    <p x-show="errors.custom_id" x-text="errors.custom_id" class="mt-1 text-sm text-red-600"></p>
+                    <p x-show="!errors.custom_id" class="mt-1 text-xs text-gray-500">A short code. Letters and numbers only, up to 10.</p>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="ref_description" class="mb-1 flex items-center justify-between text-sm font-medium text-gray-700">
+                        <span>Description <span class="font-normal text-gray-400">(optional)</span></span>
+                        <span class="text-xs font-normal text-gray-400"><span x-text="form.description.length"></span>/500</span>
+                    </label>
+                    <textarea id="ref_description" name="description" rows="3" maxlength="500" x-model="form.description"
+                              :class="errors.description ? 'border-red-400' : 'border-gray-300'"
+                              class="w-full resize-none rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500"></textarea>
+                    <p x-show="errors.description" x-text="errors.description" class="mt-1 text-sm text-red-600"></p>
+                </div>
+                
+                <label class="mb-5 flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 px-4 py-3">
+                    <input type="checkbox" name="is_active" value="1" x-model="form.is_active" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                    <span>
+                        <span class="block text-sm font-medium text-gray-800">Active</span>
+                        <span class="block text-xs text-gray-500">Inactive items stay on record but are not offered for new customers.</span>
+                    </span>
+                </label>
+
+                <div class="flex justify-end gap-3 border-t border-gray-100 pt-4">
+                    <button type="button" @click="closeModal()" class="rounded-lg bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200">Cancel</button>
+                    <button type="submit" :disabled="saving"
+                            class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60">
+                        <i class="fas" :class="saving ? 'fa-spinner fa-spin' : 'fa-save'"></i>
+                        <span x-text="saving ? 'Saving...' : (mode === 'edit' ? 'Save changes' : 'Add')"></span>
                     </button>
                 </div>
             </form>
         </div>
     </div>
-</div>
 
-<!-- Customer Type Modal -->
-<div id="customer-type-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm overflow-y-auto h-full w-full hidden z-50">
-    <div class="relative top-20 mx-auto p-0 border-0 w-96 shadow-2xl rounded-xl bg-white overflow-hidden">
-        <div class="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-4">
-            <h3 class="text-xl font-bold text-white mb-0 flex items-center" id="customer-type-modal-title">
-                <div class="bg-white/20 p-2 rounded-lg mr-3">
-                    <i class="fas fa-tags"></i>
+    {{-- Yes / No question for switches and deletes --}}
+    <div x-show="confirmBox.open" x-cloak x-transition.opacity
+         class="fixed inset-0 z-[60] flex items-center justify-center bg-gray-900/50 p-4"
+         @click.self="confirmNo()" role="alertdialog" aria-modal="true" aria-labelledby="settings-confirm-title">
+        <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
+            <div class="flex items-start gap-4">
+                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                      :class="confirmBox.tone === 'red' ? 'bg-red-100 text-red-600' : (confirmBox.tone === 'amber' ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600')">
+                    <i class="fas" :class="confirmBox.tone === 'red' ? 'fa-trash' : (confirmBox.tone === 'amber' ? 'fa-exclamation-triangle' : 'fa-question')"></i>
+                </span>
+                <div class="min-w-0">
+                    <h2 id="settings-confirm-title" class="text-lg font-semibold text-gray-900" x-text="confirmBox.title"></h2>
+                    <p class="mt-1 text-sm text-gray-600" x-text="confirmBox.message"></p>
                 </div>
-                Add Customer Type
-            </h3>
-        </div>
-        <div class="p-6">
-            <form id="customer-type-form" action="{{ route('settings.customer-types.store') }}" method="POST">
-                @csrf
-                <div id="customer-type-method"></div>
-                
-                <div class="mb-6">
-                    <label for="customer_type_name" class="block text-sm font-semibold text-gray-700 mb-2">Type Name</label>
-                    <input type="text" id="customer_type_name" name="name" required 
-                           class="w-full px-4 py-3 rounded-lg border-2 border-gray-300 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200">
                 </div>
-                
-                <div class="mb-6">
-                    <label for="customer_type_custom_id" class="block text-sm font-semibold text-gray-700 mb-2">Custom ID (Max 10 chars)</label>
-                    <input type="text" id="customer_type_custom_id" name="custom_id" required maxlength="10"
-                           class="w-full px-4 py-3 rounded-lg border-2 border-gray-300 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200">
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" x-ref="noBtn" @click="confirmNo()" class="rounded-lg bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200">Cancel</button>
+                <button type="button" @click="confirmYes()" x-text="confirmBox.yes"
+                        :class="confirmBox.tone === 'red' ? 'bg-red-600 hover:bg-red-700' : (confirmBox.tone === 'amber' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-blue-600 hover:bg-blue-700')"
+                        class="rounded-lg px-4 py-2 text-sm font-semibold text-white"></button>
                 </div>
-                
-                <div class="mb-6">
-                    <label for="customer_type_description" class="block text-sm font-semibold text-gray-700 mb-2">Description</label>
-                    <textarea id="customer_type_description" name="description" rows="3"
-                              class="w-full px-4 py-3 rounded-lg border-2 border-gray-300 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 resize-none"></textarea>
-                </div>
-                
-                <div class="mb-6">
-                    <label class="flex items-center cursor-pointer">
-                        <input type="checkbox" id="customer_type_is_active" name="is_active" value="1" checked
-                               class="w-5 h-5 rounded border-2 border-gray-300 text-green-600 focus:ring-2 focus:ring-green-200 transition-all duration-200">
-                        <span class="ml-3 text-sm font-medium text-gray-700">Active</span>
-                    </label>
-                </div>
-                
-                <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-                    <button type="button" onclick="closeModal('customer-type-modal')"
-                            class="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg transition-all duration-200 transform hover:scale-105">
-                        Cancel
-                    </button>
-                    <button type="submit"
-                            class="px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
-                        <i class="fas fa-save mr-2"></i>Save
-                    </button>
-                </div>
-            </form>
         </div>
     </div>
 </div>
 
 <script>
-// Tab functionality
-function showTab(tabName) {
-    // Hide all tabs with fade effect
-    document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.classList.add('hidden');
-    });
-    
-    // Show selected tab with fade effect
-    const selectedTab = document.getElementById(tabName + '-tab');
-    selectedTab.classList.remove('hidden');
-    
-    // Update tab buttons
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('border-blue-500', 'text-blue-600');
-        btn.classList.add('border-transparent', 'text-gray-500');
-        
-        // Update badge colors
-        const badge = btn.querySelector('span');
-        if (badge) {
-            badge.classList.remove('bg-gradient-to-r', 'from-blue-500', 'to-blue-600', 'from-green-500', 'to-green-600');
-            badge.classList.add('bg-gradient-to-r', 'from-gray-400', 'to-gray-500');
-        }
-    });
-    
-    // Highlight active tab
-    const activeBtn = event.target.closest('.tab-btn');
-    activeBtn.classList.remove('border-transparent', 'text-gray-500');
-    activeBtn.classList.add('border-blue-500', 'text-blue-600');
-    
-    // Update active tab badge color
-    const activeBadge = activeBtn.querySelector('span');
-    if (activeBadge) {
-        activeBadge.classList.remove('bg-gradient-to-r', 'from-gray-400', 'to-gray-500');
-        if (tabName === 'divisions') {
-            activeBadge.classList.add('bg-gradient-to-r', 'from-blue-500', 'to-blue-600');
-        } else if (tabName === 'customer-types') {
-            activeBadge.classList.add('bg-gradient-to-r', 'from-green-500', 'to-green-600');
-        }
-    }
-}
+document.addEventListener('alpine:init', () => {
+    Alpine.data('settingsPage', (boot) => ({
+        // Customer data tabs and the add / edit form
+        tab: boot.tab,
+        modal: boot.modal,            // null, 'division' or 'customer-type'
+        mode: boot.mode,              // 'create' or 'edit'
+        form: boot.form,
+        errors: boot.errors,
+        urls: boot.urls,
+        saving: false,
+        q: { 'divisions': '', 'customer-types': '' },
+        visible: { 'divisions': boot.counts['divisions'], 'customer-types': boot.counts['customer-types'] },
 
-// Modal functionality
-function openModal(modalId, skipReset = false) {
-    document.getElementById(modalId).classList.remove('hidden');
-    if (!skipReset) {
-    resetForm(modalId);
-    }
-}
+        // Section jump bar
+        active: '',
+        holdUntil: 0,
 
-function closeModal(modalId) {
-    document.getElementById(modalId).classList.add('hidden');
-}
+        // Yes / No question
+        confirmBox: { open: false, title: '', message: '', yes: 'Yes', tone: 'blue', apply: null, cancel: null },
 
-function resetForm(modalId) {
-    console.log('Resetting form for modal:', modalId);
-    
-    if (modalId === 'division-modal') {
-        document.getElementById('division-form').reset();
-        document.getElementById('division-form').action = "{{ route('settings.divisions.store') }}";
-        document.getElementById('division-method').innerHTML = '';
-        document.getElementById('division-modal-title').innerHTML = '<i class="fas fa-map-marked-alt mr-2"></i>Add Division';
-        document.getElementById('division_is_active').checked = true;
-    } else if (modalId === 'customer-type-modal') {
-        document.getElementById('customer-type-form').reset();
-        document.getElementById('customer-type-form').action = "{{ route('settings.customer-types.store') }}";
-        document.getElementById('customer-type-method').innerHTML = '';
-        document.getElementById('customer-type-modal-title').innerHTML = '<i class="fas fa-tags mr-2"></i>Add Customer Type';
-        document.getElementById('customer_type_is_active').checked = true;
-    }
-}
+        init() {
+            const hash = window.location.hash.replace('#', '');
+            if (hash === 'divisions' || hash === 'customer-types') {
+                this.tab = hash;
+                this.active = 'customer-data';
+                this.$nextTick(() => document.getElementById('customer-data')?.scrollIntoView());
+            }
 
-// Edit functions
-function editDivision(button) {
-    try {
-        const id = button.dataset.id;
-        const name = button.dataset.name;
-        const customId = button.dataset.customId;
-        const description = button.dataset.description;
-        const isActive = button.dataset.isActive === 'true';
-        
-        // Debug log
-        console.log('Division edit data:', { id, name, customId, description, isActive });
-        
-        // Validate required data
-        if (!id || !name || !customId) {
-            console.error('Missing required data for division edit:', { id, name, customId });
-            alert('Error: Missing required data. Please refresh the page and try again.');
-            return;
-        }
-        
-    document.getElementById('division_name').value = name;
-    document.getElementById('division_custom_id').value = customId;
-        document.getElementById('division_description').value = description || '';
-    document.getElementById('division_is_active').checked = isActive;
-    
-        // Debug: Verify values are set
-        console.log('Form values set:', {
-            name: document.getElementById('division_name').value,
-            customId: document.getElementById('division_custom_id').value,
-            description: document.getElementById('division_description').value,
-            isActive: document.getElementById('division_is_active').checked
-        });
-    
-        document.getElementById('division-form').action = `{{ route('settings.divisions.update', ':id') }}`.replace(':id', id);
-    document.getElementById('division-method').innerHTML = '@method("PUT")';
-    document.getElementById('division-modal-title').innerHTML = '<i class="fas fa-edit mr-2"></i>Edit Division';
-    
-            openModal('division-modal', true);
-    } catch (error) {
-        console.error('Error in editDivision:', error);
-        alert('Error editing division. Please refresh the page and try again.');
-    }
-}
+            this.$watch('modal', (open) => document.body.classList.toggle('overflow-hidden', !!open));
+            if (this.modal) {
+                document.body.classList.add('overflow-hidden');
+                this.$nextTick(() => this.$refs.nameInput?.focus());
+            }
 
-function editCustomerType(button) {
-    try {
-        const id = button.dataset.id;
-        const name = button.dataset.name;
-        const customId = button.dataset.customId;
-        const description = button.dataset.description;
-        const isActive = button.dataset.isActive === 'true';
-        
-        // Debug log
-        console.log('Customer type edit data:', { id, name, customId, description, isActive });
-        
-        // Validate required data
-        if (!id || !name || !customId) {
-            console.error('Missing required data for customer type edit:', { id, name, customId });
-            alert('Error: Missing required data. Please refresh the page and try again.');
-            return;
-        }
-        
-    document.getElementById('customer_type_name').value = name;
-    document.getElementById('customer_type_custom_id').value = customId;
-        document.getElementById('customer_type_description').value = description || '';
-    document.getElementById('customer_type_is_active').checked = isActive;
-    
-        // Debug: Verify values are set
-        console.log('Form values set:', {
-            name: document.getElementById('customer_type_name').value,
-            customId: document.getElementById('customer_type_custom_id').value,
-            description: document.getElementById('customer_type_description').value,
-            isActive: document.getElementById('customer_type_is_active').checked
-        });
-    
-        document.getElementById('customer-type-form').action = `{{ route('settings.customer-types.update', ':id') }}`.replace(':id', id);
-    document.getElementById('customer-type-method').innerHTML = '@method("PUT")';
-    document.getElementById('customer-type-modal-title').innerHTML = '<i class="fas fa-edit mr-2"></i>Edit Customer Type';
-    
-            openModal('customer-type-modal', true);
-    } catch (error) {
-        console.error('Error in editCustomerType:', error);
-        alert('Error editing customer type. Please refresh the page and try again.');
-    }
-}
+            // Highlight the last section whose top has passed the line near the top of the screen.
+            let queued = false;
+            const spy = () => {
+                queued = false;
+                if (Date.now() < this.holdUntil) return;
+                let current = null;
+                document.querySelectorAll('[data-section]').forEach((el) => {
+                    if (el.getBoundingClientRect().top <= 120) current = el.id;
+                });
+                if (current) this.active = current;
+            };
+            window.addEventListener('scroll', () => {
+                if (!queued) { queued = true; requestAnimationFrame(spy); }
+            }, { passive: true });
+            this.active = this.active || document.querySelector('[data-section]')?.id || '';
+            spy();
+        },
 
-// Auto-uppercase for custom IDs
-document.addEventListener('DOMContentLoaded', function() {
-    ['division_custom_id', 'customer_type_custom_id'].forEach(inputId => {
-        const input = document.getElementById(inputId);
-        if (input) {
-            input.addEventListener('input', function() {
-                this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        go(id) {
+            this.active = id;
+            this.holdUntil = Date.now() + 900; // keep the clicked pill lit while the page scrolls there
+            document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        },
+
+        setTab(name) {
+            this.tab = name;
+            history.replaceState(null, '', '#' + name);
+        },
+
+        // Add / edit
+        get modalTitle() {
+            const what = this.modal === 'division' ? 'division' : 'customer type';
+            return (this.mode === 'edit' ? 'Edit ' : 'Add ') + what;
+        },
+        get actionUrl() {
+            const u = this.urls[this.modal];
+            if (!u) return '';
+            return this.mode === 'edit' ? u.update.replace(':id', this.form.id) : u.store;
+        },
+        openCreate(kind) {
+            this.mode = 'create';
+            this.form = { id: '', name: '', custom_id: '', description: '', is_active: true };
+            this.openModal(kind);
+        },
+        openEdit(kind, data) {
+            this.mode = 'edit';
+            this.form = {
+                id: data.id,
+                name: data.name || '',
+                custom_id: data.customId || '',
+                description: data.description || '',
+                is_active: data.isActive === 'true',
+            };
+            this.openModal(kind);
+        },
+        openModal(kind) {
+            this.errors = { name: '', custom_id: '', description: '' };
+            this.saving = false;
+            this.tab = kind === 'division' ? 'divisions' : 'customer-types';
+            this.modal = kind;
+            this.$nextTick(() => this.$refs.nameInput?.focus());
+        },
+        closeModal() {
+            this.modal = null;
+        },
+
+        // Search inside the table on this page
+        filter(key) {
+            const needle = this.q[key].trim().toLowerCase();
+            let shown = 0;
+            document.querySelectorAll('[data-kind="' + key + '"] tr[data-row]').forEach((row) => {
+                const match = !needle || row.dataset.search.includes(needle);
+                row.classList.toggle('hidden', !match);
+                if (match) shown++;
             });
-        }
-    });
+            this.visible[key] = shown;
+        },
+
+        // Yes / No question
+        ask(opts) {
+            this.confirmBox = {
+                open: true,
+                title: opts.title,
+                message: opts.message || '',
+                yes: opts.yes || 'Yes',
+                tone: opts.tone || 'blue',
+                apply: opts.apply || null,
+                cancel: opts.cancel || null,
+            };
+            this.$nextTick(() => this.$refs.noBtn?.focus());
+        },
+        confirmYes() {
+            const apply = this.confirmBox.apply;
+            this.confirmBox.open = false;
+            if (apply) apply();
+        },
+        confirmNo() {
+            const cancel = this.confirmBox.cancel;
+            this.confirmBox.open = false;
+            if (cancel) cancel();
+        },
+        escapePressed() {
+            if (this.confirmBox.open) return this.confirmNo();
+            if (this.modal) this.closeModal();
+        },
+
+        // A switch was flipped: put it back, ask, and only keep the change on Yes.
+        toggleAsk(event, cfg) {
+            const box = event.target;
+            const want = box.checked;
+            const form = box.form;
+            const c = want ? cfg.on : cfg.off;
+            box.checked = !want;
+            this.ask({
+                title: c.title,
+                message: c.message,
+                yes: c.yes || 'Yes',
+                tone: c.tone || 'blue',
+                apply: () => {
+                    box.checked = want;
+                    form.classList.add('opacity-60', 'pointer-events-none');
+                    form.requestSubmit();
+                },
+            });
+        },
+
+        // Delete with a question that names the record and any customers using it
+        askDelete(event) {
+            const btn = event.currentTarget;
+            const d = btn.dataset;
+            const form = btn.form;
+            const count = parseInt(d.count || '0', 10);
+            this.ask({
+                title: 'Delete ' + d.label + ' "' + d.name + '"?',
+                message: count > 0
+                    ? count + ' customer(s) use it. ' + d.warning + ' This cannot be undone.'
+                    : 'No customers use it. This cannot be undone.',
+                yes: 'Yes, delete it',
+                tone: 'red',
+                apply: () => form.requestSubmit(),
+            });
+        },
+    }));
 });
 </script>
-
-<style>
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.animate-fade-in-up {
-    animation: fadeInUp 0.6s ease-out;
-}
-
-/* Custom scrollbar for tables */
-.overflow-x-auto::-webkit-scrollbar {
-    height: 8px;
-}
-
-.overflow-x-auto::-webkit-scrollbar-track {
-    background: #f1f5f9;
-    border-radius: 4px;
-}
-
-.overflow-x-auto::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 4px;
-}
-
-.overflow-x-auto::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
-}
-
-/* Enhanced focus styles */
-input:focus, textarea:focus, select:focus {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-/* Smooth transitions for all interactive elements */
-* {
-    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 150ms;
-}
-
-/* Enhanced button hover effects */
-button:hover {
-    transform: translateY(-1px);
-}
-
-button:active {
-    transform: translateY(0);
-}
-
-/* Loading animation for form submissions */
-.loading {
-    position: relative;
-    pointer-events: none;
-}
-
-.loading::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 20px;
-    height: 20px;
-    margin-top: -10px;
-    margin-left: -10px;
-    border: 2px solid #ffffff;
-    border-top: 2px solid transparent;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-</style>
 @endsection 

@@ -193,6 +193,25 @@
                             @enderror
                         </div>
 
+                        <!-- Gender -->
+                        <div class="space-y-2">
+                            <label class="block text-sm font-semibold text-gray-700">Gender</label>
+                            <div class="relative">
+                                <select name="gender"
+                                        class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:outline-none transition-colors appearance-none @error('gender') border-red-300 @enderror">
+                                    <option value="">Not set</option>
+                                    <option value="male" {{ old('gender') == 'male' ? 'selected' : '' }}>Male</option>
+                                    <option value="female" {{ old('gender') == 'female' ? 'selected' : '' }}>Female</option>
+                                </select>
+                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                    <i class="fas fa-chevron-down text-gray-400"></i>
+                                </div>
+                            </div>
+                            @error('gender')
+                                <p class="text-xs text-red-600 flex items-center"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p>
+                            @enderror
+                        </div>
+
                         <!-- First Name -->
                         <div class="space-y-2">
                             <label class="block text-sm font-semibold text-gray-700">

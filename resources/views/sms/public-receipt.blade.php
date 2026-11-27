@@ -47,10 +47,10 @@
                 <dt class="text-xs font-medium uppercase tracking-wide text-water-600">Method</dt>
                 <dd class="mt-1 text-sm font-semibold text-water-900">{{ ucfirst(str_replace('_', ' ', (string) $payment->payment_method)) }}</dd>
             </div>
-            @if($payment->receiver)
+            @if($payment->receiver || $payment->isAutoWalletCredit())
             <div class="rounded-2xl bg-water-50 px-4 py-3 sm:col-span-2">
                 <dt class="text-xs font-medium uppercase tracking-wide text-water-600">Received by</dt>
-                <dd class="mt-1 text-sm font-semibold text-water-900">{{ $payment->receiver->name }}</dd>
+                <dd class="mt-1 text-sm font-semibold text-water-900">{{ $payment->receivedByLabel() }}</dd>
             </div>
             @endif
         </dl>

@@ -77,6 +77,32 @@ class Payment extends Model
         return round((float) $this->amount + $this->walletAddedAmount(), 2);
     }
 
+    /**
+     * Wallet credit applied automatically when a bill is created (reading submit, monthly generate, etc.).
+     * This is not a cash collection by a staff member, so no receiver is shown.
+     */
+    public function isAutoWalletCredit(): bool
+    {
+        if ($this->payment_method !== 'wallet') {
+            return false;
+        }
+
+        return $this->received_by === null
+            || str_starts_with((string) $this->notes, 'Auto-applied wallet credit');
+    }
+
+    /**
+     * Label for "Received by" on receipts, reports, and exports.
+     */
+    public function receivedByLabel(): string
+    {
+        if ($this->isAutoWalletCredit()) {
+            return 'Wallet (auto-applied)';
+        }
+
+        return $this->receiver?->name ?? 'Office';
+    }
+
     public function paidOnDisplay(string $format = 'Y-m-d H:i'): string
     {
         return optional($this->paid_on)->timezone(config('app.timezone'))->format($format) ?? '—';

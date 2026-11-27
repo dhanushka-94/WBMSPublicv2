@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\ReadingChainLockedException;
 use App\Models\Bill;
 use App\Models\Customer;
 use App\Models\MeterReading;
@@ -218,6 +219,11 @@ class BillReadingChainService
             $current = round((float) $next->current_reading, 2);
             $consumption = round(max(0, $current - $prev), 2);
 
+            // A paid or cancelled bill is never repriced, so the chain can't move past it.
+            if (abs(round((float) $next->previous_reading, 2) - $prev) > 0.001) {
+                $this->assertLaterBillNotLocked($next);
+            }
+
             MeterReading::withoutEvents(function () use ($next, $prev, $consumption) {
                 $next->forceFill([
                     'previous_reading' => $prev,
@@ -253,17 +259,51 @@ class BillReadingChainService
         ];
     }
 
+    /**
+     * Cascade for a reading that is not billed yet (pending or verified): its later readings and
+     * unpaid bills follow the new current reading. Billed readings use syncAfterReadingUpdate instead.
+     *
+     * @return array{later_readings: int, later_bills: int}
+     */
+    public function syncLaterReadings(MeterReading $reading): array
+    {
+        return $this->cascadeLaterReadings($reading);
+    }
+
+    /**
+     * Stop the edit if the reading after this one is already tied to a paid or cancelled bill.
+     * That bill's numbers can't be changed, so the chain would be left inconsistent.
+     */
+    private function assertLaterBillNotLocked(MeterReading $reading): void
+    {
+        $bill = Bill::query()
+            ->where(function ($query) use ($reading) {
+                $query->where('meter_reading_id', $reading->id)
+                    ->orWhere(function ($sameMeter) use ($reading) {
+                        $sameMeter->where('water_meter_id', $reading->water_meter_id)
+                            ->whereDate('billing_period_to', $reading->reading_date);
+                    });
+            })
+            ->orderByDesc('id')
+            ->first();
+
+        if ($bill && in_array($bill->status, ['paid', 'cancelled'], true)) {
+            throw new ReadingChainLockedException(
+                'This change would move the next reading ('.$reading->reading_date->format('d M Y').
+                ') so its bill '.$bill->bill_number.' would no longer match its reading. That bill is already '.
+                $bill->status.', and paid or cancelled bills cannot be changed. The edit was cancelled.'
+            );
+        }
+    }
+
     private function repriceBillFromReading(
         Bill $bill,
         float $previous,
         float $current,
         float $consumption
     ): void {
-        // Opening dues stay as typed adjustments; do not overwrite with tariff slabs.
-        if ($bill->isOpeningBalance()) {
-            return;
-        }
-
+        // Opening-balance bills also get their water and fixed charges from the tariff when their reading
+        // changes. The carried-forward amount in adjustments is never touched, so the old dues stay as typed.
         $customer = Customer::query()->find($bill->customer_id);
         if (!$customer) {
             return;

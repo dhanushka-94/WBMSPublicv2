@@ -114,7 +114,7 @@
                                 <option value="">All Modules</option>
                                 @foreach($availableModules as $module)
                                 <option value="{{ $module }}" {{ request('module') === $module ? 'selected' : '' }}>
-                                    {{ ucfirst($module) }}
+                                    {{ ucfirst(str_replace(['_', '-'], ' ', $module)) }}
                                 </option>
                                 @endforeach
                             </select>
@@ -127,7 +127,7 @@
                                 <option value="">All Status</option>
                                 <option value="success" {{ request('status') === 'success' ? 'selected' : '' }}>Success</option>
                                 <option value="failed" {{ request('status') === 'failed' ? 'selected' : '' }}>Failed</option>
-                                <option value="error" {{ request('status') === 'error' ? 'selected' : '' }}>Error</option>
+                                <option value="warning" {{ request('status') === 'warning' ? 'selected' : '' }}>Warning</option>
                             </select>
                         </div>
 
@@ -186,7 +186,7 @@
                         <!-- Icon -->
                         <div class="flex-shrink-0">
                             <div class="w-10 h-10 rounded-full {{ $activity->status === 'failed' ? 'bg-red-100' : ($activity->status === 'success' ? 'bg-green-100' : 'bg-blue-100') }} flex items-center justify-center">
-                                <i class="{{ $activity->action_icon }} {{ $activity->status === 'failed' ? 'text-red-600' : ($activity->status === 'success' ? 'text-green-600' : 'text-blue-600') }}"></i>
+                                <i class="{{ $activity->action_icon }}"></i>
                             </div>
                         </div>
 
@@ -194,7 +194,7 @@
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <p class="text-sm font-medium text-gray-900">
+                                    <p class="text-sm font-medium {{ $activity->action_color }}">
                                         {{ ucfirst(str_replace('_', ' ', $activity->action)) }}
                                         @if($activity->module !== 'general')
                                             <span class="text-gray-500">in {{ ucfirst($activity->module) }}</span>

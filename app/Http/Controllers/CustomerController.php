@@ -152,6 +152,7 @@ class CustomerController extends Controller
         $validated = $request->validate([
             // 'account_number' => 'required|string|unique:customers,account_number|max:50', // Removed - auto-generated
             'title' => 'required|in:Mr,Mrs,Miss,Ms,Dr', // Required
+            'gender' => 'nullable|in:male,female',
             'first_name' => 'required|string|max:255', // Required
             'last_name' => 'nullable|string|max:255', // Optional
             'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg|max:1024|dimensions:ratio=1/1',
@@ -339,7 +340,16 @@ class CustomerController extends Controller
             ->orderBy('id')
             ->get(['id', 'bill_number', 'balance_amount', 'due_date', 'status']);
 
+        $walletEntries = $customer->walletEntries()
+            ->with(['user:id,name', 'payment:id,receipt_number', 'bill:id,bill_number'])
+            ->orderByDesc('id')
+            ->limit(15)
+            ->get();
+        $walletEntryCount = $customer->walletEntries()->count();
+
         return view('customers.show', compact(
+            'walletEntries',
+            'walletEntryCount',
             'customer',
             'activeMeters',
             'outstandingBalance',
@@ -469,6 +479,7 @@ class CustomerController extends Controller
                 Rule::unique('customers')->ignore($customer->id)
             ],
             'title' => 'required|in:Mr,Mrs,Miss,Ms,Dr', // Required
+            'gender' => 'nullable|in:male,female',
             'first_name' => 'required|string|max:255', // Required
             'last_name' => 'nullable|string|max:255', // Optional
             'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg|max:1024|dimensions:ratio=1/1',
@@ -604,6 +615,94 @@ class CustomerController extends Controller
         }
 
         return back()->with('success', 'Customer reconnected.');
+    }
+
+    /**
+     * Admin and Super Admin only: add credit to, or take credit off, a customer's wallet.
+     * Every change is a ledger row (never an edit of old rows) with a required reason,
+     * and it is not counted as cash received in any report.
+     */
+    public function adjustWallet(Request $request, Customer $customer): RedirectResponse
+    {
+        abort_unless(in_array($request->user()?->role, ['admin', 'super_admin'], true), 403, 'Only an Admin or Super Admin can change a wallet.');
+
+        $validated = $request->validateWithBag('wallet', [
+            'type' => ['required', Rule::in(['add', 'deduct'])],
+            'amount' => ['required', 'numeric', 'min:0.01', 'max:10000000'],
+            'reason' => ['required', 'string', 'min:3', 'max:200'],
+        ], [
+            'type.required' => 'Choose whether to add or deduct.',
+            'amount.min' => 'Enter an amount of at least Rs. 0.01.',
+            'reason.required' => 'Enter a reason. It is kept in the wallet history and the activity log.',
+            'reason.min' => 'Enter a reason of at least 3 characters.',
+        ]);
+
+        $amount = round((float) $validated['amount'], 2);
+        $reason = trim($validated['reason']);
+        $isAdd = $validated['type'] === 'add';
+        $user = $request->user();
+
+        $result = DB::transaction(function () use ($customer, $amount, $reason, $isAdd, $user) {
+            $locked = Customer::query()->lockForUpdate()->findOrFail($customer->id);
+            $before = round((float) $locked->wallet_balance, 2);
+
+            if (!$isAdd && $amount > $before + 0.001) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'amount' => 'The wallet has only Rs. '.number_format($before, 2).'. You cannot deduct Rs. '.number_format($amount, 2).'.',
+                ])->errorBag('wallet');
+            }
+
+            $signed = $isAdd ? $amount : -$amount;
+            $after = round($before + $signed, 2);
+
+            WalletEntry::create([
+                'customer_id' => $locked->id,
+                'bill_id' => null,
+                'payment_id' => null,
+                'user_id' => $user->id,
+                'amount' => $signed,
+                'reason' => $isAdd ? 'adjustment_add' : 'adjustment_deduct',
+                'notes' => $reason,
+            ]);
+
+            $locked->wallet_balance = $after;
+            $locked->save();
+
+            return ['before' => $before, 'after' => $after, 'customer' => $locked];
+        });
+
+        $this->logActivity(
+            'wallet_adjusted',
+            sprintf(
+                '%s %s Rs.%s %s wallet of %s. Reason: %s. Balance Rs.%s -> Rs.%s.',
+                $user->name,
+                $isAdd ? 'added' : 'deducted',
+                number_format($amount, 2),
+                $isAdd ? 'to the' : 'from the',
+                $customer->getLogName(),
+                $reason,
+                number_format($result['before'], 2),
+                number_format($result['after'], 2)
+            ),
+            $customer,
+            [
+                'type' => $isAdd ? 'add' : 'deduct',
+                'amount' => $amount,
+                'reason' => $reason,
+                'wallet_before' => $result['before'],
+                'wallet_after' => $result['after'],
+            ]
+        );
+
+        return redirect(route('customers.show', $customer).'#wallet')->with(
+            'success',
+            sprintf(
+                'Wallet updated: Rs. %s %s. New balance Rs. %s.',
+                number_format($amount, 2),
+                $isAdd ? 'added' : 'deducted',
+                number_format($result['after'], 2)
+            )
+        );
     }
 
     /**

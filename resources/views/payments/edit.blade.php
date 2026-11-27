@@ -51,7 +51,7 @@
             </div>
             <div>
                 <dt class="text-gray-500">Received by</dt>
-                <dd class="font-medium text-gray-900">{{ $payment->receiver?->name ?? 'Office' }}</dd>
+                <dd class="font-medium text-gray-900">{{ $payment->receivedByLabel() }}</dd>
             </div>
             <div>
                 <dt class="text-gray-500">Wallet available</dt>

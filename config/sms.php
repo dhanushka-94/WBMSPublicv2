@@ -12,6 +12,15 @@ return [
 
     'default' => env('SMS_DRIVER', 'notify_lk'),
 
+    /*
+    | Price (LKR) charged by the SMS provider for one segment.
+    | SMS_COST_PER_SEGMENT in .env is only the starting rate. The Super Admin
+    | changes the rate on the SMS Settings page, and every change is kept in the
+    | sms_rate_changes table (see App\Models\SmsRateChange). Each SMS stores the
+    | rate used when it was created, so old messages keep their original cost.
+    */
+    'cost_per_segment' => (float) env('SMS_COST_PER_SEGMENT', 0.90),
+
     'drivers' => [
         'notify_lk' => [
             'user_id' => env('NOTIFYLK_USER_ID', ''),

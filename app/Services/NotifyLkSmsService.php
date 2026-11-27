@@ -33,7 +33,8 @@ class NotifyLkSmsService
         ?string $contactLastName = null,
         ?string $contactEmail = null,
         ?string $contactAddress = null,
-        bool $unicode = false
+        bool $unicode = false,
+        bool $logAttempt = true
     ): array {
         $errors = $this->validateConfiguration();
         if ($errors !== []) {
@@ -72,8 +73,11 @@ class NotifyLkSmsService
 
             $responseData = $response->json();
 
-            // Log the SMS attempt
-            $this->logSmsAttempt($phoneNumber, $message, $responseData, $response->status());
+            // Callers that already keep their own sms_notifications row pass $logAttempt = false,
+            // otherwise every message would be logged twice.
+            if ($logAttempt) {
+                $this->logSmsAttempt($phoneNumber, $message, $responseData, $response->status());
+            }
 
             if ($response->successful() && isset($responseData['status']) && $responseData['status'] === 'success') {
                 Log::info("SMS sent successfully to {$phoneNumber}");
@@ -83,7 +87,7 @@ class NotifyLkSmsService
                     'response' => $responseData
                 ];
             } else {
-                $errorMessage = $responseData['message'] ?? 'Unknown error occurred';
+                $errorMessage = self::extractError($responseData);
                 Log::error("SMS failed to {$phoneNumber}: {$errorMessage}");
                 return [
                     'success' => false,
@@ -197,6 +201,28 @@ class NotifyLkSmsService
         return $this->formatPhoneNumber($phoneNumber) !== null;
     }
 
+    /**
+     * Notify.lk reports failures in "message" or "errors" (string or list).
+     */
+    public static function extractError(?array $response): string
+    {
+        $error = $response['message'] ?? $response['errors'] ?? null;
+
+        if (is_array($error)) {
+            $parts = [];
+            array_walk_recursive($error, function ($value) use (&$parts) {
+                if (is_scalar($value) && trim((string) $value) !== '') {
+                    $parts[] = trim((string) $value);
+                }
+            });
+            $error = implode(' ', $parts);
+        }
+
+        $error = trim((string) $error);
+
+        return $error !== '' ? $error : 'Unknown error occurred';
+    }
+
     public static function segmentCount(string $message): int
     {
         $isGsm = preg_match('/^[\n\r\x20-\x7E]*$/u', $message) === 1;
@@ -244,6 +270,8 @@ class NotifyLkSmsService
             SmsNotification::create([
                 'phone_number' => $phoneNumber,
                 'message' => $message,
+                'segments' => self::segmentCount($message),
+                'cost_per_segment' => (float) config('sms.cost_per_segment', 0),
                 'status' => ($response['status'] ?? 'failed') === 'success' ? 'sent' : 'failed',
                 'response_data' => $response,
                 'http_status' => $httpStatus,

@@ -452,7 +452,7 @@
                                     </label>
                                     <input type="number" name="amount" id="amount"
                                            step="0.01" min="0"
-                                           value="{{ $bill->balance_amount }}" required
+                                           value="{{ old('amount') }}" placeholder="Enter amount received" required
                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                     <p class="text-sm text-gray-500 mt-1">Balance: @lkr($bill->balance_amount). Any extra is added to the customer wallet.</p>
                                     @if(($bill->customer->wallet_balance ?? 0) > 0)

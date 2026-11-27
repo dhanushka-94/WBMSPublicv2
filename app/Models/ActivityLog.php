@@ -16,11 +16,79 @@ class ActivityLog extends Model
 
     public const DATABASE_RETENTION_DAYS = 90;
 
+    /**
+     * One display name per module. Older rows and some writers used other spellings
+     * (for example "customer" and "customers"), which split the module filter in two.
+     */
+    public const MODULE_ALIASES = [
+        'customers' => ['customer'],
+        'authentication' => ['login', 'logout', 'register', 'password'],
+        'mobile_app' => ['mobile-api', 'mobile_api'],
+        'meters' => ['meter', 'water-meters', 'watermeter', 'water_meters'],
+        'readings' => ['meter-readings', 'meterreading', 'meter_readings'],
+        'billing' => ['bills', 'bill'],
+        'payments' => ['payment'],
+        'users' => ['user'],
+        'rates' => ['rate'],
+        'guarantors' => ['guarantor'],
+        'administration' => ['activity-logs'],
+    ];
+
+    /** Sign-in, sign-out and password events (web and mobile app). */
+    public const AUTH_ACTIONS = [
+        'login', 'logout', 'login_failed', 'password_reset',
+        'mobile_login', 'mobile_login_failed', 'mobile_login_denied', 'mobile_logout', 'token_refresh',
+    ];
+
+    /** Actions that change data or settings. Names starting with "bulk_" also count. */
+    public const CHANGE_ACTIONS = [
+        'create', 'update', 'delete', 'import', 'restore', 'backup', 'verify', 'approve', 'reject', 'sync',
+        'payment', 'payment_created', 'payment_updated', 'payment_deleted', 'payment_collection',
+        'payment_uploaded', 'payment_recorded',
+        'reading_uploaded', 'readings_bulk_uploaded', 'meter_reading_submitted', 'bulk_sync_completed',
+        'meter_location_updated', 'mobile_profile_updated', 'mobile_profile_photo_updated',
+        'sms_resend', 'sms_bulk_resend', 'sms_send_again', 'sms_delete', 'system_task',
+        'wallet_adjusted', 'wallet_adjustment_removed',
+    ];
+
+    /** Read-only noise that can be hidden so real changes stand out. */
+    public const PAGE_VIEW_ACTIONS = [
+        'view', 'read', 'download', 'search', 'route_downloaded', 'route_fetched', 'token_check', 'quote',
+    ];
+
     protected static function booted(): void
     {
+        static::creating(function (ActivityLog $log) {
+            $log->module = self::canonicalModule($log->module);
+        });
+
         static::created(function (ActivityLog $log) {
             $log->appendToMonthlyFile();
         });
+    }
+
+    public static function canonicalModule(?string $module): string
+    {
+        $module = strtolower(trim((string) $module));
+        if ($module === '') {
+            return 'system';
+        }
+
+        foreach (self::MODULE_ALIASES as $canonical => $aliases) {
+            if ($module === $canonical || in_array($module, $aliases, true)) {
+                return $canonical;
+            }
+        }
+
+        return $module;
+    }
+
+    /** The module name plus every spelling that older rows may still use. */
+    public static function moduleVariants(string $module): array
+    {
+        $canonical = self::canonicalModule($module);
+
+        return array_values(array_unique(array_merge([$canonical, $module], self::MODULE_ALIASES[$canonical] ?? [])));
     }
 
     protected $fillable = [
@@ -80,7 +148,7 @@ class ActivityLog extends Model
 
     public function scopeByModule($query, $module)
     {
-        return $query->where('module', $module);
+        return $query->whereIn('module', self::moduleVariants((string) $module));
     }
 
     public function scopeBySubjectType($query, $type)
@@ -128,12 +196,43 @@ class ActivityLog extends Model
 
     public function scopeAuthentication($query)
     {
-        return $query->whereIn('action', ['login', 'logout', 'login_failed', 'password_reset']);
+        return $query->whereIn('action', self::AUTH_ACTIONS);
     }
 
     public function scopeCrudOperations($query)
     {
-        return $query->whereIn('action', ['create', 'read', 'update', 'delete']);
+        return $query->where(function ($q) {
+            $q->whereIn('action', self::CHANGE_ACTIONS)->orWhere('action', 'like', 'bulk\\_%');
+        });
+    }
+
+    public function scopeHidePageViews($query)
+    {
+        return $query->whereNotIn('action', self::PAGE_VIEW_ACTIONS);
+    }
+
+    /** Activity done by the system itself (scheduled jobs, console commands). */
+    public static function logSystem(
+        string $action,
+        string $description,
+        string $status = 'success',
+        array $properties = [],
+        ?string $error = null,
+        ?int $durationMs = null
+    ): self {
+        return self::create([
+            'user_name' => 'System',
+            'user_role' => 'system',
+            'action' => $action,
+            'description' => $description,
+            'module' => 'system',
+            'method' => 'CLI',
+            'user_agent' => 'artisan',
+            'status' => $status,
+            'error_message' => $error,
+            'properties' => $properties ?: null,
+            'duration_ms' => $durationMs,
+        ]);
     }
 
     // Helper methods
@@ -233,13 +332,17 @@ class ActivityLog extends Model
         $method = str_replace('_', ' ', (string) $payment->payment_method);
         $paidOn = $payment->paidOnDisplay();
 
+        $description = $payment->isAutoWalletCredit()
+            ? "Wallet credit of Rs.{$amount} auto-applied to bill {$bill} for {$customer} ({$account}), on {$paidOn} (triggered by {$actor})"
+            : "{$actor} recorded payment {$payment->receipt_number} of Rs.{$amount} ({$method}) for {$customer} ({$account}), bill {$bill}, on {$paidOn}";
+
         return self::logActivity([
             'action' => 'payment_created',
             'module' => 'payments',
             'subject_type' => Payment::class,
             'subject_id' => $payment->id,
             'subject_name' => $payment->receipt_number,
-            'description' => "{$actor} recorded payment {$payment->receipt_number} of Rs.{$amount} ({$method}) for {$customer} ({$account}), bill {$bill}, on {$paidOn}",
+            'description' => $description,
             'new_values' => self::paymentSnapshot($payment),
             'properties' => array_merge([
                 'receipt_number' => $payment->receipt_number,
@@ -527,6 +630,8 @@ class ActivityLog extends Model
                 $this->archiveText($this->action),
                 $this->archiveText($this->status),
                 $this->archiveText($this->description),
+                'module='.$this->archiveText($this->module),
+                'ip='.$this->archiveText($this->ip_address),
             ]).PHP_EOL;
 
             $handle = fopen($path, 'ab');
@@ -541,7 +646,7 @@ class ActivityLog extends Model
                 clearstatcache(true, $path);
                 if (!is_file($path) || filesize($path) === 0) {
                     fwrite($handle, '# AquaBill activity log '.$at->format('Y-m').PHP_EOL);
-                    fwrite($handle, '# date time | user | email | action | status | description'.PHP_EOL);
+                    fwrite($handle, '# date time | user | email | action | status | description | module=... | ip=... (module and ip were added on 27 Nov 2026; older lines end at description)'.PHP_EOL);
                 }
                 fwrite($handle, $line);
                 fflush($handle);
@@ -580,6 +685,8 @@ class ActivityLog extends Model
     private function archiveText(?string $value): string
     {
         $value = preg_replace('/\s+/', ' ', trim((string) $value)) ?? '';
+        // A "|" inside a value would shift the columns when the file is opened in a spreadsheet.
+        $value = str_replace('|', '/', $value);
 
         return $value === '' ? '-' : $value;
     }
@@ -595,21 +702,54 @@ class ActivityLog extends Model
         return $this->created_at->diffForHumans();
     }
 
+    /**
+     * Icon and colour for each action. The same colour is used for the icon and the action text,
+     * so for example "Reading uploaded" (green, up arrow) and "Route downloaded" (blue, down arrow)
+     * are easy to tell apart.
+     *
+     * @return array{0: string, 1: string} [icon classes, text colour class]
+     */
+    private function actionStyle(): array
+    {
+        return match ($this->action) {
+            'login' => ['fas fa-sign-in-alt', 'text-green-600'],
+            'logout' => ['fas fa-sign-out-alt', 'text-gray-600'],
+            'login_failed', 'mobile_login_failed', 'mobile_login_denied' => ['fas fa-exclamation-triangle', 'text-red-600'],
+            'mobile_login' => ['fas fa-mobile-alt', 'text-green-600'],
+            'mobile_logout' => ['fas fa-mobile-alt', 'text-gray-600'],
+            'create' => ['fas fa-plus', 'text-green-600'],
+            'read', 'view' => ['fas fa-eye', 'text-blue-600'],
+            'update' => ['fas fa-edit', 'text-yellow-600'],
+            'delete' => ['fas fa-trash', 'text-red-600'],
+            'export' => ['fas fa-file-export', 'text-purple-600'],
+            'import' => ['fas fa-file-import', 'text-purple-600'],
+            'backup' => ['fas fa-database', 'text-gray-600'],
+            // Mobile app: uploads are green with an up arrow, downloads are blue with a down arrow.
+            'reading_uploaded', 'meter_reading_submitted' => ['fas fa-cloud-upload-alt', 'text-green-600'],
+            'readings_bulk_uploaded', 'bulk_sync_completed' => ['fas fa-layer-group', 'text-green-600'],
+            'payment_uploaded', 'payment_recorded' => ['fas fa-money-bill-wave', 'text-green-600'],
+            'route_downloaded', 'route_fetched', 'download' => ['fas fa-cloud-download-alt', 'text-blue-600'],
+            'meter_location_updated' => ['fas fa-map-marker-alt', 'text-yellow-600'],
+            'payment', 'payment_created', 'payment_collection' => ['fas fa-money-bill-wave', 'text-green-600'],
+            'payment_updated' => ['fas fa-edit', 'text-yellow-600'],
+            'payment_deleted' => ['fas fa-trash', 'text-red-600'],
+            'payment_receipt_viewed' => ['fas fa-receipt', 'text-blue-600'],
+            'system_task' => ['fas fa-cogs', 'text-gray-600'],
+            'wallet_adjusted', 'wallet_adjustment_removed' => ['fas fa-wallet', 'text-teal-600'],
+            default => ['fas fa-info-circle', 'text-gray-600'],
+        };
+    }
+
     public function getActionIconAttribute(): string
     {
-        return match($this->action) {
-            'login' => 'fas fa-sign-in-alt text-green-600',
-            'logout' => 'fas fa-sign-out-alt text-gray-600',
-            'login_failed' => 'fas fa-exclamation-triangle text-red-600',
-            'create' => 'fas fa-plus text-green-600',
-            'read', 'view' => 'fas fa-eye text-blue-600',
-            'update' => 'fas fa-edit text-yellow-600',
-            'delete' => 'fas fa-trash text-red-600',
-            'export' => 'fas fa-download text-purple-600',
-            'import' => 'fas fa-upload text-purple-600',
-            'backup' => 'fas fa-database text-gray-600',
-            default => 'fas fa-info-circle text-gray-600'
-        };
+        [$icon, $color] = $this->actionStyle();
+
+        return $icon.' '.$color;
+    }
+
+    public function getActionColorAttribute(): string
+    {
+        return $this->actionStyle()[1];
     }
 
     public function getStatusBadgeAttribute(): string

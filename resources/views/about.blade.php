@@ -124,7 +124,7 @@
                         ]],
                         ['fa-user-shield', 'bg-indigo-500', 'from-indigo-50 to-indigo-100', 'Who can sign in', [
                             'Super Admin: the full office, plus System Settings, SMS Settings, turning the system on or off, the mobile API guide, and deleting an administrator.',
-                            'Admin: the full office, except System Settings, SMS Settings, system on/off, the mobile API guide, and deleting an administrator.',
+                            'Admin: the full office, including editing a customer’s wallet, plus Customer Divisions, Customer Types, rates and the Download Mobile App page in Settings. Not the other System Settings, SMS Settings, system on/off, the mobile API guide, or deleting an administrator.',
                             'Manager: the dashboard and reports.',
                             'Billing Officer and Staff: customers, meters, readings, bills, and SMS.',
                             'Cashier: bills, payments, and the collection reports.',

@@ -70,9 +70,15 @@
                     </h2>
                     <p class="text-sm text-gray-500">{{ $customer->account_number }}</p>
                 </div>
-                <div class="rounded-lg bg-emerald-50 px-4 py-3 text-right">
-                    <p class="text-xs uppercase text-emerald-700">Wallet</p>
-                    <p class="text-2xl font-bold text-emerald-900">Rs. {{ number_format($customer->wallet_balance, 2) }}</p>
+                <div class="flex gap-3">
+                    <div class="rounded-lg bg-red-50 px-4 py-3 text-right">
+                        <p class="text-xs uppercase text-red-700">Outstanding</p>
+                        <p class="text-2xl font-bold text-red-800">Rs. {{ number_format($outstanding, 2) }}</p>
+                    </div>
+                    <div class="rounded-lg bg-emerald-50 px-4 py-3 text-right">
+                        <p class="text-xs uppercase text-emerald-700">Wallet</p>
+                        <p class="text-2xl font-bold text-emerald-900">Rs. {{ number_format($customer->wallet_balance, 2) }}</p>
+                    </div>
                 </div>
             </div>
 
@@ -119,7 +125,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label for="amount" class="block text-sm font-medium text-gray-700 mb-1">Amount received (Rs.)</label>
-                        <input type="number" name="amount" id="amount" step="0.01" min="0" value="{{ old('amount', $bills->sum('balance_amount')) }}" class="w-full rounded-md border-gray-300">
+                        <input type="number" name="amount" id="amount" step="0.01" min="0" value="{{ old('amount') }}" placeholder="Enter amount received" class="w-full rounded-md border-gray-300">
                     </div>
                     <div>
                         <label for="payment_method" class="block text-sm font-medium text-gray-700 mb-1">Method</label>
@@ -165,8 +171,8 @@
                         <th class="px-3 py-2">Division</th>
                         <th class="px-3 py-2">Type</th>
                         <th class="px-3 py-2">Phone</th>
-                        <th class="px-3 py-2 text-right">Open balance</th>
-                        <th class="px-3 py-2 text-right">Wallet</th>
+                        <th class="px-3 py-2 text-right text-red-600">Outstanding</th>
+                        <th class="px-3 py-2 text-right text-emerald-600">Wallet</th>
                     </tr>
                 </thead>
                 <tbody id="customer-rows" class="divide-y">
@@ -178,8 +184,8 @@
                             <td class="px-3 py-3 text-gray-700">{{ $row->division?->name ?: '—' }}</td>
                             <td class="px-3 py-3 text-gray-700">{{ $row->customerType?->name ?: '—' }}</td>
                             <td class="px-3 py-3 text-gray-700">{{ $row->phone ?: '—' }}</td>
-                            <td class="px-3 py-3 text-right font-medium text-gray-900">Rs. {{ number_format((float) $row->open_balance, 2) }}</td>
-                            <td class="px-3 py-3 text-right text-emerald-700">Rs. {{ number_format((float) $row->wallet_balance, 2) }}</td>
+                            <td class="px-3 py-3 text-right {{ (float) $row->open_balance > 0 ? 'font-semibold text-red-700' : 'text-gray-400' }}">Rs. {{ number_format((float) $row->open_balance, 2) }}</td>
+                            <td class="px-3 py-3 text-right {{ (float) $row->wallet_balance > 0 ? 'font-semibold text-emerald-700' : 'text-gray-400' }}">Rs. {{ number_format((float) $row->wallet_balance, 2) }}</td>
                         </tr>
                     @empty
                         <tr>

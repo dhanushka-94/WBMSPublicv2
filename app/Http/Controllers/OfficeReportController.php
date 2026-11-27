@@ -142,7 +142,7 @@ class OfficeReportController extends Controller
                     number_format((float) $payment->amount, 2, '.', ''),
                     number_format($payment->walletAddedAmount(), 2, '.', ''),
                     str_replace('_', ' ', (string) $payment->payment_method),
-                    $payment->receiver?->name,
+                    $payment->receivedByLabel(),
                     optional($payment->paid_on)->timezone(config('app.timezone'))->format('Y-m-d H:i'),
                 ]);
             }
@@ -346,7 +346,7 @@ class OfficeReportController extends Controller
                 'LKR '.number_format((float) $payment->amount, 2),
                 'LKR '.number_format($payment->walletAddedAmount(), 2),
                 str_replace('_', ' ', $payment->payment_method),
-                $payment->receiver?->name,
+                $payment->receivedByLabel(),
             ]);
 
         return [
@@ -379,7 +379,7 @@ class OfficeReportController extends Controller
                 'LKR '.number_format((float) $payment->amount, 2),
                 'LKR '.number_format($payment->walletAddedAmount(), 2),
                 str_replace('_', ' ', $payment->payment_method),
-                $payment->receiver?->name,
+                $payment->receivedByLabel(),
             ]);
 
         return [

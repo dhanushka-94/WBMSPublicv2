@@ -83,6 +83,15 @@ class SystemConfiguration extends Model
         return filter_var($config->value, FILTER_VALIDATE_BOOLEAN);
     }
 
+    /**
+     * Whether the Initial Readings page is open to users other than the Super Admin.
+     * The Super Admin can always open it. Open by default so nothing changes until the switch is used.
+     */
+    public static function initialReadingsOpen(): bool
+    {
+        return (bool) static::get('initial_readings_open', true);
+    }
+
     public static function mobileAppMaintenance(): bool
     {
         $config = Cache::remember('system_config_mobile_app_maintenance', 3600, function () {

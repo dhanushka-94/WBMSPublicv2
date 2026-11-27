@@ -14,10 +14,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(\App\Http\Middleware\NoIndex::class);
 
-        $middleware->web([
-            \App\Http\Middleware\ActivityLogger::class,
-            \App\Http\Middleware\RestrictOfficeAccess::class,
-        ]);
+        // ActivityLogger goes first (outermost) so requests that fail early, such as a missing record (404)
+        // or an expired form (419), are still recorded for signed-in users.
+        $middleware->web(
+            prepend: [\App\Http\Middleware\ActivityLogger::class],
+            append: [\App\Http\Middleware\RestrictOfficeAccess::class],
+        );
 
         $middleware->api(append: [
             \App\Http\Middleware\ActivityLogger::class,

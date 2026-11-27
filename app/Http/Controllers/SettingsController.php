@@ -17,13 +17,43 @@ class SettingsController extends Controller
      */
     public function index(): View
     {
-        $divisions = Division::orderBy('name')->paginate(25, ['*'], 'divisions_page')->withQueryString();
-        $customerTypes = CustomerType::orderBy('name')->paginate(25, ['*'], 'types_page')->withQueryString();
+        // withCount gives each row its customer count in one query instead of one query per row.
+        $divisions = Division::withCount('customers')->orderBy('name')->paginate(25, ['*'], 'divisions_page')->withQueryString();
+        $customerTypes = CustomerType::withCount('customers')->orderBy('name')->paginate(25, ['*'], 'types_page')->withQueryString();
         $mapKeySaved = SystemConfiguration::googleMapsKey() !== '';
         $oneReadingPerMonth = SystemConfiguration::oneReadingPerMonth();
         $mobileAppMaintenance = SystemConfiguration::mobileAppMaintenance();
+        $initialReadingsOpen = SystemConfiguration::initialReadingsOpen();
 
-        return view('settings.index', compact('divisions', 'customerTypes', 'mapKeySaved', 'oneReadingPerMonth', 'mobileAppMaintenance'));
+        return view('settings.index', compact('divisions', 'customerTypes', 'mapKeySaved', 'oneReadingPerMonth', 'mobileAppMaintenance', 'initialReadingsOpen'));
+    }
+
+    public function updateInitialReadingsAccess(Request $request): RedirectResponse
+    {
+        $user = auth()->user();
+        abort_unless($user?->role === 'super_admin', 403);
+
+        $enabled = $request->boolean('initial_readings_open');
+        SystemConfiguration::set(
+            'initial_readings_open',
+            $enabled ? '1' : '0',
+            'boolean',
+            'When off, only the Super Admin can open the Initial Readings page'
+        );
+
+        \App\Models\ActivityLog::logActivity([
+            'action' => 'update',
+            'module' => 'settings',
+            'description' => "{$user->name} turned Initial Readings access ".($enabled ? 'on' : 'off').' for all users except Super Admin',
+            'properties' => ['setting' => 'initial_readings_open', 'value' => $enabled],
+        ]);
+
+        return redirect()->route('settings.index')->with(
+            'success',
+            $enabled
+                ? 'Initial Readings is open to every user who could open it before.'
+                : 'Initial Readings is now limited to the Super Admin.'
+        );
     }
 
     public function updateMapKey(Request $request): RedirectResponse
@@ -69,6 +99,13 @@ class SettingsController extends Controller
     {
         abort_unless(auth()->user()?->role === 'super_admin', 403);
 
+        if (! \App\Helpers\SystemConfig::isSystemEnabled()) {
+            return redirect()->route('settings.index')->with(
+                'error',
+                'The system is disabled, so the reader app stays in maintenance. Turn the system on first; the reader app then goes back to its previous state.'
+            );
+        }
+
         $enabled = $request->boolean('mobile_app_maintenance');
         SystemConfiguration::set(
             'mobile_app_maintenance',
@@ -97,14 +134,14 @@ class SettingsController extends Controller
             'custom_id' => 'required|string|max:10|unique:divisions,custom_id',
             'description' => 'nullable|string|max:500',
             'is_active' => 'nullable|boolean'
-        ]);
+        ], [], ['custom_id' => 'reference ID']);
 
         // Handle checkbox: if not present or false, set to false; if present and true, set to true
         $validated['is_active'] = $request->has('is_active') && $request->input('is_active');
 
         Division::create($validated);
 
-        return redirect()->route('settings.index')
+        return redirect()->to(route('settings.index').'#divisions')
             ->with('success', 'Division created successfully.');
     }
 
@@ -128,14 +165,14 @@ class SettingsController extends Controller
             ],
             'description' => 'nullable|string|max:500',
             'is_active' => 'nullable|boolean'
-        ]);
+        ], [], ['custom_id' => 'reference ID']);
 
         // Handle checkbox: if not present or false, set to false; if present and true, set to true
         $validated['is_active'] = $request->has('is_active') && $request->input('is_active');
 
         $division->update($validated);
 
-        return redirect()->route('settings.index')
+        return redirect()->to(route('settings.index').'#divisions')
             ->with('success', 'Division updated successfully.');
     }
 
@@ -146,13 +183,13 @@ class SettingsController extends Controller
     {
         // Check if division has customers
         if ($division->customers()->count() > 0 && !auth()->user()?->isSuperAdmin()) {
-            return redirect()->route('settings.index')
+            return redirect()->to(route('settings.index').'#divisions')
                 ->with('error', 'Cannot delete division. It has associated customers.');
         }
 
         $division->delete();
 
-        return redirect()->route('settings.index')
+        return redirect()->to(route('settings.index').'#divisions')
             ->with('success', 'Division deleted successfully.');
     }
 
@@ -168,14 +205,14 @@ class SettingsController extends Controller
             'custom_id' => 'required|string|max:10|unique:customer_types,custom_id',
             'description' => 'nullable|string|max:500',
             'is_active' => 'nullable|boolean'
-        ]);
+        ], [], ['custom_id' => 'reference ID']);
 
         // Handle checkbox: if not present or false, set to false; if present and true, set to true
         $validated['is_active'] = $request->has('is_active') && $request->input('is_active');
 
         CustomerType::create($validated);
 
-        return redirect()->route('settings.index')
+        return redirect()->to(route('settings.index').'#customer-types')
             ->with('success', 'Customer type created successfully.');
     }
 
@@ -199,14 +236,14 @@ class SettingsController extends Controller
             ],
             'description' => 'nullable|string|max:500',
             'is_active' => 'nullable|boolean'
-        ]);
+        ], [], ['custom_id' => 'reference ID']);
 
         // Handle checkbox: if not present or false, set to false; if present and true, set to true
         $validated['is_active'] = $request->has('is_active') && $request->input('is_active');
 
         $customerType->update($validated);
 
-        return redirect()->route('settings.index')
+        return redirect()->to(route('settings.index').'#customer-types')
             ->with('success', 'Customer type updated successfully.');
     }
 
@@ -217,13 +254,13 @@ class SettingsController extends Controller
     {
         // Check if customer type has customers
         if ($customerType->customers()->count() > 0 && !auth()->user()?->isSuperAdmin()) {
-            return redirect()->route('settings.index')
+            return redirect()->to(route('settings.index').'#customer-types')
                 ->with('error', 'Cannot delete customer type. It has associated customers.');
         }
 
         $customerType->delete();
 
-        return redirect()->route('settings.index')
+        return redirect()->to(route('settings.index').'#customer-types')
             ->with('success', 'Customer type deleted successfully.');
     }
 
